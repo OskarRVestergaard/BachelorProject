@@ -13,13 +13,13 @@ import (
 )
 
 func TestSignedAllValid(t *testing.T) {
-	noOfPeers := 5
-	noOfMsgs := 1
-	noOfNames := 5
+	noOfPeers := 10
+	noOfMsgs := 500
+	noOfNames := 10
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
 	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(8000 * time.Millisecond)
 
 	for i := 0; i < noOfPeers; i++ {
 		listOfPeers[i].PrintLedger()
