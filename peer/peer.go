@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"time"
 )
 
 var debugging bool
@@ -62,6 +63,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
+	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
 }
 

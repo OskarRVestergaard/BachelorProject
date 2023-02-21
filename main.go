@@ -1,7 +1,13 @@
 package main
 
-import "example.com/packages/ledger"
+import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+)
 
 func main() {
-	ledger.EstablishNetwork()
+	//ledger.EstablishNetwork()
+	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	print(&privateKey.PublicKey.X)
 }

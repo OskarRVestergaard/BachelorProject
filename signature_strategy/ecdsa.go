@@ -10,6 +10,7 @@ import (
 
 func main() {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
 	if err != nil {
 		panic(err)
 	}
