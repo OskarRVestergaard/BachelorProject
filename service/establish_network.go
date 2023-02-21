@@ -18,8 +18,6 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
 
 	for i := 0; i < noOfPeers; i++ {
 		var p peer.Peer
-		//var p peer.Peer
-		//port := strconv.Itoa(19080 + i)
 		freePort, _ := getFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
