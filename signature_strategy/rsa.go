@@ -3,7 +3,7 @@ package signature_strategy
 import (
 	"crypto/rand"
 	"example.com/packages/hash_strategy"
-	"example.com/packages/peer"
+	"example.com/packages/models"
 	"math/big"
 	"strconv"
 	"strings"
@@ -63,7 +63,7 @@ func KeyGen(k int) (*big.Int, *big.Int, *big.Int) {
 
 }
 
-func CreateSigniture(transaction peer.SignedTransaction, secretKey string) *big.Int {
+func CreateSigniture(transaction models.SignedTransaction, secretKey string) *big.Int {
 	n, d := SplitKey(secretKey)
 
 	t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
@@ -88,7 +88,7 @@ func SplitKey(key string) (*big.Int, *big.Int) {
 	return n, de
 }
 
-func ValidateSignature(transaction peer.SignedTransaction) bool {
+func ValidateSignature(transaction models.SignedTransaction) bool {
 	signature := transaction.Signature
 
 	pk := transaction.From

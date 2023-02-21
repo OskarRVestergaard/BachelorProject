@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-//package main
-
 type Ledger struct {
 	Accounts map[string]int
 	mutex    sync.Mutex
