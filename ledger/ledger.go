@@ -27,12 +27,6 @@ func (l *Ledger) UpdateLedger(from string, to string, value int) {
 	l.mutex.Unlock()
 }
 
-/*
-	func main() {
-		//For debugging true Ledger
-		EstablishNetwork()
-	}
-*/
 func EstablishNetwork() {
 	peersQt := 5
 	tau := 10
