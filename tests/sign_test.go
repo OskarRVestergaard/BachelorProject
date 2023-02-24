@@ -37,12 +37,14 @@ func TestSignedOneNotValid(t *testing.T) {
 	noOfPeers := 5
 	noOfMsgs := 1
 	noOfNames := 5
+	AccountBalance := 1000
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
 	println("finished setting up connections")
 	println("Starting simulation")
 
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
+		listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
 	controlLedger := new(ledger.Ledger)
@@ -95,12 +97,14 @@ func TestSignedAllRandom(t *testing.T) {
 	noOfPeers := 5
 	noOfMsgs := 15
 	noOfNames := 5
+	AccountBalance := 100
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
 	println("finished setting up connections")
 	println("Starting simulation")
 
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
+		listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
 	controlLedger := new(ledger.Ledger)
@@ -136,12 +140,14 @@ func TestNoTransactions(t *testing.T) {
 
 	noOfPeers := 5
 	noOfNames := 5
+	AccountBalance := 100
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
 	println("finished setting up connections")
 	println("Starting simulation")
 
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
+		listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
 	controlLedger := new(ledger.Ledger)
@@ -175,8 +181,6 @@ func Test10AccountsHoldsMoney(t *testing.T) {
 
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
-	}
-	for i := 0; i < noOfNames; i++ {
 		listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
