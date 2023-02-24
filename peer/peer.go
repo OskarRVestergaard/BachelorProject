@@ -80,6 +80,8 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	debug(p.IpPort + " called doSignedTransaction")
 	if amount == 0 {
 		println("Invalid SignedTransaction with the amount 0")
+	} else if p.Ledger.Accounts[from] < amount {
+		println("Account should hold the transactionamount")
 	} else {
 		p.floodMutex.Lock()
 		t := models.SignedTransaction{from, to, amount, big.NewInt(1000000)}

@@ -187,6 +187,35 @@ func Test10AccountsHoldsMoney(t *testing.T) {
 
 	}
 }
+func TestShouldNotBeAbleToHaveNegativeBalance(t *testing.T) {
+
+	noOfPeers := 2
+	noOfNames := 2
+
+	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+
+	println("finished setting up connections")
+	println("Starting simulation")
+
+	for i := 0; i < noOfNames; i++ {
+		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
+	}
+	time.Sleep(250 * time.Millisecond)
+	p1 := pkList[0]
+	p2 := pkList[1]
+
+	go listOfPeers[0].FloodSignedTransaction(p1, p2, 100)
+	time.Sleep(250 * time.Millisecond)
+
+	for i := 0; i < noOfPeers; i++ {
+		accountsOfPeer := listOfPeers[i].Ledger.Accounts
+		accountBalance := accountsOfPeer[pkList[i]]
+
+		//println(accountBalance)
+		assert.True(t, accountBalance <= 0, "Balance should be positive")
+
+	}
+}
 
 func printControlLedger(controlLedger *ledger.Ledger) {
 	l := controlLedger.Accounts
