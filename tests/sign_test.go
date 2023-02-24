@@ -14,12 +14,12 @@ import (
 
 func TestSignedAllValid(t *testing.T) {
 	noOfPeers := 10
-	noOfMsgs := 500
+	noOfMsgs := 5000
 	noOfNames := 10
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
 	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 
-	time.Sleep(8000 * time.Millisecond)
+	time.Sleep(30000 * time.Millisecond)
 
 	for i := 0; i < noOfPeers; i++ {
 		listOfPeers[i].PrintLedger()
@@ -129,6 +129,61 @@ func TestSignedAllRandom(t *testing.T) {
 		accountsOfPeer := listOfPeers[i].Ledger.Accounts
 		accountsOfPrevPeer := listOfPeers[i-1].Ledger.Accounts
 		assert.True(t, reflect.DeepEqual(accountsOfPeer, accountsOfPrevPeer))
+
+	}
+}
+func TestNoTransactions(t *testing.T) {
+
+	noOfPeers := 5
+	noOfNames := 5
+	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	println("finished setting up connections")
+	println("Starting simulation")
+
+	for i := 0; i < noOfNames; i++ {
+		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
+	}
+
+	controlLedger := new(ledger.Ledger)
+	controlLedger.TA = 0
+	controlLedger.Accounts = make(map[string]int)
+	rand.Seed(time.Now().Unix())
+
+	time.Sleep(250 * time.Millisecond)
+	for i := 0; i < noOfPeers; i++ {
+		listOfPeers[i].PrintLedger()
+	}
+
+	printControlLedger(controlLedger)
+
+	for i := 1; i < noOfPeers; i++ {
+		accountsOfPeer := listOfPeers[i].Ledger.Accounts
+		accountsOfPrevPeer := listOfPeers[i-1].Ledger.Accounts
+		assert.True(t, reflect.DeepEqual(accountsOfPeer, accountsOfPrevPeer))
+
+	}
+}
+func Test10AccountsHoldsMoney(t *testing.T) {
+
+	noOfPeers := 10
+	noOfNames := 10
+	AccountBalance := 100
+	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+
+	println("finished setting up connections")
+	println("Starting simulation")
+
+	for i := 0; i < noOfNames; i++ {
+		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
+	}
+	for i := 0; i < noOfNames; i++ {
+		listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
+	}
+
+	for i := 0; i < noOfPeers; i++ {
+		accountsOfPeer := listOfPeers[i].Ledger.Accounts
+		accountBalance := accountsOfPeer[pkList[i]]
+		assert.Equal(t, AccountBalance, accountBalance, "Balance should match")
 
 	}
 }

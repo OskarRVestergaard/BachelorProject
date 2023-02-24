@@ -296,3 +296,14 @@ func (p *Peer) CreateAccount() string {
 
 	return publicKey
 }
+
+// for testing only
+func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
+
+	debug(p.IpPort + " called updateLedger")
+
+	p.Ledger.mutex.Lock()
+	p.Ledger.Accounts[pk] += amount
+
+	p.Ledger.mutex.Unlock()
+}
