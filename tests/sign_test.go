@@ -215,7 +215,6 @@ func TestShouldNotBeAbleToHaveNegativeBalance(t *testing.T) {
 		accountsOfPeer := listOfPeers[i].Ledger.Accounts
 		accountBalance := accountsOfPeer[pkList[i]]
 
-		//println(accountBalance)
 		assert.True(t, accountBalance <= 0, "Balance should be positive")
 
 	}

@@ -78,11 +78,8 @@ func (p *Peer) StartListener() {
 
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	debug(p.IpPort + " called doSignedTransaction")
-	if amount == 0 {
-		println("Invalid SignedTransaction with the amount 0")
-	} else if p.Ledger.Accounts[from] < amount {
-		println("Account should hold the transactionamount")
-	} else {
+
+	if p.validTransaction(from, amount) {
 		p.floodMutex.Lock()
 		t := models.SignedTransaction{from, to, amount, big.NewInt(1000000)}
 
@@ -105,6 +102,18 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 		p.FloodMessage(msg)
 		p.floodMutex.Unlock()
 	}
+}
+
+func (p *Peer) validTransaction(from string, amount int) bool {
+	if amount == 0 {
+		println("Invalid SignedTransaction with the amount 0")
+		return false
+	} else if p.Ledger.Accounts[from] < amount {
+		println("Account should hold the transactionamount")
+		return false
+	}
+	return true
+
 }
 
 func (p *Peer) FloodMessage(msg Message) {
