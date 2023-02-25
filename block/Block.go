@@ -13,6 +13,7 @@ type Block struct {
 }
 
 func (b *Block) MakeBlock(transactions map[int]string, prevHash string) {
+	//TODO add maximum blockSize
 	b.PreviousHash = prevHash
 	b.TransactionsLog = transactions
 	b.Hash = b.calculateHash()
