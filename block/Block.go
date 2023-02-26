@@ -12,8 +12,11 @@ type Block struct {
 	//TransactionsLog map[int]*models.SignedTransaction
 	TransactionsLog map[int]string
 }
+type Blockchain struct {
+	blockchain []Block
+}
 
-var Blockchain []Block
+var Blockchain2 []Block
 
 var slot = 1
 

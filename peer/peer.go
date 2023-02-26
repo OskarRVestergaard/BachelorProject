@@ -2,8 +2,10 @@ package peer
 
 import (
 	"encoding/gob"
+	"example.com/packages/block"
 	"example.com/packages/models"
 	"example.com/packages/signature_strategy"
+	"example.com/packages/utils"
 	"io"
 	"math/big"
 	"net"
@@ -49,6 +51,7 @@ type Peer struct {
 	floodMutex        sync.Mutex
 	validMutex        sync.Mutex
 	PublicToSecret    map[string]string
+	VisibleBlockchain map[string]*block.Block
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -63,6 +66,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
+	p.VisibleBlockchain = make(map[string]*block.Block)
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
 }
@@ -84,7 +88,8 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 		t := models.SignedTransaction{from, to, amount, big.NewInt(1000000)}
 
 		p.validMutex.Lock()
-		msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
+		//msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
+		msg := Message{utils.SignedTransaction, p.IpPort, t, map[string]Void{}}
 
 		if val, ok := p.PublicToSecret[from]; ok {
 			signature := signature_strategy.CreateSigniture(msg.SignedTransaction, val)
@@ -190,7 +195,7 @@ func (p *Peer) handleMessage(msg Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {
-	case "SignedTransaction":
+	case utils.SignedTransaction:
 		p.validMutex.Lock()
 		if signature_strategy.ValidateSignature(msg.SignedTransaction) {
 			p.UpdateLedger((msg).SignedTransaction)
@@ -200,26 +205,26 @@ func (p *Peer) handleMessage(msg Message) {
 			p.Ledger.mutex.Unlock()
 		}
 		p.validMutex.Unlock()
-	case "joinMessage":
+	case utils.JoinMessage: //"joinMessage":
 		debug(p.IpPort + ": received a join message from: " + (msg).MessageSender)
 		p.AddIpPort((msg).MessageSender)
-	case "getPeersMessage":
+	case utils.GetPeersMessage: //"getPeersMessage":
 		debug(p.IpPort + ": received a getPeers message from: " + (msg).MessageSender)
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
-		err := p.SendMessageTo((msg).MessageSender, Message{"peerMapDelivery", p.IpPort, models.SignedTransaction{"", "", 0, big.NewInt(0)}, ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{utils.PeerMapDelivery, p.IpPort, models.SignedTransaction{"", "", 0, big.NewInt(0)}, ac})
 		if err != nil {
 			println(err.Error())
 		}
-	case "peerMapDelivery":
+	case utils.PeerMapDelivery: //"peerMapDelivery":
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
 		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
 		for e := range (msg).PeerMap {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
-		p.FloodMessage(Message{"joinMessage", p.IpPort, models.SignedTransaction{"", "", 0, big.NewInt(0)}, map[string]Void{}})
+		p.FloodMessage(Message{utils.JoinMessage, p.IpPort, models.SignedTransaction{"", "", 0, big.NewInt(0)}, map[string]Void{}})
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -263,7 +268,7 @@ func (p *Peer) UpdateLedger(t models.SignedTransaction) {
 
 func (p *Peer) Connect(ip string, port int) {
 	ipPort := ip + ":" + strconv.Itoa(port)
-	err := p.SendMessageTo(ipPort, Message{"getPeersMessage", p.IpPort, models.SignedTransaction{"", "", 0, big.NewInt(0)}, map[string]Void{}})
+	err := p.SendMessageTo(ipPort, Message{utils.GetPeersMessage, p.IpPort, models.SignedTransaction{"", "", 0, big.NewInt(0)}, map[string]Void{}})
 
 	if err != nil {
 		println(err.Error())
