@@ -8,11 +8,11 @@ import (
 )
 
 func TestBlockHash(t *testing.T) {
-	var b block.Block
+	//var b block.Block
 	transactionsLog := make(map[int]string)
 	transactionsLog[1] = "a->b:100"
 	prevHash := "hejhej"
-	b.MakeBlock(transactionsLog, prevHash)
+	var b = block.MakeBlock(transactionsLog, prevHash)
 
 	h := sha256.New()
 
