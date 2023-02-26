@@ -3,9 +3,12 @@ package test
 import (
 	"crypto/sha256"
 	"example.com/packages/block"
-	"example.com/packages/utils"
+	"example.com/packages/peer"
+	"example.com/packages/service"
 	"github.com/stretchr/testify/assert"
+	"strconv"
 	"testing"
+	"time"
 )
 
 func TestBlockHash(t *testing.T) {
@@ -25,23 +28,42 @@ func TestBlockchainLengthOfGenesis(t *testing.T) {
 	assert.Equal(t, 1, len(blockChain), "blockchain length should be 1")
 }
 
-func TestPeerCanAppendBlockToBlockchain(t *testing.T) {
+func TestFirstConnectedPeerHasGenesisBlockslot0(t *testing.T) {
+	noOfPeers := 1
 
-	//var blockChain = makeGenesisBlockchain()
-	//
-	//println(blockChain)
-	//blockChain = append(blockChain, genesisBlock)
+	listOfPeers := make([]*peer.Peer, noOfPeers)
 
-	println(utils.SignedTransaction)
+	var connectedPeers []string
+
+	for i := 0; i < noOfPeers; i++ {
+		var p peer.Peer
+		freePort, _ := service.GetFreePort()
+		port := strconv.Itoa(freePort)
+		listOfPeers[i] = &p
+		p.RunPeer("127.0.0.1:" + port)
+
+	}
+	listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
+	connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
+	time.Sleep(250 * time.Millisecond)
+	slotNumberGenesis := (listOfPeers[0].VisibleBlockchain[0].SlotNumber)
+	assert.Equal(t, 0, slotNumberGenesis, "genesisblock should have slotnumber 0")
+
 }
-func makeGenesisBlockchain() []block.Block {
-	genesisBlock := block.Block{
+func Test2PeersHaveSameGenesisBlock(t *testing.T) {
+
+}
+
+func makeGenesisBlockchain() map[int]*block.Block {
+	genesisBlock := &block.Block{
+		SlotNumber:      0,
 		Hash:            "GenesisBlock",
 		PreviousHash:    "GenesisBlock",
 		TransactionsLog: nil,
 	}
-	var blockChain = block.Blockchain2
-	blockChain = append(blockChain, genesisBlock)
+	var blockChain = make(map[int]*block.Block)
+	blockChain[genesisBlock.SlotNumber] = genesisBlock
+	//blockChain = append(blockChain, (genesisBlock))
 	return blockChain
 }
 

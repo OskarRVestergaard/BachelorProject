@@ -6,24 +6,24 @@ import (
 )
 
 type Block struct {
-	slotNumber   int
+	SlotNumber   int
 	Hash         string
 	PreviousHash string
 	//TransactionsLog map[int]*models.SignedTransaction
 	TransactionsLog map[int]string
 }
 type Blockchain struct {
-	blockchain []Block
+	blockchain map[string]*Block
 }
 
-var Blockchain2 []Block
+//var Blockchain2 [string]*Block
 
-var slot = 1
+var slot = 0
 
 func MakeBlock(transactions map[int]string, prevHash string) Block {
 	//TODO add maximum blockSize
 	var b Block
-	b.slotNumber = slot
+	//b.slotNumber = slot
 	b.PreviousHash = prevHash
 	b.TransactionsLog = transactions
 	b.Hash = calculateHash(b.PreviousHash, b.TransactionsLog)
@@ -42,9 +42,9 @@ func calculateHash(PreviousHash string, TransactionsLog map[int]string) string {
 }
 
 func isValid(block Block, previousBlock Block) bool {
-	if previousBlock.slotNumber >= block.slotNumber {
-		return false
-	}
+	//if previousBlock.slotNumber >= block.slotNumber {
+	//	return false
+	//}
 	if previousBlock.Hash != block.PreviousHash {
 		return false
 	}

@@ -18,7 +18,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
 
 	for i := 0; i < noOfPeers; i++ {
 		var p peer.Peer
-		freePort, _ := getFreePort()
+		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
@@ -48,7 +48,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
 	return listOfPeers, pkList
 }
 
-func getFreePort() (port int, err error) {
+func GetFreePort() (port int, err error) {
 	var a *net.TCPAddr
 	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
 		var l *net.TCPListener

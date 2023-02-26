@@ -51,7 +51,7 @@ type Peer struct {
 	floodMutex        sync.Mutex
 	validMutex        sync.Mutex
 	PublicToSecret    map[string]string
-	VisibleBlockchain map[string]*block.Block
+	VisibleBlockchain map[int]*block.Block
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -66,7 +66,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
-	p.VisibleBlockchain = make(map[string]*block.Block)
+	p.VisibleBlockchain = make(map[int]*block.Block)
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
 }
@@ -277,6 +277,7 @@ func (p *Peer) Connect(ip string, port int) {
 }
 
 func (p *Peer) startNewNetwork() {
+	p.VisibleBlockchain = makeGenesisBlockchain() //"asd" // = makeGenesisBlockchain()
 	println("Network started")
 	println("********************************************************************")
 	println("Host IP: " + p.IpPort)
@@ -311,6 +312,18 @@ func (p *Peer) CreateAccount() string {
 	p.PublicToSecret[publicKey] = secretKey
 
 	return publicKey
+}
+func makeGenesisBlockchain() map[int]*block.Block {
+	genesisBlock := &block.Block{
+		SlotNumber:      0,
+		Hash:            "GenesisBlock",
+		PreviousHash:    "GenesisBlock",
+		TransactionsLog: nil,
+	}
+	var blockChain = make(map[int]*block.Block)
+	blockChain[genesisBlock.SlotNumber] = genesisBlock
+	//blockChain = append(blockChain, (genesisBlock))
+	return blockChain
 }
 
 // for testing only
