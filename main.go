@@ -1,14 +1,19 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"example.com/packages/ledger"
 	"example.com/packages/service"
 	"fmt"
 )
 
 func main() {
-	//ledger.EstablishNetwork()
-	//privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	//print(&privateKey.PublicKey.X)
+
+	ledger.EstablishNetwork()
+	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	print(&privateKey.PublicKey.X)
 
 	noOfPeers := 2
 	noOfNames := 2
