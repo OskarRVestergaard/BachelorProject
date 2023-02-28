@@ -37,7 +37,7 @@ func calculateHash(PreviousHash string, TransactionsLog map[int]string) string {
 
 	transactionsString := ConvertToString(TransactionsLog)
 	h.Write([]byte((PreviousHash + transactionsString)))
-	println(transactionsString)
+	//println(transactionsString)
 	return string(h.Sum(nil))
 }
 

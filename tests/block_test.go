@@ -23,6 +23,7 @@ func TestBlockHash(t *testing.T) {
 	h.Write([]byte((prevHash + block.ConvertToString(transactionsLog))))
 	assert.Equal(t, b.Hash, string(h.Sum(nil)), "hashes match")
 }
+
 func TestBlockchainLengthOfGenesis(t *testing.T) {
 	var blockChain = makeGenesisBlockchain()
 	assert.Equal(t, 1, len(blockChain), "blockchain length should be 1")
