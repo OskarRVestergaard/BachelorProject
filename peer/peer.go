@@ -3,6 +3,7 @@ package peer
 import (
 	"encoding/gob"
 	"example.com/packages/block"
+	"example.com/packages/hash_strategy"
 	"example.com/packages/models"
 	"example.com/packages/signature_strategy"
 	"example.com/packages/utils"
@@ -11,6 +12,7 @@ import (
 	"net"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -91,13 +93,15 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	//msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
 	msg := Message{utils.SignedTransaction, p.IpPort, t, map[string]Void{}}
 
+	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
+	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
+	publicKey := msg.SignedTransaction.From
 	if val, ok := p.PublicToSecret[from]; ok {
-
-		signature := p.SignatureStrategy.Sign(msg.SignedTransaction, val)
-		msg.SignedTransaction.Signature = signature
+		signatureToAssign := p.SignatureStrategy.Sign(hashedMessage, val)
+		msg.SignedTransaction.Signature = signatureToAssign
 	}
-
-	if p.SignatureStrategy.Verify(msg.SignedTransaction) {
+	signature := msg.SignedTransaction.Signature
+	if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
 		p.UpdateLedger(msg.SignedTransaction)
 	} else {
 		p.Ledger.mutex.Lock()
@@ -200,7 +204,12 @@ func (p *Peer) handleMessage(msg Message) {
 	switch msgType {
 	case utils.SignedTransaction:
 		p.validMutex.Lock()
-		if p.SignatureStrategy.Verify(msg.SignedTransaction) {
+
+		// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
+		hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
+		publicKey := msg.SignedTransaction.From
+		signature := msg.SignedTransaction.Signature
+		if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
 			p.UpdateLedger((msg).SignedTransaction)
 		} else {
 			p.Ledger.mutex.Lock()
@@ -307,10 +316,10 @@ func debug(msg string) {
 
 func (p *Peer) CreateAccount() string {
 
-	n, d, e := p.SignatureStrategy.KeyGen()
-
-	publicKey := n.String() + ";" + e.String() + ";"
-	secretKey := n.String() + ";" + d.String() + ";"
+	nde := p.SignatureStrategy.KeyGen()
+	ndeSplit := strings.Split(nde, ";")
+	publicKey := ndeSplit[0] + ";" + ndeSplit[2] + ";"
+	secretKey := ndeSplit[0] + ";" + ndeSplit[1] + ";"
 
 	p.PublicToSecret[publicKey] = secretKey
 

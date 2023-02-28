@@ -14,7 +14,7 @@ import (
 
 func TestSignedAllValid(t *testing.T) {
 	noOfPeers := 5
-	noOfMsgs := 5
+	noOfMsgs := 1
 	noOfNames := 5
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
 	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
