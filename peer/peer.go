@@ -39,6 +39,7 @@ type Message struct {
 	MessageType       string
 	MessageSender     string
 	SignedTransaction models.SignedTransaction
+	MessageBlocks     []*block.Block
 	PeerMap           map[string]Void
 }
 
@@ -53,7 +54,7 @@ type Peer struct {
 	floodMutex        sync.Mutex
 	validMutex        sync.Mutex
 	PublicToSecret    map[string]string
-	VisibleBlockchain map[int]*block.Block
+	genesisBlock      *block.Block
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -69,7 +70,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
-	p.VisibleBlockchain = make(map[int]*block.Block)
+
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
 }
@@ -90,8 +91,7 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	t := models.SignedTransaction{From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
-	//msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
-	msg := Message{utils.SignedTransaction, p.IpPort, t, map[string]Void{}}
+	msg := Message{MessageType: utils.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
 
 	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
 	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
@@ -225,18 +225,21 @@ func (p *Peer) handleMessage(msg Message) {
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, PeerMap: ac})
+		//Also sends genesis block
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []*block.Block{p.genesisBlock}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
 	case utils.PeerMapDelivery: //"peerMapDelivery":
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
 		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
+		p.genesisBlock = msg.MessageBlocks[0]
 		for e := range (msg).PeerMap {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
-		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, PeerMap: map[string]Void{}})
+		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
+
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -280,7 +283,7 @@ func (p *Peer) UpdateLedger(t models.SignedTransaction) {
 
 func (p *Peer) Connect(ip string, port int) {
 	ipPort := ip + ":" + strconv.Itoa(port)
-	err := p.SendMessageTo(ipPort, Message{MessageType: utils.GetPeersMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, PeerMap: map[string]Void{}})
+	err := p.SendMessageTo(ipPort, Message{MessageType: utils.GetPeersMessage, MessageSender: p.IpPort})
 
 	if err != nil {
 		println(err.Error())
@@ -289,7 +292,7 @@ func (p *Peer) Connect(ip string, port int) {
 }
 
 func (p *Peer) startNewNetwork() {
-	p.VisibleBlockchain = makeGenesisBlockchain() //"asd" // = makeGenesisBlockchain()
+	p.genesisBlock = makeGenesisBlock()
 	println("Network started")
 	println("********************************************************************")
 	println("Host IP: " + p.IpPort)
@@ -322,17 +325,15 @@ func (p *Peer) CreateAccount() string {
 
 	return publicKey
 }
-func makeGenesisBlockchain() map[int]*block.Block {
+
+func makeGenesisBlock() *block.Block {
 	genesisBlock := &block.Block{
 		SlotNumber:      0,
 		Hash:            "GenesisBlock",
 		PreviousHash:    "GenesisBlock",
 		TransactionsLog: nil,
 	}
-	var blockChain = make(map[int]*block.Block)
-	blockChain[genesisBlock.SlotNumber] = genesisBlock
-	//blockChain = append(blockChain, (genesisBlock))
-	return blockChain
+	return genesisBlock
 }
 
 // CreateBalanceOnLedger for testing only

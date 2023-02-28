@@ -22,7 +22,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
-
+		// TODO maybe go p.RunPeer
 	}
 	listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
 	connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
