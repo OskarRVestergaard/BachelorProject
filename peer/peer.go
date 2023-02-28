@@ -19,7 +19,7 @@ var debugging bool
 
 /*
 This is a single Peer that both listens to and sends messages
-CURRENTLY IT ASSUMES THAT PEER NEVER LEAVE AND TCP CONNECTIONS DON'T DROP
+CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 */
 
 type Ledger struct {
@@ -84,31 +84,30 @@ func (p *Peer) StartListener() {
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	debug(p.IpPort + " called doSignedTransaction")
 
-	if p.validTransaction(from, amount) {
-		p.floodMutex.Lock()
-		t := models.SignedTransaction{From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	p.floodMutex.Lock()
+	t := models.SignedTransaction{From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
-		p.validMutex.Lock()
-		//msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
-		msg := Message{utils.SignedTransaction, p.IpPort, t, map[string]Void{}}
+	p.validMutex.Lock()
+	//msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
+	msg := Message{utils.SignedTransaction, p.IpPort, t, map[string]Void{}}
 
-		if val, ok := p.PublicToSecret[from]; ok {
+	if val, ok := p.PublicToSecret[from]; ok {
 
-			signature := p.SignatureStrategy.Sign(msg.SignedTransaction, val)
-			msg.SignedTransaction.Signature = signature
-		}
-
-		if p.SignatureStrategy.Verify(msg.SignedTransaction) {
-			p.UpdateLedger(msg.SignedTransaction)
-		} else {
-			p.Ledger.mutex.Lock()
-			p.Ledger.Uta++
-			p.Ledger.mutex.Unlock()
-		}
-		p.validMutex.Unlock()
-		p.FloodMessage(msg)
-		p.floodMutex.Unlock()
+		signature := p.SignatureStrategy.Sign(msg.SignedTransaction, val)
+		msg.SignedTransaction.Signature = signature
 	}
+
+	if p.SignatureStrategy.Verify(msg.SignedTransaction) {
+		p.UpdateLedger(msg.SignedTransaction)
+	} else {
+		p.Ledger.mutex.Lock()
+		p.Ledger.Uta++
+		p.Ledger.mutex.Unlock()
+	}
+	p.validMutex.Unlock()
+	p.FloodMessage(msg)
+	p.floodMutex.Unlock()
+
 }
 
 func (p *Peer) validTransaction(from string, amount int) bool {
