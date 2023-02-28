@@ -5,7 +5,7 @@ import (
 )
 
 type SignatureInterface interface {
-	KeyGen() string
+	KeyGen() (string, string)
 	Sign([]byte, string) *big.Int
 	Verify(string, []byte, *big.Int) bool
 }

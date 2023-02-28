@@ -1,31 +1,23 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"fmt"
+	"example.com/packages/service"
+	"time"
 )
 
 func main() {
 
-	//ledger.EstablishNetwork()
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	noOfPeers := 2
+	noOfMsgs := 1
+	noOfNames := 2
+	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	
+	time.Sleep(1000 * time.Millisecond)
 
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
-	if err != nil {
-		panic(err)
+	for i := 0; i < noOfPeers; i++ {
+		listOfPeers[i].PrintLedger()
 	}
-	pkByteArray, _ := x509.MarshalECPrivateKey(privateKey)
-	pkString := string(pkByteArray)
-
-	pkByteArray2 := []byte(pkString)
-	pkFromByteArray, _ := x509.ParseECPrivateKey(pkByteArray2)
-
-	fmt.Println(privateKey)
-	fmt.Println(pkFromByteArray)
 
 	//pkFromByteArray, _ := x509.ParseECPrivateKey(pkByteArray)
 	//print(&privateKey.PublicKey.X)

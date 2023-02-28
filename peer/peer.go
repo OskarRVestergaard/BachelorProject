@@ -12,7 +12,6 @@ import (
 	"net"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -58,7 +57,8 @@ type Peer struct {
 }
 
 func (p *Peer) RunPeer(IpPort string) {
-	p.SignatureStrategy = signature_strategy.RSASig{}
+	//p.SignatureStrategy = signature_strategy.RSASig{}
+	p.SignatureStrategy = signature_strategy.ECDSASig{}
 	p.IpPort = IpPort
 	p.acMutex.Lock()
 	p.ActiveConnections = make(map[string]Void)
@@ -316,10 +316,7 @@ func debug(msg string) {
 
 func (p *Peer) CreateAccount() string {
 
-	nde := p.SignatureStrategy.KeyGen()
-	ndeSplit := strings.Split(nde, ";")
-	publicKey := ndeSplit[0] + ";" + ndeSplit[2] + ";"
-	secretKey := ndeSplit[0] + ";" + ndeSplit[1] + ";"
+	secretKey, publicKey := p.SignatureStrategy.KeyGen()
 
 	p.PublicToSecret[publicKey] = secretKey
 

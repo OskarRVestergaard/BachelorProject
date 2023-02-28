@@ -9,7 +9,7 @@ import (
 type RSASig struct {
 }
 
-func (signatureScheme RSASig) KeyGen() string {
+func (signatureScheme RSASig) KeyGen() (string, string) {
 	k := 2048
 	e := big.NewInt(3)
 	b := k / 2
@@ -59,8 +59,10 @@ func (signatureScheme RSASig) KeyGen() string {
 	d := big.NewInt(0)
 	d = d.Exp(e, big.NewInt(-1), pqMinusOnes)
 
-	keyAsString := n.String() + ";" + d.String() + ";" + e.String()
-	return keyAsString
+	secretKeyAsString := n.String() + ";" + d.String() + ";"
+	publicKeyAsString := n.String() + ";" + e.String() + ";"
+
+	return secretKeyAsString, publicKeyAsString
 }
 
 func (signatureScheme RSASig) Sign(hash []byte, secretKey string) *big.Int {
