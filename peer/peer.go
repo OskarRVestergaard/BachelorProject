@@ -38,6 +38,7 @@ type Message struct {
 	MessageType       string
 	MessageSender     string
 	SignedTransaction models.SignedTransaction
+	MessageBlocks     []block.Block
 	PeerMap           map[string]Void
 }
 
@@ -88,8 +89,7 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	t := models.SignedTransaction{From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
-	//msg := Message{"SignedTransaction", p.IpPort, t, map[string]Void{}}
-	msg := Message{utils.SignedTransaction, p.IpPort, t, map[string]Void{}}
+	msg := Message{MessageType: utils.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
 
 	if val, ok := p.PublicToSecret[from]; ok {
 
@@ -227,7 +227,7 @@ func (p *Peer) handleMessage(msg Message) {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
-		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, PeerMap: map[string]Void{}})
+		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -271,7 +271,7 @@ func (p *Peer) UpdateLedger(t models.SignedTransaction) {
 
 func (p *Peer) Connect(ip string, port int) {
 	ipPort := ip + ":" + strconv.Itoa(port)
-	err := p.SendMessageTo(ipPort, Message{MessageType: utils.GetPeersMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, PeerMap: map[string]Void{}})
+	err := p.SendMessageTo(ipPort, Message{MessageType: utils.GetPeersMessage, MessageSender: p.IpPort})
 
 	if err != nil {
 		println(err.Error())
