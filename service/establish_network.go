@@ -44,7 +44,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
 	}
-
+	time.Sleep(250 * time.Millisecond)
 	return listOfPeers, pkList
 }
 
