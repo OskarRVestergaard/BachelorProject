@@ -7,7 +7,6 @@ import (
 	"example.com/packages/models"
 	"example.com/packages/signature_strategy"
 	"example.com/packages/utils"
-	"fmt"
 	"io"
 	"math/big"
 	"net"
@@ -40,7 +39,7 @@ type Message struct {
 	MessageType       string
 	MessageSender     string
 	SignedTransaction models.SignedTransaction
-	MessageBlocks     []block.Block
+	MessageBlocks     []*block.Block
 	PeerMap           map[string]Void
 }
 
@@ -237,7 +236,7 @@ func (p *Peer) handleMessage(msg Message) {
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: p.Blocks, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: p.GenesisBlock, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
@@ -250,7 +249,8 @@ func (p *Peer) handleMessage(msg Message) {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
-		fmt.Println(msg.MessageBlocks[0])
+		p.GenesisBlock = msg.MessageBlocks
+		//fmt.Println((Peer).msg.MessageBlocks[0])
 		print("jashdbaksjdbasd")
 		//for e := range (msg).MessageBlocks {
 		//	//p.GenesisBlock = append(p.GenesisBlock, msg.MessageBlocks[e])
