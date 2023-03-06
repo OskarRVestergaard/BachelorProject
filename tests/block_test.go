@@ -61,18 +61,18 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 	//print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
-	var connectedPeers []string
+	//var connectedPeers []string
 
 	for i := 0; i < noOfPeers; i++ {
 		var p peer.Peer
 		freePort, _ := service.GetFreePort()
 		port := strconv.Itoa(freePort)
-		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
+		listOfPeers[i] = &p
 
 	}
 	listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
-	connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
+	//connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
 	time.Sleep(250 * time.Millisecond)
 	p1_genesis := (listOfPeers[0].GenesisBlock[0].SlotNumber)
 	p2_genesis := (listOfPeers[1].GenesisBlock[0].SlotNumber)
