@@ -266,9 +266,7 @@ func (p *Peer) handleMessage(msg Message) {
 		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
 	case utils.Block:
 		for e := range (msg).MessageBlocks {
-			p.UpdateUncontrolledTransactions(msg.MessageBlocks[e].Transactions)
-			p.UpdateUncontrolledTransactions(msg.SignedTransaction)
-			//debug("added: " + e)
+			p.UpdateLedger(msg.MessageBlocks[e].Transactions)
 		}
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
@@ -317,10 +315,6 @@ func (p *Peer) UpdateLedger(transactions []*models.SignedTransaction) {
 	}
 	p.Ledger.mutex.Unlock()
 
-	//transactions are stored in array to later appear in block
-	//p.uncontrolledTransMutex.Lock()
-	//p.UncontrolledTransactions = append(p.UncontrolledTransactions, &t)
-	//p.uncontrolledTransMutex.Unlock()
 }
 
 func (p *Peer) Connect(ip string, port int) {
