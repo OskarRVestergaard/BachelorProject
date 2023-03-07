@@ -39,7 +39,7 @@ type Message struct {
 	MessageType       string
 	MessageSender     string
 	SignedTransaction models.SignedTransaction
-	MessageBlocks     []*block.Block
+	MessageBlocks     []block.Block
 	PeerMap           map[string]Void
 }
 
@@ -54,7 +54,9 @@ type Peer struct {
 	floodMutex        sync.Mutex
 	validMutex        sync.Mutex
 	PublicToSecret    map[string]string
-	genesisBlock      *block.Block
+	GenesisBlock      []*block.Block
+	blockMutex        sync.Mutex
+	Blocks            []block.Block
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -70,7 +72,15 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
-
+	p.blockMutex.Lock()
+	//p.GenesisBlock = []*block.Block{}
+	p.blockMutex.Unlock()
+	//p.GenesisBlock = &block.Block{
+	//	SlotNumber:      -1,
+	//	Hash:            "",
+	//	PreviousHash:    "",
+	//	TransactionsLog: nil,
+	//}
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
 }
@@ -226,18 +236,42 @@ func (p *Peer) handleMessage(msg Message) {
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []*block.Block{p.genesisBlock}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
 	case utils.PeerMapDelivery: //"peerMapDelivery":
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
 		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
-		p.genesisBlock = msg.MessageBlocks[0]
+		//TODO should not just append blocks on genesis
+		//p.GenesisBlock.SlotNumber = msg.MessageBlocks[0].SlotNumber
 		for e := range (msg).PeerMap {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
+		//p.GenesisBlock = msg.MessageBlocks
+		//fmt.Println((Peer).msg.MessageBlocks[0])
+		//print("jashdbaksjdbasd")
+		for e := range (msg).MessageBlocks {
+			p.UpdateBlock(msg.MessageBlocks[e])
+		}
+		//p.GenesisBlock = append(p.GenesisBlock, msg.MessageBlocks[e])
+		//print("asd")
+		//	//p.AddIpPort(e)
+		//	//debug("added: " + e)
+		//}
+		//p.blockMutex.Lock()
+		//p.GenesisBlock = append(p.GenesisBlock, makeGenesisBlock())
+		//p.blockMutex.Unlock()
+		//p.GenesisBlock = append(p.GenesisBlock, msg.MessageBlocks[0])
+		//p.GenesisBlock = *msg.MessageBlocks[0]
+		//p.Blocks = make([]block.Block, 2)
+		//p.Blocks = append(p.Blocks, [1]block.Block{msg.MessageBlocks})
+		//p.Blocks = append(
+		//	p.Blocks,
+		//	block.Block{SlotNumber: msg.MessageBlocks[0].SlotNumber, Hash: msg.MessageBlocks[0].Hash, PreviousHash: msg.MessageBlocks[0].PreviousHash, TransactionsLog: msg.MessageBlocks[0].TransactionsLog},
+		//	//block.Block(msg.MessageBlocks.),
+		//)
 		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
 
 	default:
@@ -292,7 +326,9 @@ func (p *Peer) Connect(ip string, port int) {
 }
 
 func (p *Peer) startNewNetwork() {
-	p.genesisBlock = makeGenesisBlock()
+	p.blockMutex.Lock()
+	p.GenesisBlock = append(p.GenesisBlock, makeGenesisBlock())
+	p.blockMutex.Unlock()
 	println("Network started")
 	println("********************************************************************")
 	println("Host IP: " + p.IpPort)
@@ -327,6 +363,7 @@ func (p *Peer) CreateAccount() string {
 }
 
 func makeGenesisBlock() *block.Block {
+
 	genesisBlock := &block.Block{
 		SlotNumber:      0,
 		Hash:            "GenesisBlock",
@@ -345,4 +382,11 @@ func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
 	p.Ledger.Accounts[pk] += amount
 
 	p.Ledger.mutex.Unlock()
+}
+
+func (p *Peer) UpdateBlock(b block.Block) {
+	//debug(p.IpPort + " called addIpPort and adding: " + &b.Hash)
+	p.blockMutex.Lock()
+	p.GenesisBlock = append(p.GenesisBlock, &b)
+	p.blockMutex.Unlock()
 }

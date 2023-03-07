@@ -47,12 +47,41 @@ func TestFirstConnectedPeerHasGenesisBlockslot0(t *testing.T) {
 	listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
 	connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
 	time.Sleep(250 * time.Millisecond)
-	//slotNumberGenesis := (listOfPeers[0].VisibleBlockchain[0].SlotNumber)
-	//assert.Equal(t, 0, slotNumberGenesis, "genesisblock should have slotnumber 0")
+	slotNumberGenesis := (listOfPeers[0].GenesisBlock[0].SlotNumber)
+	assert.Equal(t, 0, slotNumberGenesis, "genesisblock should have slotnumber 0")
 
 }
 func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 
+	noOfPeers := 2
+	noOfMsgs := 1
+	noOfNames := 2
+	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
+	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	print(controlLedger)
+	time.Sleep(1000 * time.Millisecond)
+
+	//var connectedPeers []string
+	//
+	//for i := 0; i < noOfPeers; i++ {
+	//	var p peer.Peer
+	//	freePort, _ := service.GetFreePort()
+	//	port := strconv.Itoa(freePort)
+	//	listOfPeers[i] = &p
+	//	p.RunPeer("127.0.0.1:" + port)
+	//
+	//}
+	//listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
+	//connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
+	time.Sleep(250 * time.Millisecond)
+	p1_genesis := (listOfPeers[0].GenesisBlock[0].SlotNumber)
+	p2_genesis := (listOfPeers[1].GenesisBlock[0].SlotNumber)
+	assert.Equal(t, 0, p1_genesis, "genesisblock should have slotnumber 0")
+	assert.Equal(t, 0, p2_genesis, "genesisblock should have slotnumber 0")
+
+	//for i := 0; i < noOfPeers; i++ {
+	//	accountsOfPeer := listOfPeers[i].Ledger.Accounts
+	//}
 }
 
 func makeGenesisBlockchain() map[int]*block.Block {
