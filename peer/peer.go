@@ -7,6 +7,7 @@ import (
 	"example.com/packages/models"
 	"example.com/packages/signature_strategy"
 	"example.com/packages/utils"
+	"github.com/google/uuid"
 	"io"
 	"math/big"
 	"net"
@@ -44,19 +45,21 @@ type Message struct {
 }
 
 type Peer struct {
-	SignatureStrategy signature_strategy.SignatureInterface
-	IpPort            string
-	ActiveConnections map[string]Void
-	Encoders          map[string]*gob.Encoder
-	Ledger            *Ledger
-	acMutex           sync.Mutex
-	encMutex          sync.Mutex
-	floodMutex        sync.Mutex
-	validMutex        sync.Mutex
-	PublicToSecret    map[string]string
-	GenesisBlock      []*block.Block
-	blockMutex        sync.Mutex
-	Blocks            []block.Block
+	SignatureStrategy        signature_strategy.SignatureInterface
+	IpPort                   string
+	ActiveConnections        map[string]Void
+	Encoders                 map[string]*gob.Encoder
+	Ledger                   *Ledger
+	acMutex                  sync.Mutex
+	encMutex                 sync.Mutex
+	floodMutex               sync.Mutex
+	validMutex               sync.Mutex
+	PublicToSecret           map[string]string
+	uncontrolledTransMutex   sync.Mutex
+	UncontrolledTransactions []*models.SignedTransaction
+	GenesisBlock             []*block.Block
+	blockMutex               sync.Mutex
+	Blocks                   []block.Block
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -98,7 +101,8 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	debug(p.IpPort + " called doSignedTransaction")
 
 	p.floodMutex.Lock()
-	t := models.SignedTransaction{From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+
+	t := models.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
 	msg := Message{MessageType: utils.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
@@ -121,6 +125,12 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.validMutex.Unlock()
 	p.FloodMessage(msg)
 	p.floodMutex.Unlock()
+
+}
+
+func GenerateId() uuid.UUID {
+	Id := uuid.New()
+	return Id
 
 }
 
@@ -313,6 +323,11 @@ func (p *Peer) UpdateLedger(t models.SignedTransaction) {
 	p.Ledger.Accounts[t.To] += t.Amount
 
 	p.Ledger.mutex.Unlock()
+
+	//transactions are stored in array to later appear in block
+	p.uncontrolledTransMutex.Lock()
+	p.UncontrolledTransactions = append(p.UncontrolledTransactions, &t)
+	p.uncontrolledTransMutex.Unlock()
 }
 
 func (p *Peer) Connect(ip string, port int) {
@@ -350,8 +365,6 @@ func debug(msg string) {
 		println(msg)
 	}
 }
-
-//----------------------
 
 func (p *Peer) CreateAccount() string {
 
