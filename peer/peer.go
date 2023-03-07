@@ -116,7 +116,7 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	}
 	signature := msg.SignedTransaction.Signature
 	if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
-		p.UpdateLedger(msg.SignedTransaction)
+		p.UpdateUncontrolledTransactions(msg.SignedTransaction)
 	} else {
 		p.Ledger.mutex.Lock()
 		p.Ledger.Uta++
@@ -230,7 +230,7 @@ func (p *Peer) handleMessage(msg Message) {
 		publicKey := msg.SignedTransaction.From
 		signature := msg.SignedTransaction.Signature
 		if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
-			p.UpdateLedger((msg).SignedTransaction)
+			p.UpdateUncontrolledTransactions((msg).SignedTransaction)
 		} else {
 			p.Ledger.mutex.Lock()
 			p.Ledger.Uta++
@@ -254,36 +254,22 @@ func (p *Peer) handleMessage(msg Message) {
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
 		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
 		//TODO should not just append blocks on genesis
-		//p.GenesisBlock.SlotNumber = msg.MessageBlocks[0].SlotNumber
 		for e := range (msg).PeerMap {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
-		//p.GenesisBlock = msg.MessageBlocks
-		//fmt.Println((Peer).msg.MessageBlocks[0])
-		//print("jashdbaksjdbasd")
+
 		for e := range (msg).MessageBlocks {
 			p.UpdateBlock(msg.MessageBlocks[e])
 		}
-		//p.GenesisBlock = append(p.GenesisBlock, msg.MessageBlocks[e])
-		//print("asd")
-		//	//p.AddIpPort(e)
-		//	//debug("added: " + e)
-		//}
-		//p.blockMutex.Lock()
-		//p.GenesisBlock = append(p.GenesisBlock, makeGenesisBlock())
-		//p.blockMutex.Unlock()
-		//p.GenesisBlock = append(p.GenesisBlock, msg.MessageBlocks[0])
-		//p.GenesisBlock = *msg.MessageBlocks[0]
-		//p.Blocks = make([]block.Block, 2)
-		//p.Blocks = append(p.Blocks, [1]block.Block{msg.MessageBlocks})
-		//p.Blocks = append(
-		//	p.Blocks,
-		//	block.Block{SlotNumber: msg.MessageBlocks[0].SlotNumber, Hash: msg.MessageBlocks[0].Hash, PreviousHash: msg.MessageBlocks[0].PreviousHash, TransactionsLog: msg.MessageBlocks[0].TransactionsLog},
-		//	//block.Block(msg.MessageBlocks.),
-		//)
-		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
 
+		p.FloodMessage(Message{MessageType: utils.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
+	case utils.Block:
+		for e := range (msg).MessageBlocks {
+			p.UpdateUncontrolledTransactions(msg.MessageBlocks[e].Transactions)
+			p.UpdateUncontrolledTransactions(msg.SignedTransaction)
+			//debug("added: " + e)
+		}
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -313,21 +299,28 @@ func MakeLedger() *Ledger {
 	return ledger
 }
 
-func (p *Peer) UpdateLedger(t models.SignedTransaction) {
+func (p *Peer) UpdateUncontrolledTransactions(t models.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
-	p.Ledger.mutex.Lock()
-
-	p.Ledger.TA = p.Ledger.TA + 1
-	p.Ledger.Accounts[t.From] -= t.Amount
-	p.Ledger.Accounts[t.To] += t.Amount
-
-	p.Ledger.mutex.Unlock()
-
-	//transactions are stored in array to later appear in block
 	p.uncontrolledTransMutex.Lock()
 	p.UncontrolledTransactions = append(p.UncontrolledTransactions, &t)
 	p.uncontrolledTransMutex.Unlock()
+}
+func (p *Peer) UpdateLedger(transactions []*models.SignedTransaction) {
+	debug(p.IpPort + " called updateLedger")
+
+	p.Ledger.mutex.Lock()
+	for _, trans := range transactions {
+		p.Ledger.TA = p.Ledger.TA + 1
+		p.Ledger.Accounts[trans.From] -= trans.Amount
+		p.Ledger.Accounts[trans.To] += trans.Amount
+	}
+	p.Ledger.mutex.Unlock()
+
+	//transactions are stored in array to later appear in block
+	//p.uncontrolledTransMutex.Lock()
+	//p.UncontrolledTransactions = append(p.UncontrolledTransactions, &t)
+	//p.uncontrolledTransMutex.Unlock()
 }
 
 func (p *Peer) Connect(ip string, port int) {
@@ -378,10 +371,10 @@ func (p *Peer) CreateAccount() string {
 func makeGenesisBlock() *block.Block {
 
 	genesisBlock := &block.Block{
-		SlotNumber:      0,
-		Hash:            "GenesisBlock",
-		PreviousHash:    "GenesisBlock",
-		TransactionsLog: nil,
+		SlotNumber:   0,
+		Hash:         "GenesisBlock",
+		PreviousHash: "GenesisBlock",
+		Transactions: nil,
 	}
 	return genesisBlock
 }
