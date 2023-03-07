@@ -12,7 +12,6 @@ import (
 )
 
 func TestBlockHash(t *testing.T) {
-	//var b block.Block
 	transactionsLog := make(map[int]string)
 	transactionsLog[1] = "a->b:100"
 	prevHash := "hejhej"
@@ -61,27 +60,12 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
-	//var connectedPeers []string
-	//
-	//for i := 0; i < noOfPeers; i++ {
-	//	var p peer.Peer
-	//	freePort, _ := service.GetFreePort()
-	//	port := strconv.Itoa(freePort)
-	//	listOfPeers[i] = &p
-	//	p.RunPeer("127.0.0.1:" + port)
-	//
-	//}
-	//listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
-	//connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
-	time.Sleep(250 * time.Millisecond)
-	p1_genesis := (listOfPeers[0].GenesisBlock[0].SlotNumber)
-	p2_genesis := (listOfPeers[1].GenesisBlock[0].SlotNumber)
-	assert.Equal(t, 0, p1_genesis, "genesisblock should have slotnumber 0")
-	assert.Equal(t, 0, p2_genesis, "genesisblock should have slotnumber 0")
+	time.Sleep(1000 * time.Millisecond)
+	p1Genesis := listOfPeers[0].GenesisBlock[0].SlotNumber
+	p2Genesis := listOfPeers[1].GenesisBlock[0].SlotNumber
+	assert.Equal(t, 0, p1Genesis, "genesisblock should have slotnumber 0")
+	assert.Equal(t, 0, p2Genesis, "genesisblock should have slotnumber 0")
 
-	//for i := 0; i < noOfPeers; i++ {
-	//	accountsOfPeer := listOfPeers[i].Ledger.Accounts
-	//}
 }
 
 func makeGenesisBlockchain() map[int]*block.Block {
@@ -93,7 +77,6 @@ func makeGenesisBlockchain() map[int]*block.Block {
 	}
 	var blockChain = make(map[int]*block.Block)
 	blockChain[genesisBlock.SlotNumber] = genesisBlock
-	//blockChain = append(blockChain, (genesisBlock))
 	return blockChain
 }
 
