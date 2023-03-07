@@ -2,6 +2,7 @@ package test
 
 import (
 	"example.com/packages/service"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -16,13 +17,10 @@ func TestTransactionsAppearInList(t *testing.T) {
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
-	time.Sleep(1000 * time.Millisecond)
+	p1TransactionLog := listOfPeers[0].UncontrolledTransactions
+	p2TransactionLog := listOfPeers[1].UncontrolledTransactions
 
-	//p1Genesis := listOfPeers[0].GenesisBlock[0].SlotNumber
-	p1Genesis := len(listOfPeers[0].UncontrolledTransactions)
-	print(p1Genesis)
-	//p2Genesis := listOfPeers[1].GenesisBlock[0].SlotNumber
-	//assert.Equal(t, 0, p1Genesis, "genesisblock should have slotnumber 0")
-	//assert.Equal(t, 0, p2Genesis, "genesisblock should have slotnumber 0")
+	assert.NotEmpty(t, p1TransactionLog)
+	assert.NotEmpty(t, p2TransactionLog)
 
 }
