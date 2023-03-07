@@ -76,14 +76,8 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
 	p.blockMutex.Lock()
-	//p.GenesisBlock = []*block.Block{}
 	p.blockMutex.Unlock()
-	//p.GenesisBlock = &block.Block{
-	//	SlotNumber:      -1,
-	//	Hash:            "",
-	//	PreviousHash:    "",
-	//	TransactionsLog: nil,
-	//}
+
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
 }
@@ -268,6 +262,7 @@ func (p *Peer) handleMessage(msg Message) {
 		for e := range (msg).MessageBlocks {
 			p.UpdateLedger(msg.MessageBlocks[e].Transactions)
 		}
+		p.GenesisBlock = append(p.GenesisBlock, &msg.MessageBlocks[0])
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -304,6 +299,7 @@ func (p *Peer) UpdateUncontrolledTransactions(t models.SignedTransaction) {
 	p.UncontrolledTransactions = append(p.UncontrolledTransactions, &t)
 	p.uncontrolledTransMutex.Unlock()
 }
+
 func (p *Peer) UpdateLedger(transactions []*models.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
@@ -390,3 +386,49 @@ func (p *Peer) UpdateBlock(b block.Block) {
 	p.GenesisBlock = append(p.GenesisBlock, &b)
 	p.blockMutex.Unlock()
 }
+
+func (p *Peer) FloodBlocks(slotNumber int) {
+	//t := models.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	var block1 block.Block
+	block1.SlotNumber = slotNumber
+	block1.PreviousHash = "Nothing"
+	for b := 0; b < utils.BlockSize; b++ {
+		if len(p.UncontrolledTransactions) >= utils.BlockSize {
+			block1.Transactions = append(block1.Transactions, p.UncontrolledTransactions[b])
+		}
+	}
+	block1.Hash = block.ConvertToString(block1.Transactions)
+	var blockArray = []block.Block{block1}
+
+	var t = Message{
+		MessageType: utils.Block,
+		//MessageSender:     "",
+		//SignedTransaction: models.SignedTransaction{},
+		MessageBlocks: blockArray,
+		//PeerMap:           nil,
+	}
+	p.FloodMessage(t)
+	//p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
+
+	//block.Block{
+	//	SlotNumber:   slotNumber,
+	//	Hash:         "",
+	//	PreviousHash: "",
+	//	Transactions: nil,
+
+}
+
+//func MakeBlock(transactions []*models.SignedTransaction, prevHash string) Block {
+//	//TODO add maximum blockSize
+//	var b Block
+//	//b.slotNumber = slot
+//	b.PreviousHash = prevHash
+//	//b.TransactionsLog = transactions
+//	b.Transactions = transactions
+//	b.Hash = calculateHash(b.PreviousHash, b.Transactions)
+//	slot += 1
+//	return b
+//
+//}
+
+//TODO: empty unctontrolled list when sending block + receiver should remove doublicates. ledger should be updated correct

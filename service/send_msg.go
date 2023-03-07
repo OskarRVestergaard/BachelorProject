@@ -25,3 +25,7 @@ func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*peer.Peer, pkList []st
 	return controlLedger
 
 }
+
+func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*peer.Peer, pkList []string) {
+
+}
