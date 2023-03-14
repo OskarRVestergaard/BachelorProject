@@ -423,8 +423,13 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 
 func (p *Peer) Mine() {
 	fmt.Println("We're there. All I can see are turtle tracks. Whaddaya say we give Bowser the old Brooklyn one-two?")
+	var hasPotentialWinner bool
 	for k := range p.PublicToSecret {
-		p.LotteryStrategy.Mine(k, p.GenesisBlock[len(p.GenesisBlock)-1].PreviousHash)
+		hasPotentialWinner, _ = p.LotteryStrategy.Mine(k, p.GenesisBlock[len(p.GenesisBlock)-1].PreviousHash)
+	}
+
+	if hasPotentialWinner {
+		// do block stuff IDK
 	}
 }
 
