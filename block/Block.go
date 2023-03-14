@@ -18,8 +18,6 @@ type Blockchain struct {
 	blockchain map[string]*Block
 }
 
-//var Blockchain2 [string]*Block
-
 var slot = 0
 
 func MakeBlock(transactions []*models.SignedTransaction, prevHash string) Block {
@@ -63,4 +61,6 @@ func ConvertToString(transactions []*models.SignedTransaction) string {
 
 	}
 	return s
+
+	//TODO should consider doing it wothg join
 }

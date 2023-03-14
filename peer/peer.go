@@ -409,7 +409,6 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 	}
 	p.FloodMessage(t)
 	//p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
-
 	//block.Block{
 	//	SlotNumber:   slotNumber,
 	//	Hash:         "",

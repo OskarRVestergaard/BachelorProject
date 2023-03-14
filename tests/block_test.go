@@ -67,6 +67,19 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 
 }
 
+func TestPeer1WinsLottery(t *testing.T) {
+	noOfPeers := 2
+	noOfNames := 2
+	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	pk0 := pkList[0]
+	pk1 := pkList[1]
+	//Action
+	listOfPeers[1].FloodSignedTransaction(pk1, pk0, 50)
+	time.Sleep(200 * time.Millisecond)
+	// wins slot action
+	
+}
+
 func makeGenesisBlockchain() map[int]*block.Block {
 	genesisBlock := &block.Block{
 		SlotNumber:   0,

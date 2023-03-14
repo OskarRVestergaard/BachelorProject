@@ -1,6 +1,7 @@
 package test
 
 import (
+	"example.com/packages/lottery_strategy"
 	"example.com/packages/service"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -54,6 +55,19 @@ func TestFloodBlockOnNetworkWithTransactions(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	//Action
 	listOfPeers[1].FloodBlocks(50)
-	time.Sleep(200 * time.Millisecond)
-	print("DET VIRKER", pkList)
+	time.Sleep(250 * time.Millisecond)
+	//Assert
+	assert.Equal(t, len(listOfPeers[0].GenesisBlock), 2)
+}
+
+func TestPoW(t *testing.T) {
+	noOfPeers := 2
+	noOfNames := 2
+	//listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	_, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	pk0 := pkList[0]
+	//pk1 := pkList[1]
+	//listOfPeers[0].
+	lottery_strategy.PoW{}.Mine(pk0, "asdasd")
+	print("asd")
 }
