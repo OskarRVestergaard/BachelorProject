@@ -4,9 +4,11 @@ import (
 	"encoding/gob"
 	"example.com/packages/block"
 	"example.com/packages/hash_strategy"
+	"example.com/packages/lottery_strategy"
 	"example.com/packages/models"
 	"example.com/packages/signature_strategy"
 	"example.com/packages/utils"
+	"fmt"
 	"github.com/google/uuid"
 	"io"
 	"math/big"
@@ -46,6 +48,7 @@ type Message struct {
 
 type Peer struct {
 	SignatureStrategy        signature_strategy.SignatureInterface
+	LotteryStrategy          lottery_strategy.LotteryInterface
 	IpPort                   string
 	ActiveConnections        map[string]Void
 	Encoders                 map[string]*gob.Encoder
@@ -65,6 +68,7 @@ type Peer struct {
 func (p *Peer) RunPeer(IpPort string) {
 	//p.SignatureStrategy = signature_strategy.RSASig{}
 	p.SignatureStrategy = signature_strategy.ECDSASig{}
+	p.LotteryStrategy = lottery_strategy.PoW{}
 	p.IpPort = IpPort
 	p.acMutex.Lock()
 	p.ActiveConnections = make(map[string]Void)
@@ -415,6 +419,13 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 	//	PreviousHash: "",
 	//	Transactions: nil,
 
+}
+
+func (p *Peer) Mine() {
+	fmt.Println("We're there. All I can see are turtle tracks. Whaddaya say we give Bowser the old Brooklyn one-two?")
+	for k := range p.PublicToSecret {
+		p.LotteryStrategy.Mine(k, p.GenesisBlock[len(p.GenesisBlock)-1].PreviousHash)
+	}
 }
 
 //func MakeBlock(transactions []*models.SignedTransaction, prevHash string) Block {

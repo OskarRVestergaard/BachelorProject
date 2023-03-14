@@ -2,10 +2,12 @@ package test
 
 import (
 	"example.com/packages/lottery_strategy"
-	"example.com/packages/service"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"testing"
 	"time"
+
+	"example.com/packages/service"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTransactionsAppearInList(t *testing.T) {
@@ -68,9 +70,15 @@ func TestPoW(t *testing.T) {
 	pk0 := pkList[0]
 	//pk1 := pkList[1]
 	//listOfPeers[0].
-	lottery_strategy.PoW{}.Mine(pk0, "asdasd")
-	print("asd")
+	b, h := lottery_strategy.PoW{}.Mine(pk0, "asdasd")
+	fmt.Println(b)
+	fmt.Println(h)
 
-	bm := bitmap.New(100)
-	bm.Set(0, true)
+}
+
+func TestPeerMinePoW(t *testing.T) {
+	noOfPeers := 2
+	noOfNames := 2
+	listOfPeers, _ := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers[0].Mine()
 }
