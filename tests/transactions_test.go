@@ -70,4 +70,7 @@ func TestPoW(t *testing.T) {
 	//listOfPeers[0].
 	lottery_strategy.PoW{}.Mine(pk0, "asdasd")
 	print("asd")
+
+	bm := bitmap.New(100)
+	bm.Set(0, true)
 }

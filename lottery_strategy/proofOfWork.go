@@ -26,6 +26,8 @@ func (lottery PoW) Mine(vk string, a string) (bool, []byte) {
 		if bytes.HasPrefix(hm, zeroHard) {
 			return true, hm
 		}
+		asd:=new big
+		hm = hm.Lsh(hm,uint(256-hardness))
 
 	}
 
