@@ -2,13 +2,14 @@ package main
 
 import (
 	"example.com/packages/hash_strategy"
+	"example.com/packages/models"
 	"fmt"
 	"strconv"
 )
 
 func main() {
 
-	smallGraph := Graph{edges: [][]bool{{false, true}, {false, false}}, value: [][]byte{[]byte("one"), []byte("two")}}
+	smallGraph := models.Graph{Size: 2, Edges: [][]bool{{false, true}, {false, false}}, Value: [][]byte{[]byte("one"), []byte("two")}}
 
 	fmt.Println(smallGraph)
 	fmt.Println(*newEmptyGraph(4))
@@ -16,14 +17,7 @@ func main() {
 
 }
 
-type Graph struct {
-	// Assumed to be topologically sorted DAG according to index
-	size  int
-	edges [][]bool
-	value [][]byte
-}
-
-func newEmptyGraph(size int) *Graph {
+func newEmptyGraph(size int) *models.Graph {
 	if size <= 0 {
 		panic("Graph cannot have a size of 0 or less")
 	} else {
@@ -31,11 +25,11 @@ func newEmptyGraph(size int) *Graph {
 		for i := range edges {
 			edges[i] = make([]bool, size, size)
 		}
-		return &Graph{size, edges, make([][]byte, size, size)}
+		return &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 	}
 }
 
-func newTestDAG() *Graph {
+func newTestDAG() *models.Graph {
 	size := 6
 	edges := make([][]bool, size, size)
 	for i := range edges {
@@ -49,22 +43,23 @@ func newTestDAG() *Graph {
 	edges[2][4] = true
 	edges[2][5] = true
 
-	resultGraph := &Graph{size, edges, make([][]byte, size, size)}
+	resultGraph := &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 
 	pebbleGraph(resultGraph)
 
 	return resultGraph
 }
 
-func pebbleGraph(graph *Graph) {
+func pebbleGraph(graph *models.Graph) {
 	// Assumed to be topologically sorted DAG according to index
-	for i := 0; i < graph.size; i++ {
+	size := graph.Size
+	for i := 0; i < size; i++ {
 		vertexLabel := []byte(strconv.Itoa(i))
 		toBeHashed := vertexLabel
-		for j := 0; j < graph.size; j++ {
-			jIsParent := graph.edges[j][i]
+		for j := 0; j < size; j++ {
+			jIsParent := graph.Edges[j][i]
 			if jIsParent {
-				parentHashValue := graph.value[j]
+				parentHashValue := graph.Value[j]
 				toBeHashed = append(toBeHashed, parentHashValue...)
 			}
 		}
@@ -74,6 +69,6 @@ func pebbleGraph(graph *Graph) {
 		//fmt.Println(vertexLabel)
 		//fmt.Println(toBeHashed)
 
-		graph.value[i] = hash_strategy.HashByteArray(toBeHashed)
+		graph.Value[i] = hash_strategy.HashByteArray(toBeHashed)
 	}
 }
