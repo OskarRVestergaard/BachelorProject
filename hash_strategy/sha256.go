@@ -18,6 +18,13 @@ func Hash_SHA256(msg string) *big.Int {
 	return hm
 }
 
+func HashByteArray(toBeHashed []byte) []byte {
+	h := sha256.New()
+	h.Write(toBeHashed)
+
+	return h.Sum(nil)
+}
+
 func HashSignedTransactionToByteArrayWowSoCool(transaction models.SignedTransaction) []byte {
 	t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
 	t = strings.Replace(t, ";", "", -1)
