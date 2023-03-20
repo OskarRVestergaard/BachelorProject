@@ -9,12 +9,10 @@ import (
 
 func main() {
 
-	smallGraph := models.Graph{Size: 2, Edges: [][]bool{{false, true}, {false, false}}, Value: [][]byte{[]byte("one"), []byte("two")}}
-
-	fmt.Println(smallGraph)
-	fmt.Println(*newEmptyGraph(4))
-	fmt.Println(*newTestDAG())
-
+	dag := newTestDAG()
+	fmt.Println(*dag)
+	merkle := CreateMerkleTree(*dag)
+	fmt.Println(*merkle)
 }
 
 func newEmptyGraph(size int) *models.Graph {
@@ -71,4 +69,28 @@ func pebbleGraph(graph *models.Graph) {
 
 		graph.Value[i] = hash_strategy.HashByteArray(toBeHashed)
 	}
+}
+
+type MerkleTree struct {
+	//Binary tree, children are at (index + 1) * 2 - 1 and (index + 1) * 2
+	nodes [][]byte
+}
+
+func CreateMerkleTree(graph models.Graph) *MerkleTree {
+	//TODO Assume we have a tree of size 2^N where N is a natural number
+	//TODO Fake it, only uses the first 4 nodes of the graph
+	size := 4 //TODO fake
+	tree := MerkleTree{make([][]byte, size*2-1, size*2-1)}
+	firstLeaf := size - 1
+	//Inserting value for leaves
+	for i := 0; i < size; i++ {
+		tree.nodes[firstLeaf+i] = graph.Value[i]
+	}
+	for i := firstLeaf - 1; i >= 0; i-- {
+		leftChild := tree.nodes[(i+1)*2-1]
+		rightChild := tree.nodes[(i+1)*2]
+		toBeHashed := append(leftChild, rightChild...)
+		tree.nodes[i] = hash_strategy.HashByteArray(toBeHashed)
+	}
+	return &tree
 }
