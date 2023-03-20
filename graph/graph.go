@@ -77,15 +77,14 @@ type MerkleTree struct {
 }
 
 func CreateMerkleTree(graph models.Graph) *MerkleTree {
-	//TODO Assume we have a tree of size 2^N where N is a natural number
-	//TODO Fake it, only uses the first 4 nodes of the graph
-	size := 4 //TODO fake
+	size := graph.Size
 	tree := MerkleTree{make([][]byte, size*2-1, size*2-1)}
 	firstLeaf := size - 1
 	//Inserting value for leaves
 	for i := 0; i < size; i++ {
 		tree.nodes[firstLeaf+i] = graph.Value[i]
 	}
+	//Computing parents
 	for i := firstLeaf - 1; i >= 0; i-- {
 		leftChild := tree.nodes[(i+1)*2-1]
 		rightChild := tree.nodes[(i+1)*2]
