@@ -121,5 +121,4 @@ func (tree *MerkleTree) Open(openingIndex int) [][]byte {
 		i = (i+1)/2 - 1 //Go to parent
 	}
 	return result
-
 }
