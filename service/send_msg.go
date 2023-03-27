@@ -2,11 +2,11 @@ package service
 
 import (
 	"example.com/packages/ledger"
-	"example.com/packages/peer"
+	"example.com/packages/models"
 	"math/rand"
 )
 
-func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*peer.Peer, pkList []string) *ledger.Ledger {
+func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []string) *ledger.Ledger {
 	noOfNames := len(pkList)
 	controlLedger := new(ledger.Ledger)
 	controlLedger.TA = 0
@@ -26,6 +26,6 @@ func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*peer.Peer, pkList []st
 
 }
 
-func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*peer.Peer, pkList []string) {
+func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []string) {
 
 }

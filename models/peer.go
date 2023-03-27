@@ -1,12 +1,12 @@
-package peer
+package models
 
 import (
 	"encoding/gob"
 	"example.com/packages/block"
-	"example.com/packages/models"
 	"example.com/packages/strategies/hash_strategy"
 	lottery_strategy2 "example.com/packages/strategies/lottery_strategy"
 	signature_strategy2 "example.com/packages/strategies/signature_strategy"
+	"example.com/packages/structs"
 	"example.com/packages/utils/Constants"
 	"fmt"
 	"github.com/google/uuid"
@@ -41,7 +41,7 @@ var member Void
 type Message struct {
 	MessageType       string
 	MessageSender     string
-	SignedTransaction models.SignedTransaction
+	SignedTransaction structs.SignedTransaction
 	MessageBlocks     []block.Block
 	PeerMap           map[string]Void
 }
@@ -59,7 +59,7 @@ type Peer struct {
 	validMutex               sync.Mutex
 	PublicToSecret           map[string]string
 	uncontrolledTransMutex   sync.Mutex
-	UncontrolledTransactions []*models.SignedTransaction
+	UncontrolledTransactions []*structs.SignedTransaction
 	GenesisBlock             []*block.Block
 	blockMutex               sync.Mutex
 	Blocks                   []block.Block
@@ -100,7 +100,7 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 
 	p.floodMutex.Lock()
 
-	t := models.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	t := structs.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
 	msg := Message{MessageType: Constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
@@ -244,7 +244,7 @@ func (p *Peer) handleMessage(msg Message) {
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: Constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: Constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
@@ -261,7 +261,7 @@ func (p *Peer) handleMessage(msg Message) {
 			p.UpdateBlock(msg.MessageBlocks[e])
 		}
 
-		p.FloodMessage(Message{MessageType: Constants.JoinMessage, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}})
+		p.FloodMessage(Message{MessageType: Constants.JoinMessage, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}})
 	case Constants.Block:
 		for e := range (msg).MessageBlocks {
 			p.UpdateLedger(msg.MessageBlocks[e].Transactions)
@@ -296,7 +296,7 @@ func MakeLedger() *Ledger {
 	return ledger
 }
 
-func (p *Peer) UpdateUncontrolledTransactions(t models.SignedTransaction) {
+func (p *Peer) UpdateUncontrolledTransactions(t structs.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
 	p.uncontrolledTransMutex.Lock()
@@ -304,7 +304,7 @@ func (p *Peer) UpdateUncontrolledTransactions(t models.SignedTransaction) {
 	p.uncontrolledTransMutex.Unlock()
 }
 
-func (p *Peer) UpdateLedger(transactions []*models.SignedTransaction) {
+func (p *Peer) UpdateLedger(transactions []*structs.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
 	p.Ledger.mutex.Lock()
@@ -392,7 +392,7 @@ func (p *Peer) UpdateBlock(b block.Block) {
 }
 
 func (p *Peer) FloodBlocks(slotNumber int) {
-	//t := models.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	//t := structs.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 	var block1 block.Block
 	block1.SlotNumber = slotNumber
 	block1.PreviousHash = "Nothing"
@@ -407,12 +407,12 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 	var t = Message{
 		MessageType: Constants.Block,
 		//MessageSender:     "",
-		//SignedTransaction: models.SignedTransaction{},
+		//SignedTransaction: structs.SignedTransaction{},
 		MessageBlocks: blockArray,
 		//PeerMap:           nil,
 	}
 	p.FloodMessage(t)
-	//p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: models.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
+	//p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
 	//block.Block{
 	//	SlotNumber:   slotNumber,
 	//	Hash:         "",
@@ -433,7 +433,7 @@ func (p *Peer) Mine() {
 	}
 }
 
-//func MakeBlock(transactions []*models.SignedTransaction, prevHash string) Block {
+//func MakeBlock(transactions []*structs.SignedTransaction, prevHash string) Block {
 //	//TODO add maximum blockSize
 //	var b Block
 //	//b.slotNumber = slot

@@ -1,4 +1,4 @@
-package utils
+package Constants
 
 type msg string
 

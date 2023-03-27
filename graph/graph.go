@@ -1,8 +1,8 @@
 package main
 
 import (
-	"example.com/packages/hash_strategy"
-	"example.com/packages/models"
+	"example.com/packages/strategies/hash_strategy"
+	"example.com/packages/structs"
 	"fmt"
 	"strconv"
 )
@@ -21,7 +21,7 @@ func main() {
 	fmt.Println(merkle.Open(4))
 }
 
-func newEmptyGraph(size int) *models.Graph {
+func newEmptyGraph(size int) *structs.Graph {
 	if size <= 0 {
 		panic("Graph cannot have a size of 0 or less")
 	} else {
@@ -29,11 +29,11 @@ func newEmptyGraph(size int) *models.Graph {
 		for i := range edges {
 			edges[i] = make([]bool, size, size)
 		}
-		return &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
+		return &structs.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 	}
 }
 
-func newTestDAG() *models.Graph {
+func newTestDAG() *structs.Graph {
 	size := 6
 	edges := make([][]bool, size, size)
 	for i := range edges {
@@ -47,14 +47,14 @@ func newTestDAG() *models.Graph {
 	edges[2][4] = true
 	edges[2][5] = true
 
-	resultGraph := &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
+	resultGraph := &structs.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 
 	pebbleGraph(resultGraph)
 
 	return resultGraph
 }
 
-func pebbleGraph(graph *models.Graph) {
+func pebbleGraph(graph *structs.Graph) {
 	// Assumed to be topologically sorted DAG according to index
 	size := graph.Size
 	for i := 0; i < size; i++ {
@@ -82,7 +82,7 @@ type MerkleTree struct {
 	nodes [][]byte
 }
 
-func CreateMerkleTree(graph models.Graph) *MerkleTree {
+func CreateMerkleTree(graph structs.Graph) *MerkleTree {
 	size := graph.Size
 	tree := MerkleTree{make([][]byte, size*2-1, size*2-1)}
 	firstLeaf := size - 1

@@ -2,7 +2,7 @@ package test
 
 import (
 	"example.com/packages/block"
-	"example.com/packages/peer"
+	"example.com/packages/models"
 	"example.com/packages/service"
 	"github.com/stretchr/testify/assert"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestBlockHash(t *testing.T) {
-	//var transactionsLog = []*models.SignedTransaction
+	//var transactionsLog = []*structs.SignedTransaction
 	//transactionsLog[1] = "a->b:100"
 	//prevHash := "hejhej"
 	//var b = block.MakeBlock(transactionsLog, prevHash)
@@ -30,12 +30,12 @@ func TestBlockchainLengthOfGenesis(t *testing.T) {
 func TestFirstConnectedPeerHasGenesisBlockslot0(t *testing.T) {
 	noOfPeers := 1
 
-	listOfPeers := make([]*peer.Peer, noOfPeers)
+	listOfPeers := make([]*models.Peer, noOfPeers)
 
 	var connectedPeers []string
 
 	for i := 0; i < noOfPeers; i++ {
-		var p peer.Peer
+		var p models.Peer
 		freePort, _ := service.GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
@@ -77,7 +77,7 @@ func TestPeer1WinsLottery(t *testing.T) {
 	listOfPeers[1].FloodSignedTransaction(pk1, pk0, 50)
 	time.Sleep(200 * time.Millisecond)
 	// wins slot action
-	
+
 }
 
 func makeGenesisBlockchain() map[int]*block.Block {

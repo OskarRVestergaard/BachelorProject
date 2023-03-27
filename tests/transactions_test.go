@@ -1,7 +1,7 @@
 package test
 
 import (
-	"example.com/packages/lottery_strategy"
+	"example.com/packages/strategies/lottery_strategy"
 	"fmt"
 	"testing"
 	"time"

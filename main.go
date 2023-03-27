@@ -8,12 +8,12 @@ import (
 func main() {
 
 	noOfPeers := 2
-	noOfMsgs := 1
+	noOfMsgs := 2
 	noOfNames := 2
 	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
 	service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
-	
-	time.Sleep(1000 * time.Millisecond)
+
+	time.Sleep(3000 * time.Millisecond)
 
 	for i := 0; i < noOfPeers; i++ {
 		listOfPeers[i].PrintLedger()

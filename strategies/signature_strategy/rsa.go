@@ -138,7 +138,7 @@ func (signatureScheme RSASig) Verify(publicKey string, hash []byte, signature *b
 //
 //}
 
-//func CreateSigniture(transaction models.SignedTransaction, secretKey string) *big.Int {
+//func CreateSigniture(transaction structs.SignedTransaction, secretKey string) *big.Int {
 //	n, d := SplitKey(secretKey)
 //
 //	t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
@@ -163,7 +163,7 @@ func SplitKey(key string) (*big.Int, *big.Int) {
 	return n, de
 }
 
-//func ValidateSignature(transaction models.SignedTransaction) bool {
+//func ValidateSignature(transaction structs.SignedTransaction) bool {
 //	signature := transaction.Signature
 //
 //	pk := transaction.From
