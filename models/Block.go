@@ -1,4 +1,4 @@
-package block
+package models
 
 import (
 	"crypto/sha256"

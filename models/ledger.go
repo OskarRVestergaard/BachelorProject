@@ -1,7 +1,6 @@
-package ledger
+package models
 
 import (
-	"example.com/packages/models"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -29,14 +28,14 @@ func EstablishNetwork() {
 	peersQt := 5
 	tau := 10
 	names := 5
-	listOfPeers := make([]*models.Peer, peersQt)
+	listOfPeers := make([]*Peer, peersQt)
 
 	var connectedPeers []string
 
 	pkList := make([]string, names)
 
 	for i := 0; i < peersQt; i++ {
-		var p models.Peer
+		var p Peer
 		port := strconv.Itoa(18080 + i)
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)

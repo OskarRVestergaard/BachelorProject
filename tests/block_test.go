@@ -1,7 +1,6 @@
 package test
 
 import (
-	"example.com/packages/block"
 	"example.com/packages/models"
 	"example.com/packages/service"
 	"github.com/stretchr/testify/assert"
@@ -80,14 +79,14 @@ func TestPeer1WinsLottery(t *testing.T) {
 
 }
 
-func makeGenesisBlockchain() map[int]*block.Block {
-	genesisBlock := &block.Block{
+func makeGenesisBlockchain() map[int]*models.Block {
+	genesisBlock := &models.Block{
 		SlotNumber:   0,
 		Hash:         "GenesisBlock",
 		PreviousHash: "GenesisBlock",
 		//TransactionsLog: nil,
 	}
-	var blockChain = make(map[int]*block.Block)
+	var blockChain = make(map[int]*models.Block)
 	blockChain[genesisBlock.SlotNumber] = genesisBlock
 	return blockChain
 }

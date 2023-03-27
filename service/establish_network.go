@@ -48,6 +48,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*models.Peer, []string) {
 	return listOfPeers, pkList
 }
 
+// TODO move to util
 func GetFreePort() (port int, err error) {
 	var a *net.TCPAddr
 	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {

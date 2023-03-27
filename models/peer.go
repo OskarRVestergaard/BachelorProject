@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/gob"
-	"example.com/packages/block"
 	"example.com/packages/strategies/hash_strategy"
 	lottery_strategy2 "example.com/packages/strategies/lottery_strategy"
 	signature_strategy2 "example.com/packages/strategies/signature_strategy"
@@ -42,7 +41,7 @@ type Message struct {
 	MessageType       string
 	MessageSender     string
 	SignedTransaction structs.SignedTransaction
-	MessageBlocks     []block.Block
+	MessageBlocks     []Block
 	PeerMap           map[string]Void
 }
 
@@ -60,9 +59,9 @@ type Peer struct {
 	PublicToSecret           map[string]string
 	uncontrolledTransMutex   sync.Mutex
 	UncontrolledTransactions []*structs.SignedTransaction
-	GenesisBlock             []*block.Block
+	GenesisBlock             []*Block
 	blockMutex               sync.Mutex
-	Blocks                   []block.Block
+	Blocks                   []Block
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -244,7 +243,7 @@ func (p *Peer) handleMessage(msg Message) {
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: Constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: Constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []Block{*makeGenesisBlock()}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
@@ -362,9 +361,9 @@ func (p *Peer) CreateAccount() string {
 	return publicKey
 }
 
-func makeGenesisBlock() *block.Block {
+func makeGenesisBlock() *Block {
 
-	genesisBlock := &block.Block{
+	genesisBlock := &Block{
 		SlotNumber:   0,
 		Hash:         "GenesisBlock",
 		PreviousHash: "GenesisBlock",
@@ -384,7 +383,7 @@ func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
 	p.Ledger.mutex.Unlock()
 }
 
-func (p *Peer) UpdateBlock(b block.Block) {
+func (p *Peer) UpdateBlock(b Block) {
 	//debug(p.IpPort + " called addIpPort and adding: " + &b.Hash)
 	p.blockMutex.Lock()
 	p.GenesisBlock = append(p.GenesisBlock, &b)
@@ -393,7 +392,7 @@ func (p *Peer) UpdateBlock(b block.Block) {
 
 func (p *Peer) FloodBlocks(slotNumber int) {
 	//t := structs.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
-	var block1 block.Block
+	var block1 Block
 	block1.SlotNumber = slotNumber
 	block1.PreviousHash = "Nothing"
 	for b := 0; b < Constants.BlockSize; b++ {
@@ -401,8 +400,8 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 			block1.Transactions = append(block1.Transactions, p.UncontrolledTransactions[b])
 		}
 	}
-	block1.Hash = block.ConvertToString(block1.Transactions)
-	var blockArray = []block.Block{block1}
+	block1.Hash = ConvertToString(block1.Transactions)
+	var blockArray = []Block{block1}
 
 	var t = Message{
 		MessageType: Constants.Block,

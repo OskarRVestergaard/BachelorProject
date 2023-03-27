@@ -1,14 +1,13 @@
 package service
 
 import (
-	"example.com/packages/ledger"
 	"example.com/packages/models"
 	"math/rand"
 )
 
-func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []string) *ledger.Ledger {
+func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []string) *models.Ledger {
 	noOfNames := len(pkList)
-	controlLedger := new(ledger.Ledger)
+	controlLedger := new(models.Ledger)
 	controlLedger.TA = 0
 	controlLedger.Accounts = make(map[string]int)
 	for j := 0; j < noOfMsgs; j++ {

@@ -1,7 +1,7 @@
 package test
 
 import (
-	"example.com/packages/ledger"
+	"example.com/packages/models"
 	"example.com/packages/service"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
@@ -46,7 +46,7 @@ func TestSignedOneNotValid(t *testing.T) {
 		//listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
-	controlLedger := new(ledger.Ledger)
+	controlLedger := new(models.Ledger)
 	controlLedger.TA = 0
 	controlLedger.Accounts = make(map[string]int)
 	rand.Seed(time.Now().Unix())
@@ -105,7 +105,7 @@ func TestSignedAllRandom(t *testing.T) {
 		//listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
-	controlLedger := new(ledger.Ledger)
+	controlLedger := new(models.Ledger)
 	controlLedger.TA = 0
 	controlLedger.Accounts = make(map[string]int)
 	rand.Seed(time.Now().Unix())
@@ -147,7 +147,7 @@ func TestNoTransactions(t *testing.T) {
 		//listOfPeers[i].CreateBalanceOnLedger(pkList[i], AccountBalance)
 	}
 
-	controlLedger := new(ledger.Ledger)
+	controlLedger := new(models.Ledger)
 	controlLedger.TA = 0
 	controlLedger.Accounts = make(map[string]int)
 	rand.Seed(time.Now().Unix())
@@ -217,7 +217,7 @@ func TestShouldNotBeAbleToHaveNegativeBalance(t *testing.T) {
 	}
 }
 
-func printControlLedger(controlLedger *ledger.Ledger) {
+func printControlLedger(controlLedger *models.Ledger) {
 	l := controlLedger.Accounts
 	keys := make([]string, 0, len(l))
 	for k := range l {
