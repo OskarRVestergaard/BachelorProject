@@ -3,13 +3,14 @@ package models
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/messages"
 )
 
 type Block struct {
 	SlotNumber   int
 	Hash         string
 	PreviousHash string
-	Transactions []*SignedTransaction
+	Transactions []*messages.SignedTransaction
 
 	//TransactionsLog map[int]string
 }
@@ -19,7 +20,7 @@ type Blockchain struct {
 
 var slot = 0
 
-func MakeBlock(transactions []*SignedTransaction, prevHash string) Block {
+func MakeBlock(transactions []*messages.SignedTransaction, prevHash string) Block {
 	//TODO add maximum blockSize
 	var b Block
 	//b.slotNumber = slot
@@ -32,7 +33,7 @@ func MakeBlock(transactions []*SignedTransaction, prevHash string) Block {
 
 }
 
-func calculateHash(PreviousHash string, transactions []*SignedTransaction) string {
+func calculateHash(PreviousHash string, transactions []*messages.SignedTransaction) string {
 	h := sha256.New()
 
 	transactionsString := ConvertToString(transactions)
@@ -53,7 +54,7 @@ func isValid(block Block, previousBlock Block) bool {
 	return true
 }
 
-func ConvertToString(transactions []*SignedTransaction) string {
+func ConvertToString(transactions []*messages.SignedTransaction) string {
 	var s string
 	for key, value := range transactions {
 		s = fmt.Sprintf("%v:%s", key, value)

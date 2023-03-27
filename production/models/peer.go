@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/messages"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
@@ -32,7 +33,7 @@ var member Void
 type Message struct {
 	MessageType       string
 	MessageSender     string
-	SignedTransaction SignedTransaction
+	SignedTransaction messages.SignedTransaction
 	MessageBlocks     []Block
 	PeerMap           map[string]Void
 }
@@ -50,7 +51,7 @@ type Peer struct {
 	validMutex               sync.Mutex
 	PublicToSecret           map[string]string
 	uncontrolledTransMutex   sync.Mutex
-	UncontrolledTransactions []*SignedTransaction
+	UncontrolledTransactions []*messages.SignedTransaction
 	GenesisBlock             []*Block
 	blockMutex               sync.Mutex
 	Blocks                   []Block
@@ -91,7 +92,7 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 
 	p.floodMutex.Lock()
 
-	t := SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	t := messages.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
 	msg := Message{MessageType: constants2.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
@@ -235,7 +236,7 @@ func (p *Peer) handleMessage(msg Message) {
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants2.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []Block{*makeGenesisBlock()}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants2.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []Block{*makeGenesisBlock()}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
@@ -252,7 +253,7 @@ func (p *Peer) handleMessage(msg Message) {
 			p.UpdateBlock(msg.MessageBlocks[e])
 		}
 
-		p.FloodMessage(Message{MessageType: constants2.JoinMessage, MessageSender: p.IpPort, SignedTransaction: SignedTransaction{Signature: big.NewInt(0)}})
+		p.FloodMessage(Message{MessageType: constants2.JoinMessage, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}})
 	case constants2.Block:
 		for e := range (msg).MessageBlocks {
 			p.UpdateLedger(msg.MessageBlocks[e].Transactions)
@@ -287,7 +288,7 @@ func MakeLedger() *Ledger {
 	return ledger
 }
 
-func (p *Peer) UpdateUncontrolledTransactions(t SignedTransaction) {
+func (p *Peer) UpdateUncontrolledTransactions(t messages.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
 	p.uncontrolledTransMutex.Lock()
@@ -295,7 +296,7 @@ func (p *Peer) UpdateUncontrolledTransactions(t SignedTransaction) {
 	p.uncontrolledTransMutex.Unlock()
 }
 
-func (p *Peer) UpdateLedger(transactions []*SignedTransaction) {
+func (p *Peer) UpdateLedger(transactions []*messages.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
 	p.Ledger.Mutex.Lock()
