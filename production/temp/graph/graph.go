@@ -1,9 +1,9 @@
 package main
 
 import (
-	"example.com/packages/hash_strategy"
-	"example.com/packages/models"
 	"fmt"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"strconv"
 )
 

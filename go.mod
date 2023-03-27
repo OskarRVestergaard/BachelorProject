@@ -1,4 +1,4 @@
-module example.com/packages
+module github.com/OskarRVestergaard/BachelorProject
 
 go 1.19
 

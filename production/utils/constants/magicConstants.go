@@ -1,3 +1,3 @@
-package utils
+package constants
 
 var BlockSize = 10

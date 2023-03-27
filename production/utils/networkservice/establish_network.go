@@ -1,23 +1,23 @@
-package service
+package networkservice
 
 import (
-	"example.com/packages/peer"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"math/rand"
 	"net"
 	"strconv"
 	"time"
 )
 
-func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
+func SetupPeers(noOfPeers int, noOfNames int) ([]*models.Peer, []string) {
 
-	listOfPeers := make([]*peer.Peer, noOfPeers)
+	listOfPeers := make([]*models.Peer, noOfPeers)
 
 	var connectedPeers []string
 
 	pkList := make([]string, noOfNames)
 
 	for i := 0; i < noOfPeers; i++ {
-		var p peer.Peer
+		var p models.Peer
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
@@ -48,6 +48,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*peer.Peer, []string) {
 	return listOfPeers, pkList
 }
 
+// TODO move to util
 func GetFreePort() (port int, err error) {
 	var a *net.TCPAddr
 	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {

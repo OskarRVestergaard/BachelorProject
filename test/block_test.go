@@ -1,9 +1,8 @@
 package test
 
 import (
-	"example.com/packages/block"
-	"example.com/packages/peer"
-	"example.com/packages/service"
+	models2 "github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestBlockHash(t *testing.T) {
-	//var transactionsLog = []*models.SignedTransaction
+	//var transactionsLog = []*structs.SignedTransaction
 	//transactionsLog[1] = "a->b:100"
 	//prevHash := "hejhej"
 	//var b = block.MakeBlock(transactionsLog, prevHash)
@@ -30,13 +29,13 @@ func TestBlockchainLengthOfGenesis(t *testing.T) {
 func TestFirstConnectedPeerHasGenesisBlockslot0(t *testing.T) {
 	noOfPeers := 1
 
-	listOfPeers := make([]*peer.Peer, noOfPeers)
+	listOfPeers := make([]*models2.Peer, noOfPeers)
 
 	var connectedPeers []string
 
 	for i := 0; i < noOfPeers; i++ {
-		var p peer.Peer
-		freePort, _ := service.GetFreePort()
+		var p models2.Peer
+		freePort, _ := networkservice.GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
@@ -54,8 +53,8 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 1
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
-	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames)             //setup peer
+	controlLedger := networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
@@ -70,24 +69,24 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 func TestPeer1WinsLottery(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 	//Action
 	listOfPeers[1].FloodSignedTransaction(pk1, pk0, 50)
 	time.Sleep(200 * time.Millisecond)
 	// wins slot action
-	
+
 }
 
-func makeGenesisBlockchain() map[int]*block.Block {
-	genesisBlock := &block.Block{
+func makeGenesisBlockchain() map[int]*models2.Block {
+	genesisBlock := &models2.Block{
 		SlotNumber:   0,
 		Hash:         "GenesisBlock",
 		PreviousHash: "GenesisBlock",
 		//TransactionsLog: nil,
 	}
-	var blockChain = make(map[int]*block.Block)
+	var blockChain = make(map[int]*models2.Block)
 	blockChain[genesisBlock.SlotNumber] = genesisBlock
 	return blockChain
 }
