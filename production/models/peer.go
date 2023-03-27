@@ -425,6 +425,11 @@ func (p *Peer) Mine() {
 	}
 }
 
+//TODO REMOVE
+func (p *Peer) DebugForceLotteryWin() {
+
+}
+
 //func MakeBlock(transactions []*structs.SignedTransaction, prevHash string) Block {
 //	//TODO add maximum blockSize
 //	var b Block
