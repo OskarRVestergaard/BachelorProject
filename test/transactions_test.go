@@ -1,12 +1,12 @@
 package test
 
 import (
-	"example.com/packages/strategies/lottery_strategy"
 	"fmt"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
 	"testing"
 	"time"
 
-	"example.com/packages/service"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,8 +15,8 @@ func TestTransactionsAppearInList(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 3
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
-	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames)             //setup peer
+	controlLedger := networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
@@ -31,7 +31,7 @@ func TestTransactionsAppearAcrossnetwork(t *testing.T) {
 	//Act
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 
@@ -48,7 +48,7 @@ func TestTransactionsAppearAcrossnetwork(t *testing.T) {
 func TestFloodBlockOnNetworkWithTransactions(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 
@@ -65,8 +65,8 @@ func TestFloodBlockOnNetworkWithTransactions(t *testing.T) {
 func TestPoW(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
-	//listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
-	_, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	//listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
+	_, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	//pk1 := pkList[1]
 	//listOfPeers[0].
@@ -79,6 +79,6 @@ func TestPoW(t *testing.T) {
 func TestPeerMinePoW(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, _ := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, _ := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	listOfPeers[0].Mine()
 }

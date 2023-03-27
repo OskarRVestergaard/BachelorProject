@@ -1,4 +1,4 @@
-package structs
+package models
 
 type Graph struct {
 	// Assumed to be topologically sorted DAG according to index

@@ -2,7 +2,7 @@ package hash_strategy
 
 import (
 	"crypto/sha256"
-	"example.com/packages/structs"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"math/big"
 	"strconv"
 	"strings"
@@ -25,7 +25,7 @@ func HashByteArray(toBeHashed []byte) []byte {
 	return h.Sum(nil)
 }
 
-func HashSignedTransactionToByteArrayWowSoCool(transaction structs.SignedTransaction) []byte {
+func HashSignedTransactionToByteArrayWowSoCool(transaction models.SignedTransaction) []byte {
 	t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
 	t = strings.Replace(t, ";", "", -1)
 

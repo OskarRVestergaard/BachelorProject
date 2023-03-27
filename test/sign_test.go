@@ -1,8 +1,8 @@
 package test
 
 import (
-	"example.com/packages/models"
-	"example.com/packages/service"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"reflect"
@@ -16,8 +16,8 @@ func TestSignedAllValid(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 1
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
-	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames)             //setup peer
+	controlLedger := networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 
 	time.Sleep(1000 * time.Millisecond)
 
@@ -37,7 +37,7 @@ func TestSignedOneNotValid(t *testing.T) {
 	noOfPeers := 5
 	noOfMsgs := 1
 	noOfNames := 5
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	println("finished setting up connections")
 	println("Starting simulation")
 
@@ -96,7 +96,7 @@ func TestSignedAllRandom(t *testing.T) {
 	noOfPeers := 5
 	noOfMsgs := 15
 	noOfNames := 5
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	println("finished setting up connections")
 	println("Starting simulation")
 
@@ -138,7 +138,7 @@ func TestNoTransactions(t *testing.T) {
 
 	noOfPeers := 5
 	noOfNames := 5
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	println("finished setting up connections")
 	println("Starting simulation")
 
@@ -171,7 +171,7 @@ func Test10AccountsHoldsMoney(t *testing.T) {
 	noOfPeers := 10
 	noOfNames := 10
 	AccountBalance := 100
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 
 	println("finished setting up connections")
 	println("Starting simulation")
@@ -193,7 +193,7 @@ func TestShouldNotBeAbleToHaveNegativeBalance(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
 
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 
 	println("finished setting up connections")
 	println("Starting simulation")

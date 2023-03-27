@@ -1,7 +1,7 @@
-package service
+package networkservice
 
 import (
-	"example.com/packages/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"math/rand"
 	"net"
 	"strconv"

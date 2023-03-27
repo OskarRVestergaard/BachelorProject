@@ -1,13 +1,13 @@
-package service
+package networkservice
 
 import (
-	"example.com/packages/models"
+	models2 "github.com/OskarRVestergaard/BachelorProject/production/models"
 	"math/rand"
 )
 
-func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []string) *models.Ledger {
+func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*models2.Peer, pkList []string) *models2.Ledger {
 	noOfNames := len(pkList)
-	controlLedger := new(models.Ledger)
+	controlLedger := new(models2.Ledger)
 	controlLedger.TA = 0
 	controlLedger.Accounts = make(map[string]int)
 	for j := 0; j < noOfMsgs; j++ {
@@ -25,6 +25,6 @@ func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []
 
 }
 
-func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*models.Peer, pkList []string) {
+func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*models2.Peer, pkList []string) {
 
 }

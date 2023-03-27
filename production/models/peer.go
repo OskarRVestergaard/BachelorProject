@@ -2,12 +2,11 @@ package models
 
 import (
 	"encoding/gob"
-	"example.com/packages/strategies/hash_strategy"
-	lottery_strategy2 "example.com/packages/strategies/lottery_strategy"
-	signature_strategy2 "example.com/packages/strategies/signature_strategy"
-	"example.com/packages/structs"
-	"example.com/packages/utils/Constants"
 	"fmt"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	constants2 "github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
 	"io"
 	"math/big"
@@ -25,13 +24,6 @@ This is a single Peer that both listens to and sends messages
 CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 */
 
-type Ledger struct {
-	Accounts map[string]int
-	mutex    sync.Mutex
-	TA       int
-	Uta      int
-}
-
 type Void struct {
 }
 
@@ -40,14 +32,14 @@ var member Void
 type Message struct {
 	MessageType       string
 	MessageSender     string
-	SignedTransaction structs.SignedTransaction
+	SignedTransaction SignedTransaction
 	MessageBlocks     []Block
 	PeerMap           map[string]Void
 }
 
 type Peer struct {
-	SignatureStrategy        signature_strategy2.SignatureInterface
-	LotteryStrategy          lottery_strategy2.LotteryInterface
+	SignatureStrategy        signature_strategy.SignatureInterface
+	LotteryStrategy          lottery_strategy.LotteryInterface
 	IpPort                   string
 	ActiveConnections        map[string]Void
 	Encoders                 map[string]*gob.Encoder
@@ -58,7 +50,7 @@ type Peer struct {
 	validMutex               sync.Mutex
 	PublicToSecret           map[string]string
 	uncontrolledTransMutex   sync.Mutex
-	UncontrolledTransactions []*structs.SignedTransaction
+	UncontrolledTransactions []*SignedTransaction
 	GenesisBlock             []*Block
 	blockMutex               sync.Mutex
 	Blocks                   []Block
@@ -66,8 +58,8 @@ type Peer struct {
 
 func (p *Peer) RunPeer(IpPort string) {
 	//p.SignatureStrategy = signature_strategy.RSASig{}
-	p.SignatureStrategy = signature_strategy2.ECDSASig{}
-	p.LotteryStrategy = lottery_strategy2.PoW{}
+	p.SignatureStrategy = signature_strategy.ECDSASig{}
+	p.LotteryStrategy = lottery_strategy.PoW{}
 	p.IpPort = IpPort
 	p.acMutex.Lock()
 	p.ActiveConnections = make(map[string]Void)
@@ -99,10 +91,10 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 
 	p.floodMutex.Lock()
 
-	t := structs.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	t := SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
-	msg := Message{MessageType: Constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
+	msg := Message{MessageType: constants2.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
 
 	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
 	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
@@ -115,9 +107,9 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
 		p.UpdateUncontrolledTransactions(msg.SignedTransaction)
 	} else {
-		p.Ledger.mutex.Lock()
-		p.Ledger.Uta++
-		p.Ledger.mutex.Unlock()
+		p.Ledger.Mutex.Lock()
+		p.Ledger.UTA++
+		p.Ledger.Mutex.Unlock()
 	}
 	p.validMutex.Unlock()
 	p.FloodMessage(msg)
@@ -219,7 +211,7 @@ func (p *Peer) handleMessage(msg Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {
-	case Constants.SignedTransaction:
+	case constants2.SignedTransaction:
 		p.validMutex.Lock()
 
 		// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
@@ -229,25 +221,25 @@ func (p *Peer) handleMessage(msg Message) {
 		if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
 			p.UpdateUncontrolledTransactions((msg).SignedTransaction)
 		} else {
-			p.Ledger.mutex.Lock()
-			p.Ledger.Uta++
-			p.Ledger.mutex.Unlock()
+			p.Ledger.Mutex.Lock()
+			p.Ledger.UTA++
+			p.Ledger.Mutex.Unlock()
 		}
 		p.validMutex.Unlock()
-	case Constants.JoinMessage: //"joinMessage":
+	case constants2.JoinMessage: //"joinMessage":
 		debug(p.IpPort + ": received a join message from: " + (msg).MessageSender)
 		p.AddIpPort((msg).MessageSender)
-	case Constants.GetPeersMessage: //"getPeersMessage":
+	case constants2.GetPeersMessage: //"getPeersMessage":
 		debug(p.IpPort + ": received a getPeers message from: " + (msg).MessageSender)
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: Constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []Block{*makeGenesisBlock()}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants2.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []Block{*makeGenesisBlock()}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
-	case Constants.PeerMapDelivery: //"peerMapDelivery":
+	case constants2.PeerMapDelivery: //"peerMapDelivery":
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
 		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
 		//TODO should not just append blocks on genesis
@@ -260,8 +252,8 @@ func (p *Peer) handleMessage(msg Message) {
 			p.UpdateBlock(msg.MessageBlocks[e])
 		}
 
-		p.FloodMessage(Message{MessageType: Constants.JoinMessage, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}})
-	case Constants.Block:
+		p.FloodMessage(Message{MessageType: constants2.JoinMessage, MessageSender: p.IpPort, SignedTransaction: SignedTransaction{Signature: big.NewInt(0)}})
+	case constants2.Block:
 		for e := range (msg).MessageBlocks {
 			p.UpdateLedger(msg.MessageBlocks[e].Transactions)
 		}
@@ -272,7 +264,7 @@ func (p *Peer) handleMessage(msg Message) {
 }
 
 func (p *Peer) PrintLedger() {
-	p.Ledger.mutex.Lock()
+	p.Ledger.Mutex.Lock()
 	l := p.Ledger.Accounts
 	keys := make([]string, 0, len(l))
 	for k := range l {
@@ -285,8 +277,8 @@ func (p *Peer) PrintLedger() {
 	for _, value := range keys {
 		print("[" + strconv.Itoa(l[value]) + "]")
 	}
-	println(" with the amount of SignedTransactions: " + strconv.Itoa(p.Ledger.TA) + " and deniedTransactions: " + strconv.Itoa(p.Ledger.Uta))
-	p.Ledger.mutex.Unlock()
+	println(" with the amount of SignedTransactions: " + strconv.Itoa(p.Ledger.TA) + " and deniedTransactions: " + strconv.Itoa(p.Ledger.UTA))
+	p.Ledger.Mutex.Unlock()
 }
 
 func MakeLedger() *Ledger {
@@ -295,7 +287,7 @@ func MakeLedger() *Ledger {
 	return ledger
 }
 
-func (p *Peer) UpdateUncontrolledTransactions(t structs.SignedTransaction) {
+func (p *Peer) UpdateUncontrolledTransactions(t SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
 	p.uncontrolledTransMutex.Lock()
@@ -303,22 +295,22 @@ func (p *Peer) UpdateUncontrolledTransactions(t structs.SignedTransaction) {
 	p.uncontrolledTransMutex.Unlock()
 }
 
-func (p *Peer) UpdateLedger(transactions []*structs.SignedTransaction) {
+func (p *Peer) UpdateLedger(transactions []*SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
-	p.Ledger.mutex.Lock()
+	p.Ledger.Mutex.Lock()
 	for _, trans := range transactions {
 		p.Ledger.TA = p.Ledger.TA + 1
 		p.Ledger.Accounts[trans.From] -= trans.Amount
 		p.Ledger.Accounts[trans.To] += trans.Amount
 	}
-	p.Ledger.mutex.Unlock()
+	p.Ledger.Mutex.Unlock()
 
 }
 
 func (p *Peer) Connect(ip string, port int) {
 	ipPort := ip + ":" + strconv.Itoa(port)
-	err := p.SendMessageTo(ipPort, Message{MessageType: Constants.GetPeersMessage, MessageSender: p.IpPort})
+	err := p.SendMessageTo(ipPort, Message{MessageType: constants2.GetPeersMessage, MessageSender: p.IpPort})
 
 	if err != nil {
 		println(err.Error())
@@ -377,10 +369,10 @@ func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
 
 	debug(p.IpPort + " called updateLedger")
 
-	p.Ledger.mutex.Lock()
+	p.Ledger.Mutex.Lock()
 	p.Ledger.Accounts[pk] += amount
 
-	p.Ledger.mutex.Unlock()
+	p.Ledger.Mutex.Unlock()
 }
 
 func (p *Peer) UpdateBlock(b Block) {
@@ -395,8 +387,8 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 	var block1 Block
 	block1.SlotNumber = slotNumber
 	block1.PreviousHash = "Nothing"
-	for b := 0; b < Constants.BlockSize; b++ {
-		if len(p.UncontrolledTransactions) >= Constants.BlockSize {
+	for b := 0; b < constants2.BlockSize; b++ {
+		if len(p.UncontrolledTransactions) >= constants2.BlockSize {
 			block1.Transactions = append(block1.Transactions, p.UncontrolledTransactions[b])
 		}
 	}
@@ -404,7 +396,7 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 	var blockArray = []Block{block1}
 
 	var t = Message{
-		MessageType: Constants.Block,
+		MessageType: constants2.Block,
 		//MessageSender:     "",
 		//SignedTransaction: structs.SignedTransaction{},
 		MessageBlocks: blockArray,

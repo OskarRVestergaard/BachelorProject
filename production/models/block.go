@@ -2,7 +2,6 @@ package models
 
 import (
 	"crypto/sha256"
-	"example.com/packages/structs"
 	"fmt"
 )
 
@@ -10,7 +9,7 @@ type Block struct {
 	SlotNumber   int
 	Hash         string
 	PreviousHash string
-	Transactions []*structs.SignedTransaction
+	Transactions []*SignedTransaction
 
 	//TransactionsLog map[int]string
 }
@@ -20,7 +19,7 @@ type Blockchain struct {
 
 var slot = 0
 
-func MakeBlock(transactions []*structs.SignedTransaction, prevHash string) Block {
+func MakeBlock(transactions []*SignedTransaction, prevHash string) Block {
 	//TODO add maximum blockSize
 	var b Block
 	//b.slotNumber = slot
@@ -33,7 +32,7 @@ func MakeBlock(transactions []*structs.SignedTransaction, prevHash string) Block
 
 }
 
-func calculateHash(PreviousHash string, transactions []*structs.SignedTransaction) string {
+func calculateHash(PreviousHash string, transactions []*SignedTransaction) string {
 	h := sha256.New()
 
 	transactionsString := ConvertToString(transactions)
@@ -54,7 +53,7 @@ func isValid(block Block, previousBlock Block) bool {
 	return true
 }
 
-func ConvertToString(transactions []*structs.SignedTransaction) string {
+func ConvertToString(transactions []*SignedTransaction) string {
 	var s string
 	for key, value := range transactions {
 		s = fmt.Sprintf("%v:%s", key, value)

@@ -1,8 +1,8 @@
 package test
 
 import (
-	"example.com/packages/models"
-	"example.com/packages/service"
+	models2 "github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
@@ -29,13 +29,13 @@ func TestBlockchainLengthOfGenesis(t *testing.T) {
 func TestFirstConnectedPeerHasGenesisBlockslot0(t *testing.T) {
 	noOfPeers := 1
 
-	listOfPeers := make([]*models.Peer, noOfPeers)
+	listOfPeers := make([]*models2.Peer, noOfPeers)
 
 	var connectedPeers []string
 
 	for i := 0; i < noOfPeers; i++ {
-		var p models.Peer
-		freePort, _ := service.GetFreePort()
+		var p models2.Peer
+		freePort, _ := networkservice.GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
@@ -53,8 +53,8 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 1
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames)             //setup peer
-	controlLedger := service.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames)             //setup peer
+	controlLedger := networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
@@ -69,7 +69,7 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 func TestPeer1WinsLottery(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := service.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 	//Action
@@ -79,14 +79,14 @@ func TestPeer1WinsLottery(t *testing.T) {
 
 }
 
-func makeGenesisBlockchain() map[int]*models.Block {
-	genesisBlock := &models.Block{
+func makeGenesisBlockchain() map[int]*models2.Block {
+	genesisBlock := &models2.Block{
 		SlotNumber:   0,
 		Hash:         "GenesisBlock",
 		PreviousHash: "GenesisBlock",
 		//TransactionsLog: nil,
 	}
-	var blockChain = make(map[int]*models.Block)
+	var blockChain = make(map[int]*models2.Block)
 	blockChain[genesisBlock.SlotNumber] = genesisBlock
 	return blockChain
 }
