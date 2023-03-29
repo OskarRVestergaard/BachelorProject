@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
@@ -10,15 +11,14 @@ import (
 func main() {
 
 	dag := newTestDAG()
-	fmt.Println(*dag)
 	merkle := CreateMerkleTree(*dag)
-	fmt.Println(*merkle)
-	fmt.Println("0")
-	fmt.Println(merkle.Open(0))
-	fmt.Println("3")
-	fmt.Println(merkle.Open(3))
 	fmt.Println("4")
-	fmt.Println(merkle.Open(4))
+	oneOpen := merkle.Open(4)
+	fmt.Println(oneOpen)
+	commitment := merkle.getRootCommitment()
+	openValue := merkle.nodes[11]
+	verification := VerifyOpening(commitment, 4, openValue, oneOpen)
+	fmt.Println(verification)
 }
 
 func newEmptyGraph(size int) *models.Graph {
@@ -34,7 +34,7 @@ func newEmptyGraph(size int) *models.Graph {
 }
 
 func newTestDAG() *models.Graph {
-	size := 6
+	size := 8
 	edges := make([][]bool, size, size)
 	for i := range edges {
 		edges[i] = make([]bool, size, size)
@@ -46,20 +46,27 @@ func newTestDAG() *models.Graph {
 	edges[1][4] = true
 	edges[2][4] = true
 	edges[2][5] = true
+	edges[0][7] = true
+	edges[2][6] = true
+	edges[3][6] = true
+	edges[5][6] = true
+	edges[5][7] = true
 
 	resultGraph := &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 
-	pebbleGraph(resultGraph)
+	//TODO Used Known Random ID
+	pebbleGraph("ID", resultGraph)
 
 	return resultGraph
 }
 
-func pebbleGraph(graph *models.Graph) {
+func pebbleGraph(id string, graph *models.Graph) {
 	// Assumed to be topologically sorted DAG according to index
 	size := graph.Size
 	for i := 0; i < size; i++ {
 		vertexLabel := []byte(strconv.Itoa(i))
-		toBeHashed := vertexLabel
+		toBeHashed := []byte(id)
+		toBeHashed = append(toBeHashed, vertexLabel...)
 		for j := 0; j < size; j++ {
 			jIsParent := graph.Edges[j][i]
 			if jIsParent {
@@ -82,8 +89,19 @@ type MerkleTree struct {
 	nodes [][]byte
 }
 
+func (tree *MerkleTree) getRootCommitment() []byte {
+	return tree.nodes[0]
+}
+
 func CreateMerkleTree(graph models.Graph) *MerkleTree {
 	size := graph.Size
+	i := 1
+	for i < size {
+		i = i * 2
+	}
+	if i != size {
+		panic("Graph must have 2^n number of nodes")
+	}
 	tree := MerkleTree{make([][]byte, size*2-1, size*2-1)}
 	firstLeaf := size - 1
 	//Inserting value for leaves
@@ -121,4 +139,19 @@ func (tree *MerkleTree) Open(openingIndex int) [][]byte {
 		i = (i+1)/2 - 1 //Go to parent
 	}
 	return result
+}
+
+func VerifyOpening(commitment []byte, openingIndex int, openingValue []byte, openingValues [][]byte) bool {
+	position := openingIndex
+	currentHash := openingValue
+	for _, value := range openingValues {
+		isOdd := position%2 == 1
+		if isOdd {
+			currentHash = hash_strategy.HashByteArray(append(value, currentHash...))
+		} else {
+			currentHash = hash_strategy.HashByteArray(append(currentHash, value...))
+		}
+		position = position / 2
+	}
+	return bytes.Equal(currentHash, commitment)
 }
