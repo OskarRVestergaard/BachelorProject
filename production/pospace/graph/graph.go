@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"bytes"
@@ -8,15 +8,15 @@ import (
 	"strconv"
 )
 
-func main() {
+func OpenVerificationCheck() {
 
-	dag := newTestDAG()
+	dag := NewTestDAG()
 	merkle := CreateMerkleTree(*dag)
 	fmt.Println("4")
 	oneOpen := merkle.Open(4)
 	fmt.Println(oneOpen)
-	commitment := merkle.getRootCommitment()
-	openValue := merkle.nodes[11]
+	commitment := merkle.GetRootCommitment()
+	openValue := merkle.Nodes[11]
 	verification := VerifyOpening(commitment, 4, openValue, oneOpen)
 	fmt.Println(verification)
 }
@@ -33,7 +33,7 @@ func newEmptyGraph(size int) *models.Graph {
 	}
 }
 
-func newTestDAG() *models.Graph {
+func NewTestDAG() *models.Graph {
 	size := 8
 	edges := make([][]bool, size, size)
 	for i := range edges {
@@ -86,11 +86,11 @@ func pebbleGraph(id string, graph *models.Graph) {
 
 type MerkleTree struct {
 	//Binary tree, children are at (index + 1) * 2 - 1 and (index + 1) * 2
-	nodes [][]byte
+	Nodes [][]byte
 }
 
-func (tree *MerkleTree) getRootCommitment() []byte {
-	return tree.nodes[0]
+func (tree *MerkleTree) GetRootCommitment() []byte {
+	return tree.Nodes[0]
 }
 
 func CreateMerkleTree(graph models.Graph) *MerkleTree {
@@ -106,14 +106,14 @@ func CreateMerkleTree(graph models.Graph) *MerkleTree {
 	firstLeaf := size - 1
 	//Inserting value for leaves
 	for i := 0; i < size; i++ {
-		tree.nodes[firstLeaf+i] = graph.Value[i]
+		tree.Nodes[firstLeaf+i] = graph.Value[i]
 	}
 	//Computing parents
 	for i := firstLeaf - 1; i >= 0; i-- {
-		leftChild := tree.nodes[(i+1)*2-1]
-		rightChild := tree.nodes[(i+1)*2]
+		leftChild := tree.Nodes[(i+1)*2-1]
+		rightChild := tree.Nodes[(i+1)*2]
 		toBeHashed := append(leftChild, rightChild...)
-		tree.nodes[i] = hash_strategy.HashByteArray(toBeHashed)
+		tree.Nodes[i] = hash_strategy.HashByteArray(toBeHashed)
 	}
 	return &tree
 }
@@ -124,7 +124,7 @@ func (tree *MerkleTree) Open(openingIndex int) [][]byte {
 	}
 	result := make([][]byte, 0, 1) //maybe instead of 1 choose math.Log(float64(len(tree.nodes))) (maximum size of nodes used in opening) THIS IS JUST AN OPTIMIZATION
 	var isEven bool
-	firstLeaf := len(tree.nodes) / 2
+	firstLeaf := len(tree.Nodes) / 2
 	//some loop
 	i := openingIndex + firstLeaf
 	j := 0
@@ -135,7 +135,7 @@ func (tree *MerkleTree) Open(openingIndex int) [][]byte {
 		} else {
 			j = i - 1
 		}
-		result = append(result, tree.nodes[j])
+		result = append(result, tree.Nodes[j])
 		i = (i+1)/2 - 1 //Go to parent
 	}
 	return result
