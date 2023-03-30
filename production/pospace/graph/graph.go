@@ -2,26 +2,30 @@ package graph
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"strconv"
 )
 
-func OpenVerificationCheck() {
-
-	dag := NewTestDAG()
-	merkle := CreateMerkleTree(*dag)
-	fmt.Println("4")
-	oneOpen := merkle.Open(4)
-	fmt.Println(oneOpen)
-	commitment := merkle.GetRootCommitment()
-	openValue := merkle.Nodes[11]
-	verification := VerifyOpening(commitment, 4, openValue, oneOpen)
-	fmt.Println(verification)
+type Graph struct {
+	// Assumed to be topologically sorted DAG according to index
+	Size  int
+	Edges [][]bool
+	Value [][]byte
 }
 
-func newEmptyGraph(size int) *models.Graph {
+// GetParents returns the parents of a node, sorted low to high
+func (graph *Graph) GetParents(nodeIndex int) []int {
+	result := make([]int, 0, graph.Size)
+	for j := 0; j < graph.Size; j++ {
+		jIsParent := graph.Edges[j][nodeIndex]
+		if jIsParent {
+			result = append(result, j)
+		}
+	}
+	return result
+}
+
+func newEmptyGraph(size int) *Graph {
 	if size <= 0 {
 		panic("Graph cannot have a size of 0 or less")
 	} else {
@@ -29,11 +33,11 @@ func newEmptyGraph(size int) *models.Graph {
 		for i := range edges {
 			edges[i] = make([]bool, size, size)
 		}
-		return &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
+		return &Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 	}
 }
 
-func NewTestDAG() *models.Graph {
+func NewTestDAG(id string) *Graph {
 	size := 8
 	edges := make([][]bool, size, size)
 	for i := range edges {
@@ -52,15 +56,15 @@ func NewTestDAG() *models.Graph {
 	edges[5][6] = true
 	edges[5][7] = true
 
-	resultGraph := &models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
+	resultGraph := &Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
 
 	//TODO Used Known Random ID
-	pebbleGraph("ID", resultGraph)
+	pebbleGraph(id, resultGraph)
 
 	return resultGraph
 }
 
-func pebbleGraph(id string, graph *models.Graph) {
+func pebbleGraph(id string, graph *Graph) {
 	// Assumed to be topologically sorted DAG according to index
 	size := graph.Size
 	for i := 0; i < size; i++ {
@@ -93,7 +97,7 @@ func (tree *MerkleTree) GetRootCommitment() []byte {
 	return tree.Nodes[0]
 }
 
-func CreateMerkleTree(graph models.Graph) *MerkleTree {
+func CreateMerkleTree(graph Graph) *MerkleTree {
 	size := graph.Size
 	i := 1
 	for i < size {
@@ -116,6 +120,13 @@ func CreateMerkleTree(graph models.Graph) *MerkleTree {
 		tree.Nodes[i] = hash_strategy.HashByteArray(toBeHashed)
 	}
 	return &tree
+}
+
+func (tree *MerkleTree) GetLeaf(leafIndex int) []byte {
+	firstLeaf := len(tree.Nodes) / 2
+	indexInMerkleTree := firstLeaf + leafIndex
+	result := tree.Nodes[indexInMerkleTree]
+	return result
 }
 
 func (tree *MerkleTree) Open(openingIndex int) [][]byte {
@@ -154,4 +165,36 @@ func VerifyOpening(commitment []byte, openingIndex int, openingValue []byte, ope
 		position = position / 2
 	}
 	return bytes.Equal(currentHash, commitment)
+}
+
+// CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
+func CheckCorrectPebbleOfNode(id string, nodeIndex int, graph *Graph, tree *MerkleTree) bool {
+	//Get and check opening of the node itself
+	commitment := tree.GetRootCommitment()
+	openingValue := tree.GetLeaf(nodeIndex)
+	openingValues := tree.Open(nodeIndex)
+	if !VerifyOpening(commitment, nodeIndex, openingValue, openingValues) {
+		return false
+	}
+
+	//Get and check all parents of the node
+	parents := graph.GetParents(nodeIndex)
+	parentHashes := make([]byte, 0, 1)
+	for _, p := range parents {
+		parentValue := tree.GetLeaf(p)
+		parentOpeningValues := tree.Open(p)
+		if !VerifyOpening(commitment, p, parentValue, parentOpeningValues) {
+			return false
+		}
+		parentHashes = append(parentHashes, parentValue...)
+	}
+
+	//Compare to check that the node matches both the original graph and the merkle tree
+	shouldBe := openingValue
+	nodeLabel := []byte(strconv.Itoa(nodeIndex))
+	toBeHashed := []byte(id)
+	toBeHashed = append(toBeHashed, nodeLabel...)
+	toBeHashed = append(toBeHashed, parentHashes...)
+	hash := hash_strategy.HashByteArray(toBeHashed)
+	return bytes.Equal(hash, shouldBe)
 }
