@@ -10,7 +10,7 @@ func TestOpenVerification(t *testing.T) {
 	id := "id"
 	index := 4
 	dag := graph.NewTestDAG(id)
-	merkle := graph.CreateMerkleTree(*dag)
+	merkle := graph.CreateMerkleTreeFromGraph(*dag)
 	oneOpen := merkle.Open(index)
 	commitment := merkle.GetRootCommitment()
 	openValue := merkle.GetLeaf(index)
@@ -22,7 +22,7 @@ func TestOpenVerificationWrongIndex(t *testing.T) {
 	id := "id"
 	index := 4
 	dag := graph.NewTestDAG(id)
-	merkle := graph.CreateMerkleTree(*dag)
+	merkle := graph.CreateMerkleTreeFromGraph(*dag)
 	oneOpen := merkle.Open(index)
 	commitment := merkle.GetRootCommitment()
 	openValue := merkle.GetLeaf(index)
@@ -42,6 +42,6 @@ func TestCheckPebblingOfNode(t *testing.T) {
 	id := "id"
 	index := 0
 	dag := graph.NewTestDAG(id)
-	merkle := graph.CreateMerkleTree(*dag)
+	merkle := graph.CreateMerkleTreeFromGraph(*dag)
 	assert.True(t, graph.CheckCorrectPebbleOfNode(id, index, dag, merkle))
 }

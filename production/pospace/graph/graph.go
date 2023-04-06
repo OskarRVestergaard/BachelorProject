@@ -37,7 +37,7 @@ func newEmptyGraph(size int) *Graph {
 	}
 }
 
-func NewTestDAG(id string) *Graph {
+func PrepareGraph(id string) *Graph {
 	size := 8
 	edges := make([][]bool, size, size)
 	for i := range edges {
@@ -97,7 +97,8 @@ func (tree *MerkleTree) GetRootCommitment() []byte {
 	return tree.Nodes[0]
 }
 
-func CreateMerkleTree(graph Graph) *MerkleTree {
+func CreateMerkleTreeFromGraph(graph Graph) *MerkleTree {
+	//Makes assumptions on the given graph, such as it being a DAG and sorted topologically by index
 	size := graph.Size
 	i := 1
 	for i < size {
