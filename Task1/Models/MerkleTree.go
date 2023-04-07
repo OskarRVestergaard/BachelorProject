@@ -1,4 +1,4 @@
-package Task1
+package Models
 
 type MerkleTree struct {
 	//Binary tree, children are at (index + 1) * 2 - 1 and (index + 1) * 2

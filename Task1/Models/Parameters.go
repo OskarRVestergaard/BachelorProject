@@ -1,4 +1,4 @@
-package Task1
+package Models
 
 // Parameters is a struct with parameters for use in a proof of space between a verifier and a prover.
 // Id is a random string used to make the proof unique.
@@ -11,6 +11,6 @@ type Parameters struct {
 	StorageBound int
 	//TODO Add statistical security parameter (which i used when determining amount of nodes to sample)
 	//TODO And the sampling distribution
-	GraphDescription Graph
+	GraphDescription *Graph
 	//TODO Maybe have a different struct for a pebbled graph (that indcludes values), and one that is only for edges and size
 }

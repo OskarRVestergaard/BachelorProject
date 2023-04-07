@@ -1,7 +1,8 @@
-package Task1
+package Parties
 
 import (
 	"bytes"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"strconv"
 )
@@ -22,7 +23,7 @@ func VerifyOpening(commitment []byte, openingIndex int, openingValue []byte, ope
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
-func CheckCorrectPebbleOfNode(id string, nodeIndex int, graph *Graph, tree *MerkleTree) bool {
+func CheckCorrectPebbleOfNode(id string, nodeIndex int, graph *Models.Graph, tree *Models.MerkleTree) bool {
 	//Get and check opening of the node itself
 	commitment := tree.GetRootCommitment()
 	openingValue := tree.GetLeaf(nodeIndex)
