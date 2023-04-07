@@ -71,8 +71,20 @@ func (P Prover) SendCommitment() []byte {
 	return P.commitment
 }
 
-func (P Prover) SendOpeningPair(index int) (value []byte, opening [][]byte) {
+func (P Prover) SendOpeningTriple(index int) (triple Models.OpeningTriple) {
 	indexValue := P.merkleTree.GetLeaf(index)
 	openingValues := P.merkleTree.Open(index)
-	return indexValue, openingValues
+	result := Models.OpeningTriple{
+		Index:      index,
+		Value:      indexValue,
+		OpenValues: openingValues,
+	}
+	return result
+}
+
+func (P Prover) AnswerChallenges(indices []int) (openingTriples []Models.OpeningTriple) {
+	//Remove duplicates
+	//Find parents of the nodes
+	//Remove duplicates again
+	//Append triple for each and return the result
 }
