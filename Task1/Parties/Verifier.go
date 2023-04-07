@@ -76,4 +76,33 @@ func (V Verifier) PickChallenges() []int {
 	return result
 }
 
-// parents := V.parameters.GraphDescription.GetParents(nodeIndex)
+func (V Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTriple, withGraphConsistencyCheck bool) bool {
+	//TODO Add null checks (since this would indicate not being provided all needed information)
+
+	//Organize triples
+	size := len(challenges)
+	tripleMap := make(map[int]Models.OpeningTriple, size)
+	for _, triple := range triples {
+		tripleMap[triple.Index] = triple
+	}
+	//Verify for each challenge that enough data was provided and that the data is correct.
+	for _, challenge := range challenges {
+		parents := V.parameters.GraphDescription.GetParents(challenge)
+		challengeTriple := tripleMap[challenge]
+		if withGraphConsistencyCheck {
+			parentTriples := make([]Models.OpeningTriple, len(parents))
+			for i, parentIndex := range parents {
+				parentTriples[i] = tripleMap[parentIndex]
+			}
+			if !V.checkCorrectPebbleOfNode(challengeTriple, parentTriples) {
+				return false
+			}
+		} else {
+			if !V.verifyOpening(challengeTriple) {
+				return false
+			}
+		}
+
+	}
+	return true
+}

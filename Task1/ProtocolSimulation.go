@@ -10,6 +10,8 @@ import (
 //Some slight modifications has been made to the original protocol, such as sending the index back and forth, the size
 //of the graph and the distribution and amount of challenges.
 
+//Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
+
 func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
 	edges := make([][]bool, size, size)
 	for i := range edges {

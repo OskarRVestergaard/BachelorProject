@@ -82,7 +82,7 @@ func (P Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
 	return result
 }
 
-func (P Prover) AnswerChallenges(indices []int) (openingTriples []Models.OpeningTriple) {
+func (P Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []Models.OpeningTriple) {
 	//Remove duplicates using a set
 	var member struct{}
 	indicesSet := make(map[int]struct{})
@@ -90,10 +90,12 @@ func (P Prover) AnswerChallenges(indices []int) (openingTriples []Models.Opening
 		indicesSet[value] = member
 	}
 	//Find parents of the nodes
-	for index, _ := range indicesSet {
-		parents := P.pebbledGraph.GetParents(index)
-		for _, parent := range parents {
-			indicesSet[parent] = member
+	if withParents {
+		for index, _ := range indicesSet {
+			parents := P.pebbledGraph.GetParents(index)
+			for _, parent := range parents {
+				indicesSet[parent] = member
+			}
 		}
 	}
 	//Append triple for each and return the result
