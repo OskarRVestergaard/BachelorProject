@@ -61,9 +61,12 @@ func (P Prover) createMerkleTreeFromGraph() {
 	P.commitment = P.merkleTree.GetRootCommitment()
 }
 
-func (P Prover) InitializationPhase1(params Models.Parameters) (commitment []byte) {
+func (P Prover) InitializationPhase1(params Models.Parameters) {
 	P.parameters = params
 	P.pebbleGraph()
 	P.createMerkleTreeFromGraph()
+}
+
+func (P Prover) SendCommitment() []byte {
 	return P.commitment
 }

@@ -7,7 +7,12 @@ import (
 	"strconv"
 )
 
-func VerifyOpening(commitment []byte, openingIndex int, openingValue []byte, openingValues [][]byte) bool {
+type Verifier struct {
+	parameters       Models.Parameters
+	proverCommitment []byte
+}
+
+func (V Verifier) verifyOpening(openingIndex int, openingValue []byte, openingValues [][]byte) bool {
 	position := openingIndex
 	currentHash := openingValue
 	for _, value := range openingValues {
@@ -19,16 +24,15 @@ func VerifyOpening(commitment []byte, openingIndex int, openingValue []byte, ope
 		}
 		position = position / 2
 	}
-	return bytes.Equal(currentHash, commitment)
+	return bytes.Equal(currentHash, V.proverCommitment)
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
-func CheckCorrectPebbleOfNode(id string, nodeIndex int, graph *Models.Graph, tree *Models.MerkleTree) bool {
+func (V Verifier) checkCorrectPebbleOfNode(id string, nodeIndex int, graph *Models.Graph, tree *Models.MerkleTree) bool {
 	//Get and check opening of the node itself
-	commitment := tree.GetRootCommitment()
 	openingValue := tree.GetLeaf(nodeIndex)
 	openingValues := tree.Open(nodeIndex)
-	if !VerifyOpening(commitment, nodeIndex, openingValue, openingValues) {
+	if !V.verifyOpening(nodeIndex, openingValue, openingValues) {
 		return false
 	}
 
@@ -38,7 +42,7 @@ func CheckCorrectPebbleOfNode(id string, nodeIndex int, graph *Models.Graph, tre
 	for _, p := range parents {
 		parentValue := tree.GetLeaf(p)
 		parentOpeningValues := tree.Open(p)
-		if !VerifyOpening(commitment, p, parentValue, parentOpeningValues) {
+		if !V.verifyOpening(p, parentValue, parentOpeningValues) {
 			return false
 		}
 		parentHashes = append(parentHashes, parentValue...)

@@ -6,11 +6,10 @@ package Models
 // The storage bound is equal to 2N where N is the amount of nodes in the stored graph
 // (that stores bits equal to the hashing size), N should be a power of 2.
 // GraphDescription is the graph that should be proven stored, this is specifically a description of the edges.
+// SampleDistribution assumed to be uniform and statistical security parameter is not used.
+// (but would be used to determine how many samples to check)
 type Parameters struct {
-	Id           string
-	StorageBound int
-	//TODO Add statistical security parameter (which i used when determining amount of nodes to sample)
-	//TODO And the sampling distribution
+	Id               string
+	StorageBound     int
 	GraphDescription *Graph
-	//TODO Maybe have a different struct for a pebbled graph (that indcludes values), and one that is only for edges and size
 }
