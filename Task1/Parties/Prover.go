@@ -71,7 +71,7 @@ func (P Prover) SendCommitment() []byte {
 	return P.commitment
 }
 
-func (P Prover) SendOpeningTriple(index int) (triple Models.OpeningTriple) {
+func (P Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
 	indexValue := P.merkleTree.GetLeaf(index)
 	openingValues := P.merkleTree.Open(index)
 	result := Models.OpeningTriple{
@@ -83,8 +83,23 @@ func (P Prover) SendOpeningTriple(index int) (triple Models.OpeningTriple) {
 }
 
 func (P Prover) AnswerChallenges(indices []int) (openingTriples []Models.OpeningTriple) {
-	//Remove duplicates
+	//Remove duplicates using a set
+	var member struct{}
+	indicesSet := make(map[int]struct{})
+	for _, value := range indices {
+		indicesSet[value] = member
+	}
 	//Find parents of the nodes
-	//Remove duplicates again
+	for index, _ := range indicesSet {
+		parents := P.pebbledGraph.GetParents(index)
+		for _, parent := range parents {
+			indicesSet[parent] = member
+		}
+	}
 	//Append triple for each and return the result
+	result := make([]Models.OpeningTriple, 0, 0)
+	for i, _ := range indicesSet {
+		result = append(result, P.GetOpeningTriple(i))
+	}
+	return result
 }
