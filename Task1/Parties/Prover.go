@@ -70,3 +70,9 @@ func (P Prover) InitializationPhase1(params Models.Parameters) {
 func (P Prover) SendCommitment() []byte {
 	return P.commitment
 }
+
+func (P Prover) SendOpeningPair(index int) (value []byte, opening [][]byte) {
+	indexValue := P.merkleTree.GetLeaf(index)
+	openingValues := P.merkleTree.Open(index)
+	return indexValue, openingValues
+}

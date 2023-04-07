@@ -28,19 +28,16 @@ func (V Verifier) verifyOpening(openingIndex int, openingValue []byte, openingVa
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
-func (V Verifier) checkCorrectPebbleOfNode(id string, nodeIndex int, graph *Models.Graph, tree *Models.MerkleTree) bool {
+func (V Verifier) checkCorrectPebbleOfNode(nodeIndex int, openingValue []byte, openingValues [][]byte) bool {
 	//Get and check opening of the node itself
-	openingValue := tree.GetLeaf(nodeIndex)
-	openingValues := tree.Open(nodeIndex)
 	if !V.verifyOpening(nodeIndex, openingValue, openingValues) {
 		return false
 	}
-
 	//Get and check all parents of the node
-	parents := graph.GetParents(nodeIndex)
+	parents := V.parameters.GraphDescription.GetParents(nodeIndex)
 	parentHashes := make([]byte, 0, 1)
 	for _, p := range parents {
-		parentValue := tree.GetLeaf(p)
+		parentValue := tree.GetLeaf(p) //Need to make further calls to the Prover (Think about function responsibility)
 		parentOpeningValues := tree.Open(p)
 		if !V.verifyOpening(p, parentValue, parentOpeningValues) {
 			return false
