@@ -3,6 +3,7 @@ package Task1
 import (
 	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"math"
 	"math/big"
 )
@@ -50,4 +51,29 @@ func generateParameters() Models.Parameters {
 		GraphDescription: graphEdges,
 	}
 	return result
+}
+
+func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
+	prover := Parties.Prover{}
+	verifier := Parties.Verifier{}
+	prm := generateParameters()
+
+	//Prover and verifier gets ready for the protocol, the prover generates the hash-values of the graph
+	//and computes a merkle tree commitment on it.
+	prover.InitializationPhase1(prm)
+	verifier.InitializationPhase1(prm)
+
+	//Prover sends commitment to verifier
+	rootMsg := prover.GetCommitment()
+	verifier.SaveCommitment(rootMsg)
+
+	//Verifier wants to proof the consistency of the given commitment and sends a set of challenges to the prover
+	challenges := verifier.PickChallenges()
+
+	//The prover sends all the openings of the challenges and their parents openings
+	AnswerMsg := prover.AnswerChallenges(challenges, true)
+
+	//Verifier checks that the openings are correct and that they match the hard to pebble graph
+	result := verifier.VerifyChallenges(challenges, AnswerMsg, true)
+	return prover, verifier, result
 }

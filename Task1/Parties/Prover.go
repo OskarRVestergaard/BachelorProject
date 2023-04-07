@@ -67,7 +67,7 @@ func (P Prover) InitializationPhase1(params Models.Parameters) {
 	P.createMerkleTreeFromGraph()
 }
 
-func (P Prover) SendCommitment() []byte {
+func (P Prover) GetCommitment() []byte {
 	return P.commitment
 }
 
