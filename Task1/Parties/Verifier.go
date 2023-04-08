@@ -78,8 +78,6 @@ func (V *Verifier) PickChallenges() []int {
 }
 
 func (V *Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTriple, withGraphConsistencyCheck bool) bool {
-	//TODO Add null checks (since this would indicate not being provided all needed information)
-
 	//Organize triples
 	size := len(challenges)
 	tripleMap := make(map[int]Models.OpeningTriple, size)
@@ -88,12 +86,18 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTr
 	}
 	//Verify for each challenge that enough data was provided and that the data is correct.
 	for _, challenge := range challenges {
+		challengeTriple, exists := tripleMap[challenge]
+		if !exists {
+			return false
+		}
 		parents := V.parameters.GraphDescription.GetParents(challenge)
-		challengeTriple := tripleMap[challenge]
 		if withGraphConsistencyCheck {
 			parentTriples := make([]Models.OpeningTriple, len(parents))
 			for i, parentIndex := range parents {
-				parentTriples[i] = tripleMap[parentIndex]
+				parentTriples[i], exists = tripleMap[parentIndex]
+				if !exists {
+					return false
+				}
 			}
 			if !V.checkCorrectPebbleOfNode(challengeTriple, parentTriples) {
 				return false

@@ -17,3 +17,5 @@ func TestTask1InitializationAndExecution(t *testing.T) {
 	execOkay := Task1.SimulateExecution(p, v)
 	assert.True(t, execOkay)
 }
+
+//TODO ADD Negative tests, such as, prover not sending all information needed or sending wrong values
