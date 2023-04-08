@@ -13,7 +13,7 @@ type Prover struct {
 	commitment   []byte
 }
 
-func (P Prover) pebbleGraph() {
+func (P *Prover) pebbleGraph() {
 	// Assumed to be topologically sorted DAG according to index
 	id := P.parameters.Id
 	P.pebbledGraph = P.parameters.GraphDescription
@@ -34,7 +34,7 @@ func (P Prover) pebbleGraph() {
 	}
 }
 
-func (P Prover) createMerkleTreeFromGraph() {
+func (P *Prover) createMerkleTreeFromGraph() {
 	//Makes assumptions on the given graph, such as it being a DAG and sorted topologically by index
 	size := P.pebbledGraph.Size
 	i := 1
@@ -57,21 +57,21 @@ func (P Prover) createMerkleTreeFromGraph() {
 		toBeHashed := append(leftChild, rightChild...)
 		tree.Nodes[i] = hash_strategy.HashByteArray(toBeHashed)
 	}
-	P.merkleTree = &Models.MerkleTree{}
+	P.merkleTree = &tree
 	P.commitment = P.merkleTree.GetRootCommitment()
 }
 
-func (P Prover) InitializationPhase1(params Models.Parameters) {
+func (P *Prover) InitializationPhase1(params Models.Parameters) {
 	P.parameters = params
 	P.pebbleGraph()
 	P.createMerkleTreeFromGraph()
 }
 
-func (P Prover) GetCommitment() []byte {
+func (P *Prover) GetCommitment() []byte {
 	return P.commitment
 }
 
-func (P Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
+func (P *Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
 	indexValue := P.merkleTree.GetLeaf(index)
 	openingValues := P.merkleTree.Open(index)
 	result := Models.OpeningTriple{
@@ -82,7 +82,7 @@ func (P Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
 	return result
 }
 
-func (P Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []Models.OpeningTriple) {
+func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []Models.OpeningTriple) {
 	//Remove duplicates using a set
 	var member struct{}
 	indicesSet := make(map[int]struct{})

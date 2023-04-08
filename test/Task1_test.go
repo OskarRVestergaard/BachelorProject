@@ -10,3 +10,10 @@ func TestTask1Initialization(t *testing.T) {
 	_, _, result := Task1.SimulateInitialization()
 	assert.True(t, result)
 }
+
+func TestTask1InitializationAndExecution(t *testing.T) {
+	p, v, initOkay := Task1.SimulateInitialization()
+	assert.True(t, initOkay)
+	execOkay := Task1.SimulateExecution(p, v)
+	assert.True(t, execOkay)
+}

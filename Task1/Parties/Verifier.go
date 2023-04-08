@@ -14,7 +14,7 @@ type Verifier struct {
 	proverCommitment []byte
 }
 
-func (V Verifier) verifyOpening(triple Models.OpeningTriple) bool {
+func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 	position := triple.Index
 	currentHash := triple.Value
 	for _, value := range triple.OpenValues {
@@ -30,7 +30,7 @@ func (V Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
-func (V Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, parentTriples []Models.OpeningTriple) bool {
+func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, parentTriples []Models.OpeningTriple) bool {
 	//Get and check opening of the node itself
 	if !V.verifyOpening(tripleToCheck) {
 		return false
@@ -54,18 +54,19 @@ func (V Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, p
 	return bytes.Equal(hash, shouldBe)
 }
 
-func (V Verifier) InitializationPhase1(params Models.Parameters) {
+func (V *Verifier) InitializationPhase1(params Models.Parameters) {
 	V.parameters = params
 }
 
-func (V Verifier) SaveCommitment(commitment []byte) {
+func (V *Verifier) SaveCommitment(commitment []byte) {
 	V.proverCommitment = commitment
 }
 
-func (V Verifier) PickChallenges() []int {
+func (V *Verifier) PickChallenges() []int {
 	size := V.parameters.GraphDescription.Size
-	result := make([]int, size, size)
-	for i := 0; i < size; i++ {
+	challengeAmount := size / 2
+	result := make([]int, challengeAmount, challengeAmount)
+	for i := 0; i < challengeAmount; i++ {
 		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(size))) //Uniform random distribution of specific size, could maybe depend on parameters
 		if err != nil {
 			print("ERROR HAPPENED DURING SAMPLE")
@@ -76,7 +77,7 @@ func (V Verifier) PickChallenges() []int {
 	return result
 }
 
-func (V Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTriple, withGraphConsistencyCheck bool) bool {
+func (V *Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTriple, withGraphConsistencyCheck bool) bool {
 	//TODO Add null checks (since this would indicate not being provided all needed information)
 
 	//Organize triples

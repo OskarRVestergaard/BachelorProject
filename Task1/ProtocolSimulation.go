@@ -71,9 +71,21 @@ func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
 	challenges := verifier.PickChallenges()
 
 	//The prover sends all the openings of the challenges and their parents openings
-	AnswerMsg := prover.AnswerChallenges(challenges, true)
+	answerMsg := prover.AnswerChallenges(challenges, true)
 
 	//Verifier checks that the openings are correct and that they match the hard to pebble graph
-	result := verifier.VerifyChallenges(challenges, AnswerMsg, true)
+	result := verifier.VerifyChallenges(challenges, answerMsg, true)
 	return prover, verifier, result
+}
+
+func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
+	//The verifier picks challenges again
+	challenges := verifier.PickChallenges()
+
+	//The prover sends the openings of the challenges, but does not send the parent openings.
+	answerMsg := prover.AnswerChallenges(challenges, false)
+
+	//Verifier verifies the openings but does not consult the hard to pebble graph
+	result := verifier.VerifyChallenges(challenges, answerMsg, false)
+	return result
 }
