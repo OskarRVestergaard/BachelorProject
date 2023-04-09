@@ -145,8 +145,8 @@ func (signatureScheme RSASig) Verify(publicKey string, hash []byte, signature *b
 //	t = strings.Replace(t, ";", "", -1)
 //
 //	hashed := hash_strategy.Hash_SHA256(t)
-//	sign := Decrypt(hashed, n, d)
-//	return sign
+//	temp_sign := Decrypt(hashed, n, d)
+//	return temp_sign
 //}
 
 func SplitKey(key string) (*big.Int, *big.Int) {
