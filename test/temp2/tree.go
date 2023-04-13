@@ -3,7 +3,7 @@ package temp2
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"fmt"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
 	"math"
 	"math/big"
@@ -23,12 +23,12 @@ type TreeNode struct {
 	sigma string  //signature
 }
 
-var G = models.Block{
-	SlotNumber:   0,
-	Hash:         "",
-	PreviousHash: "",
-	Transactions: nil,
-}
+//var G = models.Block{
+//	SlotNumber:   0,
+//	Hash:         "",
+//	PreviousHash: "",
+//	Transactions: nil,
+//}
 
 func validSlot(start time.Time, current time.Time, CurrentSlot int64, slotLength int64) bool {
 	var diff = int64(current.Sub(start).Seconds()) / slotLength
@@ -57,8 +57,21 @@ func calculateSlotLength() int {
 }
 
 func PathWeight(treenodeList []TreeNode) {
+
+	var nodeDictionary = makeHashmap(treenodeList)
+	//return nodeDictionary
+	fmt.Println(nodeDictionary)
 	//sortedList := sortTreeNodeListBySlotNumber(treenodeList)
 
+}
+
+func makeHashmap(treeenodelist []TreeNode) map[string]int {
+	var hashToNode map[string]int
+	for _, node := range treeenodelist {
+		hashToNode[HashStructure(node)] = node.slot
+		//hashToNode[node.]
+	}
+	return hashToNode
 }
 
 func sortTreeNodeListBySlotNumber(treenodeList []TreeNode) []TreeNode {
