@@ -26,8 +26,14 @@ func (node1 *node) hasGreaterPathWeightThan(node2 node) int {
 		return -1
 	}
 	//length is equal compare val
-	var node1val = node1.block.GetVal()
-	var node2val = node2.block.GetVal()
+	var node1val, isGenesis1 = node1.block.GetVal()
+	if isGenesis1 {
+		return 1
+	}
+	var node2val, isGenesis2 = node2.block.GetVal()
+	if isGenesis2 {
+		return -1
+	}
 	var stringComparison = strings.Compare(node1val, node2val)
 	if stringComparison != 0 {
 		return stringComparison
@@ -40,3 +46,5 @@ func (node1 *node) hasGreaterPathWeightThan(node2 node) int {
 	var byteComparison = bytes.Compare(node1bytes, node2bytes)
 	return byteComparison
 }
+
+//TODO Keep a list of children, such that cleanup is much... cleaner :)

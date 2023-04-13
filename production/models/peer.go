@@ -40,22 +40,23 @@ type Message struct {
 }
 
 type Peer struct {
-	SignatureStrategy        signature_strategy.SignatureInterface
-	LotteryStrategy          lottery_strategy.LotteryInterface
-	IpPort                   string
-	ActiveConnections        map[string]Void
-	Encoders                 map[string]*gob.Encoder
-	Ledger                   *Ledger
-	acMutex                  sync.Mutex
-	encMutex                 sync.Mutex
-	floodMutex               sync.Mutex
-	validMutex               sync.Mutex
-	PublicToSecret           map[string]string
-	uncontrolledTransMutex   sync.Mutex
-	UncontrolledTransactions []*messages.SignedTransaction
-	GenesisBlock             []*blockchain.Block
-	blockMutex               sync.Mutex
-	Blocks                   []blockchain.Block
+	SignatureStrategy       signature_strategy.SignatureInterface
+	LotteryStrategy         lottery_strategy.LotteryInterface
+	IpPort                  string
+	ActiveConnections       map[string]Void
+	Encoders                map[string]*gob.Encoder
+	Ledger                  *Ledger
+	acMutex                 sync.Mutex
+	encMutex                sync.Mutex
+	floodMutex              sync.Mutex
+	validMutex              sync.Mutex
+	PublicToSecret          map[string]string
+	unfinalizedTransMutex   sync.Mutex
+	UnfinalizedTransactions []*messages.SignedTransaction
+	blockMutex              sync.Mutex
+	blockTree               blockchain.Blocktree
+	unhandledBlocks         []blockchain.Block
+	//TODO FinilizedBlockChain
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -292,9 +293,9 @@ func MakeLedger() *Ledger {
 func (p *Peer) UpdateUncontrolledTransactions(t messages.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
 
-	p.uncontrolledTransMutex.Lock()
-	p.UncontrolledTransactions = append(p.UncontrolledTransactions, &t)
-	p.uncontrolledTransMutex.Unlock()
+	p.unfinalizedTransMutex.Lock()
+	p.UnfinalizedTransactions = append(p.UnfinalizedTransactions, &t)
+	p.unfinalizedTransMutex.Unlock()
 }
 
 func (p *Peer) UpdateLedger(transactions []*messages.SignedTransaction) {
@@ -321,9 +322,6 @@ func (p *Peer) Connect(ip string, port int) {
 }
 
 func (p *Peer) startNewNetwork() {
-	p.blockMutex.Lock()
-	p.GenesisBlock = append(p.GenesisBlock, makeGenesisBlock())
-	p.blockMutex.Unlock()
 	println("Network started")
 	println("********************************************************************")
 	println("Host IP: " + p.IpPort)
@@ -390,8 +388,8 @@ func (p *Peer) FloodBlocks(slotNumber int) {
 	block1.SlotNumber = slotNumber
 	block1.PreviousHash = "Nothing"
 	for b := 0; b < constants2.BlockSize; b++ {
-		if len(p.UncontrolledTransactions) >= constants2.BlockSize {
-			block1.Transactions = append(block1.Transactions, p.UncontrolledTransactions[b])
+		if len(p.UnfinalizedTransactions) >= constants2.BlockSize {
+			block1.Transactions = append(block1.Transactions, p.UnfinalizedTransactions[b])
 		}
 	}
 	block1.Hash = ConvertToString(block1.Transactions)

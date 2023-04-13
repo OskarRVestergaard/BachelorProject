@@ -20,8 +20,8 @@ func TestTransactionsAppearInList(t *testing.T) {
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
-	p1TransactionLog := listOfPeers[0].UncontrolledTransactions
-	p2TransactionLog := listOfPeers[1].UncontrolledTransactions
+	p1TransactionLog := listOfPeers[0].UnfinalizedTransactions
+	p2TransactionLog := listOfPeers[1].UnfinalizedTransactions
 
 	assert.NotEmpty(t, p1TransactionLog)
 	assert.NotEmpty(t, p2TransactionLog)
@@ -39,8 +39,8 @@ func TestTransactionsAppearAcrossnetwork(t *testing.T) {
 	listOfPeers[1].FloodSignedTransaction(pk1, pk0, 50)
 	time.Sleep(200 * time.Millisecond)
 	// Assert
-	p0Uncontrolledtransactionssize := len(listOfPeers[0].UncontrolledTransactions)
-	p1Uncontrolledtransactionssize := len(listOfPeers[1].UncontrolledTransactions)
+	p0Uncontrolledtransactionssize := len(listOfPeers[0].UnfinalizedTransactions)
+	p1Uncontrolledtransactionssize := len(listOfPeers[1].UnfinalizedTransactions)
 	assert.Equal(t, p0Uncontrolledtransactionssize, p1Uncontrolledtransactionssize)
 
 }

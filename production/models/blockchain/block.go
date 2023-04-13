@@ -7,24 +7,39 @@ import (
 )
 
 type Block struct {
-	Vk    big.Int //verification key
-	Slot  int     //slot number
-	Draw  string  //winner ticket
-	U     string  //Block data
-	H     []byte  //block hash of some previous hash
-	Sigma string  //signature
+	IsGenesis bool      //True only if the block is the genesis block
+	Vk        big.Int   //verification key
+	Slot      int       //slot number
+	Draw      string    //winner ticket
+	U         BlockData //Block data
+	H         []byte    //block hash of some previous hash
+	Sigma     string    //signature
 }
 
-func (block *Block) GetVal() string {
-	return block.Vk.String() + strconv.Itoa(block.Slot) + block.Draw
+/*
+GetVal
+
+returns the val of the block to be used for PathWeight calculations,
+and also true if it is genesis (to be treated as infinite)
+*/
+func (block *Block) GetVal() (val string, isGenesis bool) {
+	if block.IsGenesis {
+		return "Genesis", true
+	}
+	return block.Vk.String() + strconv.Itoa(block.Slot) + block.Draw, false
 }
 
+/*
+ToByteArray
+
+returns a byte array representation of the block to be used for hashing
+*/
 func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(block.Vk.String())
 	buffer.WriteString(strconv.Itoa(block.Slot))
 	buffer.WriteString(block.Draw)
-	buffer.WriteString(block.U)
+	buffer.WriteString(block.U.ToString())
 	buffer.WriteString(string(block.H))
 	buffer.WriteString(block.Sigma)
 
