@@ -75,6 +75,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.PublicToSecret = make(map[string]string)
 	p.blockMutex.Lock()
 	p.blockMutex.Unlock()
+	//TODO Make own BlockTree (with genesisblock using constructor)
 
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
@@ -251,16 +252,11 @@ func (p *Peer) handleMessage(msg Message) {
 			debug("added: " + e)
 		}
 
-		for e := range (msg).MessageBlocks {
-			p.UpdateBlock(msg.MessageBlocks[e])
-		}
+		//TODO Think about how a new peer "catches" up to network? Is this even something we want to handle?
 
 		p.FloodMessage(Message{MessageType: constants2.JoinMessage, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}})
 	case constants2.Block:
-		for e := range (msg).MessageBlocks {
-			p.UpdateLedger(msg.MessageBlocks[e].Transactions)
-		}
-		p.GenesisBlock = append(p.GenesisBlock, &msg.MessageBlocks[0])
+
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -321,6 +317,7 @@ func (p *Peer) Connect(ip string, port int) {
 	}
 }
 
+// TODO Rename or remove
 func (p *Peer) startNewNetwork() {
 	println("Network started")
 	println("********************************************************************")
@@ -354,17 +351,22 @@ func (p *Peer) CreateAccount() string {
 }
 
 func makeGenesisBlock() *blockchain.Block {
-
 	genesisBlock := &blockchain.Block{
-		SlotNumber:   0,
-		Hash:         "GenesisBlock",
-		PreviousHash: "GenesisBlock",
-		Transactions: nil,
+		IsGenesis: true,
+		Vk:        big.Int{},
+		Slot:      0,
+		Draw:      "",
+		U: blockchain.BlockData{
+			Hardness: 8,
+		},
+		H:     nil,
+		Sigma: "",
 	}
 	return genesisBlock
 }
 
 // CreateBalanceOnLedger for testing only
+// TODO Remove
 func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
 
 	debug(p.IpPort + " called updateLedger")
@@ -375,58 +377,21 @@ func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
 	p.Ledger.Mutex.Unlock()
 }
 
-func (p *Peer) UpdateBlock(b blockchain.Block) {
-	//debug(p.IpPort + " called addIpPort and adding: " + &b.Hash)
-	p.blockMutex.Lock()
-	p.GenesisBlock = append(p.GenesisBlock, &b)
-	p.blockMutex.Unlock()
-}
-
 func (p *Peer) FloodBlocks(slotNumber int) {
-	//t := structs.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
-	var block1 blockchain.Block
-	block1.SlotNumber = slotNumber
-	block1.PreviousHash = "Nothing"
-	for b := 0; b < constants2.BlockSize; b++ {
-		if len(p.UnfinalizedTransactions) >= constants2.BlockSize {
-			block1.Transactions = append(block1.Transactions, p.UnfinalizedTransactions[b])
-		}
-	}
-	block1.Hash = ConvertToString(block1.Transactions)
-	var blockArray = []blockchain.Block{block1}
-
-	var t = Message{
-		MessageType: constants2.Block,
-		//MessageSender:     "",
-		//SignedTransaction: structs.SignedTransaction{},
-		MessageBlocks: blockArray,
-		//PeerMap:           nil,
-	}
-	p.FloodMessage(t)
-	//p.SendMessageTo((msg).MessageSender, Message{MessageType: utils.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: structs.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []block.Block{*makeGenesisBlock()}, PeerMap: ac})
-	//block.Block{
-	//	SlotNumber:   slotNumber,
-	//	Hash:         "",
-	//	PreviousHash: "",
-	//	Transactions: nil,
 
 }
 
+// TODO FIX LATER
 func (p *Peer) Mine() {
 	fmt.Println("We're there. All I can see are turtle tracks. Whaddaya say we give Bowser the old Brooklyn one-two?")
 	var hasPotentialWinner bool
 	for k := range p.PublicToSecret {
-		hasPotentialWinner, _ = p.LotteryStrategy.Mine(k, p.GenesisBlock[len(p.GenesisBlock)-1].PreviousHash)
+		hasPotentialWinner, _ = p.LotteryStrategy.Mine(k, "PrevHash")
 	}
 
 	if hasPotentialWinner {
 		// do block stuff IDK
 	}
-}
-
-// TODO REMOVE
-func (p *Peer) DebugForceLotteryWin() {
-
 }
 
 //func MakeBlock(transactions []*structs.SignedTransaction, prevHash string) Block {
