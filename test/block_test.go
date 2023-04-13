@@ -2,6 +2,7 @@ package test
 
 import (
 	models2 "github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
 	"github.com/stretchr/testify/assert"
 	"strconv"
@@ -79,14 +80,14 @@ func TestPeer1WinsLottery(t *testing.T) {
 
 }
 
-func makeGenesisBlockchain() map[int]*models2.Block {
-	genesisBlock := &models2.Block{
+func makeGenesisBlockchain() map[int]*blockchain.Block {
+	genesisBlock := &blockchain.Block{
 		SlotNumber:   0,
 		Hash:         "GenesisBlock",
 		PreviousHash: "GenesisBlock",
 		//TransactionsLog: nil,
 	}
-	var blockChain = make(map[int]*models2.Block)
+	var blockChain = make(map[int]*blockchain.Block)
 	blockChain[genesisBlock.SlotNumber] = genesisBlock
 	return blockChain
 }
