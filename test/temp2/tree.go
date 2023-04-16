@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
+	"github.com/OskarRVestergaard/BachelorProject/test/networkservice"
 	"math"
 	"math/big"
 	"sort"

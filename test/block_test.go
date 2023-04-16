@@ -3,7 +3,7 @@ package test
 import (
 	models2 "github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
+	networkservice2 "github.com/OskarRVestergaard/BachelorProject/test/networkservice"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
@@ -36,7 +36,7 @@ func TestFirstConnectedPeerHasGenesisBlockslot0(t *testing.T) {
 
 	for i := 0; i < noOfPeers; i++ {
 		var p models2.Peer
-		freePort, _ := networkservice.GetFreePort()
+		freePort, _ := networkservice2.GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
@@ -54,8 +54,8 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 1
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames)             //setup peer
-	controlLedger := networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	listOfPeers, pkList := networkservice2.SetupPeers(noOfPeers, noOfNames)             //setup peer
+	controlLedger := networkservice2.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
 	print(controlLedger)
 	time.Sleep(1000 * time.Millisecond)
 
@@ -70,7 +70,7 @@ func Test2PeersHaveSameGenesisBlock(t *testing.T) {
 func TestPeer1WinsLottery(t *testing.T) {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := networkservice2.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 	//Action
