@@ -54,7 +54,7 @@ type Peer struct {
 	unfinalizedTransMutex   sync.Mutex
 	UnfinalizedTransactions []*messages.SignedTransaction
 	blockMutex              sync.Mutex
-	blockTree               blockchain.Blocktree
+	blockTree               *blockchain.Blocktree
 	unhandledBlocks         []blockchain.Block
 	//TODO FinilizedBlockChain (Is actually not needed, just add transaction to ledger, and do cleanup on unfinilized tranactions and blocktree)
 }
@@ -75,7 +75,8 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.PublicToSecret = make(map[string]string)
 	p.blockMutex.Lock()
 	p.blockMutex.Unlock()
-	//TODO Make own BlockTree (with genesisblock using constructor)
+
+	p.blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
 
 	time.Sleep(2500 * time.Millisecond)
 	go p.StartListener()
@@ -237,25 +238,19 @@ func (p *Peer) handleMessage(msg Message) {
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
-		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []blockchain.Block{*makeGenesisBlock()}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants.PeerMapDelivery, MessageSender: p.IpPort, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
 	case constants.PeerMapDelivery: //"peerMapDelivery":
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
-		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
-		//TODO should not just append blocks on genesis
 		for e := range (msg).PeerMap {
 			p.AddIpPort(e)
 			debug("added: " + e)
 		}
-
-		//TODO Think about how a new peer "catches" up to network? Is this even something we want to handle?
-
-		p.FloodMessage(Message{MessageType: constants.JoinMessage, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}})
-	case constants.Block:
-
+		p.FloodMessage(Message{MessageType: constants.JoinMessage, MessageSender: p.IpPort})
+	case constants.BlockDelivery:
+		print("BLOCK DELIVERY FROM: " + (msg).MessageSender)
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -287,7 +282,6 @@ func MakeLedger() *Ledger {
 
 func (p *Peer) UpdateUncontrolledTransactions(t messages.SignedTransaction) {
 	debug(p.IpPort + " called updateLedger")
-
 	p.unfinalizedTransMutex.Lock()
 	p.UnfinalizedTransactions = append(p.UnfinalizedTransactions, &t)
 	p.unfinalizedTransMutex.Unlock()
@@ -347,21 +341,6 @@ func (p *Peer) CreateAccount() string {
 	p.PublicToSecret[publicKey] = secretKey
 
 	return publicKey
-}
-
-func makeGenesisBlock() *blockchain.Block {
-	genesisBlock := &blockchain.Block{
-		IsGenesis: true,
-		Vk:        big.Int{},
-		Slot:      0,
-		Draw:      "",
-		U: blockchain.BlockData{
-			Hardness: 8,
-		},
-		H:     nil,
-		Sigma: "",
-	}
-	return genesisBlock
 }
 
 // CreateBalanceOnLedger for testing only

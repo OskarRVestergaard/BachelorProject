@@ -45,3 +45,22 @@ func (block *Block) ToByteArray() []byte {
 
 	return buffer.Bytes()
 }
+
+/*
+CreateGenesisBlock
+
+Creates the default Genesis-block to be used in a blocktree
+*/
+func CreateGenesisBlock() Block {
+	return Block{
+		IsGenesis: true,
+		Vk:        big.Int{},
+		Slot:      0,
+		Draw:      "",
+		U: BlockData{
+			Hardness: 8,
+		},
+		H:     nil,
+		Sigma: "",
+	}
+}
