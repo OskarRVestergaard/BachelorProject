@@ -7,13 +7,13 @@ import (
 )
 
 type Block struct {
-	IsGenesis bool      //True only if the block is the genesis block
-	Vk        big.Int   //verification key
-	Slot      int       //slot number
-	Draw      string    //winner ticket
-	U         BlockData //Block data
-	H         []byte    //block hash of some previous hash
-	Sigma     string    //signature
+	IsGenesis  bool      //True only if the block is the genesis block
+	Vk         big.Int   //verification key
+	Slot       int       //slot number
+	Draw       string    //winner ticket
+	BlockData  BlockData //Block data
+	ParentHash []byte    //block hash of some previous hash
+	Signature  string    //signature
 }
 
 /*
@@ -39,9 +39,9 @@ func (block *Block) ToByteArray() []byte {
 	buffer.WriteString(block.Vk.String())
 	buffer.WriteString(strconv.Itoa(block.Slot))
 	buffer.WriteString(block.Draw)
-	buffer.WriteString(block.U.ToString())
-	buffer.WriteString(string(block.H))
-	buffer.WriteString(block.Sigma)
+	buffer.WriteString(block.BlockData.ToString())
+	buffer.WriteString(string(block.ParentHash))
+	buffer.WriteString(block.Signature)
 
 	return buffer.Bytes()
 }
@@ -57,10 +57,10 @@ func CreateGenesisBlock() Block {
 		Vk:        big.Int{},
 		Slot:      0,
 		Draw:      "",
-		U: BlockData{
+		BlockData: BlockData{
 			Hardness: 8,
 		},
-		H:     nil,
-		Sigma: "",
+		ParentHash: nil,
+		Signature:  "",
 	}
 }

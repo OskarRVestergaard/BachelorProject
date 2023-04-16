@@ -19,8 +19,6 @@ import (
 	"time"
 )
 
-var debugging bool
-
 /*
 This is a single Peer that both listens to and sends messages
 CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
@@ -40,8 +38,8 @@ type Message struct {
 }
 
 type Peer struct {
-	SignatureStrategy       signature_strategy.SignatureInterface
-	LotteryStrategy         lottery_strategy.LotteryInterface
+	signatureStrategy       signature_strategy.SignatureInterface
+	lotteryStrategy         lottery_strategy.LotteryInterface
 	IpPort                  string
 	ActiveConnections       map[string]Void
 	Encoders                map[string]*gob.Encoder
@@ -52,17 +50,18 @@ type Peer struct {
 	validMutex              sync.Mutex
 	PublicToSecret          map[string]string
 	unfinalizedTransMutex   sync.Mutex
-	UnfinalizedTransactions []*messages.SignedTransaction
-	blockMutex              sync.Mutex
+	unfinalizedTransactions []messages.SignedTransaction
+	blockTreeMutex          sync.Mutex
 	blockTree               *blockchain.Blocktree
 	unhandledBlocks         []blockchain.Block
-	//TODO FinilizedBlockChain (Is actually not needed, just add transaction to ledger, and do cleanup on unfinilized tranactions and blocktree)
+	unhandledBlocksMutex    sync.Mutex
+	//TODO FinalizedBlockChain (Is actually not needed, just add transaction to ledger, and do cleanup on unfinilized tranactions and blocktree)
 }
 
 func (p *Peer) RunPeer(IpPort string) {
-	//p.SignatureStrategy = signature_strategy.RSASig{}
-	p.SignatureStrategy = signature_strategy.ECDSASig{}
-	p.LotteryStrategy = lottery_strategy.PoW{}
+	//p.signatureStrategy = signature_strategy.RSASig{}
+	p.signatureStrategy = signature_strategy.ECDSASig{}
+	p.lotteryStrategy = lottery_strategy.PoW{}
 	p.IpPort = IpPort
 	p.acMutex.Lock()
 	p.ActiveConnections = make(map[string]Void)
@@ -73,16 +72,34 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
-	p.blockMutex.Lock()
-	p.blockMutex.Unlock()
-
+	p.blockTreeMutex.Lock()
 	p.blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	p.blockTreeMutex.Unlock()
+	p.unhandledBlocksMutex.Lock()
+	p.unhandledBlocks = make([]blockchain.Block, 0, 20)
+	p.unhandledBlocksMutex.Unlock()
 
-	time.Sleep(2500 * time.Millisecond)
-	go p.StartListener()
+	time.Sleep(1500 * time.Millisecond)
+	go p.startBlockAdder()
+	go p.startListener()
 }
 
-func (p *Peer) StartListener() {
+func (p *Peer) startBlockAdder() {
+	for {
+		p.unhandledBlocksMutex.Lock()
+		if len(p.unhandledBlocks) > 0 {
+			p.blockTreeMutex.Lock()
+			var t = p.blockTree.AddBlock(p.unhandledBlocks[0]) //index?
+			print(t)
+			//remove from unhandled
+			p.blockTreeMutex.Unlock()
+		}
+		p.unhandledBlocksMutex.Unlock()
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func (p *Peer) startListener() {
 	ln, _ := net.Listen("tcp", p.IpPort)
 	for {
 		conn, _ := ln.Accept()
@@ -92,11 +109,9 @@ func (p *Peer) StartListener() {
 }
 
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
-	debug(p.IpPort + " called doSignedTransaction")
-
 	p.floodMutex.Lock()
 
-	t := messages.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
+	t := messages.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
 	msg := Message{MessageType: constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
@@ -105,12 +120,12 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
 	publicKey := msg.SignedTransaction.From
 	if val, ok := p.PublicToSecret[from]; ok {
-		signatureToAssign := p.SignatureStrategy.Sign(hashedMessage, val)
+		signatureToAssign := p.signatureStrategy.Sign(hashedMessage, val)
 		msg.SignedTransaction.Signature = signatureToAssign
 	}
 	signature := msg.SignedTransaction.Signature
-	if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
-		p.UpdateUncontrolledTransactions(msg.SignedTransaction)
+	if p.signatureStrategy.Verify(publicKey, hashedMessage, signature) {
+		p.addTransaction(msg.SignedTransaction)
 	} else {
 		p.Ledger.Mutex.Lock()
 		p.Ledger.UTA++
@@ -122,11 +137,6 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 
 }
 
-func GenerateId() uuid.UUID {
-	Id := uuid.New()
-	return Id
-}
-
 func (p *Peer) validTransaction(from string, amount int) bool {
 	if amount == 0 {
 		println("Invalid SignedTransaction with the amount 0")
@@ -136,7 +146,6 @@ func (p *Peer) validTransaction(from string, amount int) bool {
 		return false
 	}
 	return true
-
 }
 
 func (p *Peer) FloodMessage(msg Message) {
@@ -155,7 +164,6 @@ func (p *Peer) FloodMessage(msg Message) {
 }
 
 func (p *Peer) SendMessageTo(ipPort string, msg Message) error {
-	debug(p.IpPort + " called sendMessageTo")
 	var enc *gob.Encoder
 
 	p.encMutex.Lock()
@@ -181,14 +189,12 @@ func (p *Peer) SendMessageTo(ipPort string, msg Message) error {
 }
 
 func (p *Peer) AddIpPort(ipPort string) {
-	debug(p.IpPort + " called addIpPort and adding: " + ipPort)
 	p.acMutex.Lock()
 	p.ActiveConnections[ipPort] = member
 	p.acMutex.Unlock()
 }
 
 func (p *Peer) Receiver(conn net.Conn) {
-	debug(p.IpPort + " called receiver")
 
 	msg := &Message{}
 	dec := gob.NewDecoder(conn)
@@ -222,19 +228,17 @@ func (p *Peer) handleMessage(msg Message) {
 		hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
 		publicKey := msg.SignedTransaction.From
 		signature := msg.SignedTransaction.Signature
-		if p.SignatureStrategy.Verify(publicKey, hashedMessage, signature) {
-			p.UpdateUncontrolledTransactions((msg).SignedTransaction)
+		if p.signatureStrategy.Verify(publicKey, hashedMessage, signature) {
+			p.addTransaction((msg).SignedTransaction)
 		} else {
 			p.Ledger.Mutex.Lock()
 			p.Ledger.UTA++
 			p.Ledger.Mutex.Unlock()
 		}
 		p.validMutex.Unlock()
-	case constants.JoinMessage: //"joinMessage":
-		debug(p.IpPort + ": received a join message from: " + (msg).MessageSender)
+	case constants.JoinMessage:
 		p.AddIpPort((msg).MessageSender)
-	case constants.GetPeersMessage: //"getPeersMessage":
-		debug(p.IpPort + ": received a getPeers message from: " + (msg).MessageSender)
+	case constants.GetPeersMessage:
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
@@ -242,15 +246,16 @@ func (p *Peer) handleMessage(msg Message) {
 		if err != nil {
 			println(err.Error())
 		}
-	case constants.PeerMapDelivery: //"peerMapDelivery":
-		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
+	case constants.PeerMapDelivery:
 		for e := range (msg).PeerMap {
 			p.AddIpPort(e)
-			debug("added: " + e)
 		}
 		p.FloodMessage(Message{MessageType: constants.JoinMessage, MessageSender: p.IpPort})
 	case constants.BlockDelivery:
-		print("BLOCK DELIVERY FROM: " + (msg).MessageSender)
+		//TODO Verify that the block is correct! Do not just add
+		p.unhandledBlocksMutex.Lock()
+		p.unhandledBlocks = append(p.unhandledBlocks, msg.MessageBlocks...)
+		p.unhandledBlocksMutex.Unlock()
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -280,15 +285,13 @@ func MakeLedger() *Ledger {
 	return ledger
 }
 
-func (p *Peer) UpdateUncontrolledTransactions(t messages.SignedTransaction) {
-	debug(p.IpPort + " called updateLedger")
+func (p *Peer) addTransaction(t messages.SignedTransaction) {
 	p.unfinalizedTransMutex.Lock()
-	p.UnfinalizedTransactions = append(p.UnfinalizedTransactions, &t)
+	p.unfinalizedTransactions = append(p.unfinalizedTransactions, t)
 	p.unfinalizedTransMutex.Unlock()
 }
 
 func (p *Peer) UpdateLedger(transactions []*messages.SignedTransaction) {
-	debug(p.IpPort + " called updateLedger")
 
 	p.Ledger.Mutex.Lock()
 	for _, trans := range transactions {
@@ -306,40 +309,21 @@ func (p *Peer) Connect(ip string, port int) {
 
 	if err != nil {
 		println(err.Error())
-		p.startNewNetwork()
+		p.printNewNetworkStarted()
 	}
 }
 
 // TODO Rename or remove
-func (p *Peer) startNewNetwork() {
+func (p *Peer) printNewNetworkStarted() {
 	println("Network started")
 	println("********************************************************************")
 	println("Host IP: " + p.IpPort)
 	println("********************************************************************")
 }
 
-func (p *Peer) PrintActiveCons() {
-	println("Peer: " + p.IpPort + " has the following connections: ")
-	p.acMutex.Lock()
-	ac := p.ActiveConnections
-	p.acMutex.Unlock()
-	for e := range ac {
-		println(e)
-	}
-}
-
-func debug(msg string) {
-	if debugging {
-		println(msg)
-	}
-}
-
 func (p *Peer) CreateAccount() string {
-
-	secretKey, publicKey := p.SignatureStrategy.KeyGen()
-
+	secretKey, publicKey := p.signatureStrategy.KeyGen()
 	p.PublicToSecret[publicKey] = secretKey
-
 	return publicKey
 }
 
@@ -347,16 +331,9 @@ func (p *Peer) CreateAccount() string {
 // TODO Remove
 func (p *Peer) CreateBalanceOnLedger(pk string, amount int) {
 
-	debug(p.IpPort + " called updateLedger")
-
 	p.Ledger.Mutex.Lock()
 	p.Ledger.Accounts[pk] += amount
-
 	p.Ledger.Mutex.Unlock()
-}
-
-func (p *Peer) FloodBlocks(slotNumber int) {
-
 }
 
 // TODO FIX LATER
@@ -364,7 +341,7 @@ func (p *Peer) Mine() {
 	fmt.Println("We're there. All I can see are turtle tracks. Whaddaya say we give Bowser the old Brooklyn one-two?")
 	var hasPotentialWinner bool
 	for k := range p.PublicToSecret {
-		hasPotentialWinner, _ = p.LotteryStrategy.Mine(k, "PrevHash")
+		hasPotentialWinner, _ = p.lotteryStrategy.Mine(k, "PrevHash")
 	}
 
 	if hasPotentialWinner {
@@ -372,17 +349,27 @@ func (p *Peer) Mine() {
 	}
 }
 
-//func MakeBlock(transactions []*structs.SignedTransaction, prevHash string) Block {
-//	//TODO add maximum blockSize
-//	var b Block
-//	//b.slotNumber = slot
-//	b.PreviousHash = prevHash
-//	//b.TransactionsLog = transactions
-//	b.Transactions = transactions
-//	b.Hash = calculateHash(b.PreviousHash, b.Transactions)
-//	slot += 1
-//	return b
-//
-//}
-
-//TODO: empty unctontrolled list when sending block + receiver should remove doublicates. ledger should be updated correct
+func (p *Peer) SendFakeBlockWithTransactions() {
+	var headBlock = p.blockTree.GetHead()
+	var headBlockHash = hash_strategy.HashByteArray(headBlock.ToByteArray())
+	var blockWithCurrentlyUnhandledTransactions = blockchain.Block{
+		IsGenesis: false,
+		Vk:        big.Int{},
+		Slot:      1,
+		Draw:      "+4 cards",
+		BlockData: blockchain.BlockData{
+			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain)
+		},
+		ParentHash: headBlockHash,
+		Signature:  "",
+	}
+	var msg = Message{
+		MessageType:   constants.BlockDelivery,
+		MessageSender: p.IpPort,
+		MessageBlocks: []blockchain.Block{blockWithCurrentlyUnhandledTransactions},
+	}
+	go p.FloodMessage(msg)
+	p.unhandledBlocksMutex.Lock()
+	p.unhandledBlocks = append(p.unhandledBlocks, msg.MessageBlocks...)
+	p.unhandledBlocksMutex.Unlock()
+}

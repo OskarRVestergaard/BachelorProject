@@ -28,9 +28,11 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 		block:  genesisBlock,
 		length: 0,
 	}
-	var genesisHash = string(hash_strategy.HashByteArray(genesisBlock.ToByteArray()))
-	treeMap[genesisHash] = genesisNode
-	return &Blocktree{treeMap: treeMap}
+	var genesisByteArray = genesisBlock.ToByteArray()
+	var genesisHash = hash_strategy.HashByteArray(genesisByteArray)
+	var genesisStringHash = string(genesisHash)
+	treeMap[genesisStringHash] = genesisNode
+	return &Blocktree{treeMap: treeMap, head: genesisNode}
 }
 
 /*
@@ -76,8 +78,8 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Find parent
-	var parentHash = block.H
-	var parentNode, parentIsInTree = tree.treeMap[string(parentHash)]
+	var parentHash = string(block.ParentHash)
+	var parentNode, parentIsInTree = tree.treeMap[parentHash]
 	if !parentIsInTree {
 		return 0
 	}
