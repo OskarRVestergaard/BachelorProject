@@ -28,7 +28,7 @@ func HashByteArray(toBeHashed []byte) []byte {
 func HashSignedTransactionToByteArrayWowSoCool(transaction messages.SignedTransaction) []byte {
 	t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
 	t = strings.Replace(t, ";", "", -1)
-
+	//Todo This is NOT!!!!! safe, different predictable signed transactions use the same signature! - Daniel
 	h := sha256.New()
 	h.Write([]byte(t))
 

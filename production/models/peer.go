@@ -8,7 +8,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
-	constants2 "github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
 	"io"
 	"math/big"
@@ -56,7 +56,7 @@ type Peer struct {
 	blockMutex              sync.Mutex
 	blockTree               blockchain.Blocktree
 	unhandledBlocks         []blockchain.Block
-	//TODO FinilizedBlockChain
+	//TODO FinilizedBlockChain (Is actually not needed, just add transaction to ledger, and do cleanup on unfinilized tranactions and blocktree)
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -98,7 +98,7 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	t := messages.SignedTransaction{Id: GenerateId(), From: from, To: to, Amount: amount, Signature: big.NewInt(1000000)}
 
 	p.validMutex.Lock()
-	msg := Message{MessageType: constants2.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
+	msg := Message{MessageType: constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
 
 	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
 	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
@@ -124,7 +124,6 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 func GenerateId() uuid.UUID {
 	Id := uuid.New()
 	return Id
-
 }
 
 func (p *Peer) validTransaction(from string, amount int) bool {
@@ -215,7 +214,7 @@ func (p *Peer) handleMessage(msg Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {
-	case constants2.SignedTransaction:
+	case constants.SignedTransaction:
 		p.validMutex.Lock()
 
 		// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
@@ -230,20 +229,20 @@ func (p *Peer) handleMessage(msg Message) {
 			p.Ledger.Mutex.Unlock()
 		}
 		p.validMutex.Unlock()
-	case constants2.JoinMessage: //"joinMessage":
+	case constants.JoinMessage: //"joinMessage":
 		debug(p.IpPort + ": received a join message from: " + (msg).MessageSender)
 		p.AddIpPort((msg).MessageSender)
-	case constants2.GetPeersMessage: //"getPeersMessage":
+	case constants.GetPeersMessage: //"getPeersMessage":
 		debug(p.IpPort + ": received a getPeers message from: " + (msg).MessageSender)
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
 		p.acMutex.Unlock()
 		//Also sends genesis block
-		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants2.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []blockchain.Block{*makeGenesisBlock()}, PeerMap: ac})
+		err := p.SendMessageTo((msg).MessageSender, Message{MessageType: constants.PeerMapDelivery, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}, MessageBlocks: []blockchain.Block{*makeGenesisBlock()}, PeerMap: ac})
 		if err != nil {
 			println(err.Error())
 		}
-	case constants2.PeerMapDelivery: //"peerMapDelivery":
+	case constants.PeerMapDelivery: //"peerMapDelivery":
 		debug(p.IpPort + ": received a peerMapDelivery message from: " + (msg).MessageSender)
 		//TODO FIX: THIS ASSUMES THAT THE ONLY TIME THIS MESSAGE IS RECEIVED IS WHEN CONNECTING TO A NETWORK (since we flood joinMessage)
 		//TODO should not just append blocks on genesis
@@ -254,8 +253,8 @@ func (p *Peer) handleMessage(msg Message) {
 
 		//TODO Think about how a new peer "catches" up to network? Is this even something we want to handle?
 
-		p.FloodMessage(Message{MessageType: constants2.JoinMessage, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}})
-	case constants2.Block:
+		p.FloodMessage(Message{MessageType: constants.JoinMessage, MessageSender: p.IpPort, SignedTransaction: messages.SignedTransaction{Signature: big.NewInt(0)}})
+	case constants.Block:
 
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
@@ -309,7 +308,7 @@ func (p *Peer) UpdateLedger(transactions []*messages.SignedTransaction) {
 
 func (p *Peer) Connect(ip string, port int) {
 	ipPort := ip + ":" + strconv.Itoa(port)
-	err := p.SendMessageTo(ipPort, Message{MessageType: constants2.GetPeersMessage, MessageSender: p.IpPort})
+	err := p.SendMessageTo(ipPort, Message{MessageType: constants.GetPeersMessage, MessageSender: p.IpPort})
 
 	if err != nil {
 		println(err.Error())
