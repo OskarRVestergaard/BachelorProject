@@ -8,7 +8,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
 	"io"
-	"math/big"
 	"net"
 	"strconv"
 )
@@ -150,7 +149,7 @@ func (p *Peer) startListener() {
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.floodMutex.Lock()
 
-	t := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: *big.NewInt(1000000)}
+	t := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 
 	p.validMutex.Lock()
 	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
@@ -161,15 +160,10 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	secretSigningKey, foundSecretKey := p.PublicToSecret[from]
 	if foundSecretKey {
 		signatureToAssign := p.signatureStrategy.Sign(hashedMessage, secretSigningKey)
-		msg.SignedTransaction.Signature = *signatureToAssign
+		msg.SignedTransaction.Signature = signatureToAssign
 	}
 	signature := msg.SignedTransaction.Signature
-	if msg.SignedTransaction.Amount == 63 {
-		print(msg.SignedTransaction.From)
-		print(msg.SignedTransaction.To)
-		print(msg.SignedTransaction.Amount)
-	}
-	if p.signatureStrategy.Verify(publicKey, hashedMessage, &signature) {
+	if p.signatureStrategy.Verify(publicKey, hashedMessage, signature) {
 		p.addTransaction(msg.SignedTransaction)
 	} else {
 		p.Ledger.Mutex.Lock()

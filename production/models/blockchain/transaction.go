@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"github.com/google/uuid"
-	"math/big"
 )
 
 type SignedTransaction struct {
@@ -10,5 +9,5 @@ type SignedTransaction struct {
 	From      string
 	To        string
 	Amount    int
-	Signature big.Int
+	Signature []byte
 }

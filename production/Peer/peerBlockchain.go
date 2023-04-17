@@ -5,7 +5,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
-	"math/big"
 	"time"
 )
 
@@ -36,9 +35,12 @@ func (p *Peer) SendFakeBlockWithTransactions(slot int) {
 			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain) This is both something the create of the block should take care of, but also something that the receiver needs to check
 		},
 		ParentHash: headBlockHash,
-		Signature:  big.Int{},
+		Signature:  nil,
 	}
-	blockWithCurrentlyUnhandledTransactions.CalculateSignature(p.signatureStrategy, secretKey)
+	errorCode := blockWithCurrentlyUnhandledTransactions.CalculateSignature(p.signatureStrategy, secretKey)
+	if errorCode != 1 {
+		return
+	}
 	var msg = blockchain.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.IpPort,
@@ -59,20 +61,15 @@ func (p *Peer) startBlockHandler() {
 
 func (p *Peer) handleBlock(block blockchain.Block) {
 	//TODO The check are currently made here, this can hurt performance since some part might be done multiple times for a given block
-	hasCorrectSignature := block.HasCorrectSignature(p.signatureStrategy)
-	if !hasCorrectSignature {
+	blockSignatureIsCorrect := block.HasCorrectSignature(p.signatureStrategy)
+	if !blockSignatureIsCorrect {
 		return
 	}
 	//Check correctness of transactions
 	transactions := block.BlockData.Transactions
 	for _, transaction := range transactions {
-		signatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
-		if !signatureIsCorrect {
-			if transaction.Amount == 63 {
-				print(transaction.From)
-				print(transaction.To)
-				print(transaction.Amount)
-			}
+		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
+		if !transactionSignatureIsCorrect {
 			return
 		}
 	}

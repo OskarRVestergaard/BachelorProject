@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
-	"math/big"
 	"strconv"
 )
 
@@ -15,7 +14,7 @@ type Block struct {
 	Draw       string    //winner ticket
 	BlockData  BlockData //Block data
 	ParentHash []byte    //block hash of some previous hash
-	Signature  big.Int   //signature
+	Signature  []byte    //signature
 }
 
 /*
@@ -49,15 +48,9 @@ ToByteArray
 returns a byte array representation, if you want the hash use HashOfBlock instead
 */
 func (block *Block) ToByteArray() []byte {
-	var buffer bytes.Buffer
-	buffer.WriteString(block.Vk)
-	buffer.WriteString(strconv.Itoa(block.Slot))
-	buffer.WriteString(block.Draw)
-	buffer.WriteString(block.BlockData.ToString())
-	buffer.WriteString(string(block.ParentHash))
-	buffer.WriteString(block.Signature.String())
-
-	return buffer.Bytes()
+	var firstBytes = block.toByteArrayWithoutSign()
+	firstBytes = append(firstBytes, block.Signature...)
+	return firstBytes
 }
 
 /*
@@ -91,21 +84,22 @@ func CreateGenesisBlock() Block {
 			Hardness: 8,
 		},
 		ParentHash: nil,
-		Signature:  big.Int{},
+		Signature:  nil,
 	}
 }
 
-func (block *Block) CalculateSignature(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
+func (block *Block) CalculateSignature(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) int {
 	data := block.toByteArrayWithoutSign()
 	hashedData := hash_strategy.HashByteArray(data)
 	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
-	block.Signature = *signature
+	block.Signature = signature
+	return 1
 }
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
 	blockVerificationKey := block.Vk
 	blockHashWithoutSign := hash_strategy.HashByteArray(block.toByteArrayWithoutSign())
 	blockSignature := block.Signature
-	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, &blockSignature)
+	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, blockSignature)
 	return result
 }

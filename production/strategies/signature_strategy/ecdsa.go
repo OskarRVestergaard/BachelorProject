@@ -19,17 +19,17 @@ type JsonifiedPublicKey struct {
 type ECDSASig struct {
 }
 
-func (signatureScheme ECDSASig) Sign(hash []byte, secretKey string) *big.Int {
+func (signatureScheme ECDSASig) Sign(hash []byte, secretKey string) (signature []byte) {
 	privateKey, _ := x509.ParseECPrivateKey([]byte(secretKey))
 	sig, err := ecdsa.SignASN1(rand.Reader, privateKey, hash[:])
 	if err != nil {
 		panic(err)
 	}
 
-	return new(big.Int).SetBytes(sig)
+	return sig
 }
 
-func (signatureScheme ECDSASig) Verify(publicKey string, hash []byte, signature *big.Int) bool {
+func (signatureScheme ECDSASig) Verify(publicKey string, hash []byte, signature []byte) bool {
 	rt := new(JsonifiedPublicKey)
 	err := json.Unmarshal([]byte(publicKey), &rt)
 	if err != nil {
@@ -38,7 +38,7 @@ func (signatureScheme ECDSASig) Verify(publicKey string, hash []byte, signature 
 	}
 	ecdsaPublicKey := ecdsa.PublicKey{Curve: rt.CurveParams, Y: rt.MyY, X: rt.MyX}
 
-	return ecdsa.VerifyASN1(&ecdsaPublicKey, hash, signature.Bytes())
+	return ecdsa.VerifyASN1(&ecdsaPublicKey, hash, signature)
 }
 
 func (signatureScheme ECDSASig) KeyGen() (string, string) {
