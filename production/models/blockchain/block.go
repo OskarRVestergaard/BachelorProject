@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"bytes"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"math/big"
 	"strconv"
 )
@@ -13,7 +15,7 @@ type Block struct {
 	Draw       string    //winner ticket
 	BlockData  BlockData //Block data
 	ParentHash []byte    //block hash of some previous hash
-	Signature  string    //signature
+	Signature  big.Int   //signature
 }
 
 /*
@@ -30,9 +32,21 @@ func (block *Block) GetVal() (val string, isGenesis bool) {
 }
 
 /*
+HashOfBlock
+
+returns a byte array representation of the block to be used for hashing'
+//TODO Make into a hashing function instead? maybe pass hashing strategy, when this is interfaced
+*/
+func (block *Block) HashOfBlock() []byte {
+	byteArrayString := block.ToByteArray()
+	hash := hash_strategy.HashByteArray(byteArrayString)
+	return hash
+}
+
+/*
 ToByteArray
 
-returns a byte array representation of the block to be used for hashing
+returns a byte array representation, if you want the hash use HashOfBlock instead
 */
 func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
@@ -41,7 +55,23 @@ func (block *Block) ToByteArray() []byte {
 	buffer.WriteString(block.Draw)
 	buffer.WriteString(block.BlockData.ToString())
 	buffer.WriteString(string(block.ParentHash))
-	buffer.WriteString(block.Signature)
+	buffer.WriteString(block.Signature.String())
+
+	return buffer.Bytes()
+}
+
+/*
+ToByteArrayWithoutSign
+
+returns a byte array representation, to be used for signature calculation
+*/
+func (block *Block) toByteArrayWithoutSign() []byte {
+	var buffer bytes.Buffer
+	buffer.WriteString(block.Vk.String())
+	buffer.WriteString(strconv.Itoa(block.Slot))
+	buffer.WriteString(block.Draw)
+	buffer.WriteString(block.BlockData.ToString())
+	buffer.WriteString(string(block.ParentHash))
 
 	return buffer.Bytes()
 }
@@ -61,6 +91,20 @@ func CreateGenesisBlock() Block {
 			Hardness: 8,
 		},
 		ParentHash: nil,
-		Signature:  "",
+		Signature:  big.Int{},
 	}
+}
+
+func (block *Block) CalculateSignature(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) big.Int {
+	data := block.toByteArrayWithoutSign()
+	signature := signatureStrategy.Sign(data, secretSigningKey)
+	return *signature
+}
+
+func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
+	blockVerificationKey := block.Vk.String()
+	blockHashWithoutSign := hash_strategy.HashByteArray(block.toByteArrayWithoutSign())
+	blockSignature := block.Signature
+	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, &blockSignature)
+	return result
 }

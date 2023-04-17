@@ -89,6 +89,8 @@ func (p *Peer) startBlockHandler() {
 }
 
 func (p *Peer) handleBlock(block blockchain.Block) {
+	//TODO The check are currently made here, this can hurt performance since some part might be done multiple times for a given block
+
 	//Check signature
 	//Other checks?
 	p.blockTreeMutex.Lock()
@@ -100,6 +102,8 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 		//Block is in tree already and can be ignored
 	case 0:
 		//Parent is not in the tree, try to add later
+		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
+		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
 		p.blockTreeMutex.Unlock()
 		time.Sleep(200 * time.Millisecond)
 		p.blockTreeMutex.Lock()
@@ -133,8 +137,8 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
 	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
 	publicKey := msg.SignedTransaction.From
-	if val, ok := p.PublicToSecret[from]; ok {
-		signatureToAssign := p.signatureStrategy.Sign(hashedMessage, val)
+	if secretSigningKey, ok := p.PublicToSecret[from]; ok {
+		signatureToAssign := p.signatureStrategy.Sign(hashedMessage, secretSigningKey)
 		msg.SignedTransaction.Signature = signatureToAssign
 	}
 	signature := msg.SignedTransaction.Signature
@@ -266,7 +270,6 @@ func (p *Peer) handleMessage(msg Message) {
 		}
 		p.FloodMessage(Message{MessageType: constants.JoinMessage, MessageSender: p.IpPort})
 	case constants.BlockDelivery:
-		//TODO Verify that the block is correct! Do not just add (Should this be done here or later?)
 		for _, block := range msg.MessageBlocks {
 			p.unhandledBlocks <- block
 		}
@@ -365,7 +368,7 @@ func (p *Peer) Mine() {
 
 func (p *Peer) SendFakeBlockWithTransactions() {
 	var headBlock = p.blockTree.GetHead()
-	var headBlockHash = hash_strategy.HashByteArray(headBlock.ToByteArray())
+	var headBlockHash = headBlock.HashOfBlock()
 	var blockWithCurrentlyUnhandledTransactions = blockchain.Block{
 		IsGenesis: false,
 		Vk:        big.Int{},
@@ -375,7 +378,7 @@ func (p *Peer) SendFakeBlockWithTransactions() {
 			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain)
 		},
 		ParentHash: headBlockHash,
-		Signature:  "",
+		Signature:  big.Int{},
 	}
 	var msg = Message{
 		MessageType:   constants.BlockDelivery,

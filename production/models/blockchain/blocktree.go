@@ -1,7 +1,5 @@
 package blockchain
 
-import "github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
-
 /*
 Blocktree
 
@@ -28,8 +26,7 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 		block:  genesisBlock,
 		length: 0,
 	}
-	var genesisByteArray = genesisBlock.ToByteArray()
-	var genesisHash = hash_strategy.HashByteArray(genesisByteArray)
+	var genesisHash = genesisBlock.HashOfBlock()
 	var genesisStringHash = string(genesisHash)
 	treeMap[genesisStringHash] = genesisNode
 	return &Blocktree{treeMap: treeMap, head: genesisNode}
@@ -71,7 +68,7 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Check that this block is not already in the tree
-	var newBlockHash = string(hash_strategy.HashByteArray(block.ToByteArray()))
+	var newBlockHash = string(block.HashOfBlock())
 	var _, isAlreadyInTree = tree.treeMap[newBlockHash]
 	if isAlreadyInTree {
 		return -1
