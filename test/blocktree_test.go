@@ -22,7 +22,7 @@ func TestBlockDelivery(t *testing.T) {
 
 	printControlLedger(controlLedger)
 	listOfPeers[1].SendFakeBlockWithTransactions()
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 
 	assert.True(t, true)
 	//for i := 0; i < noOfPeers; i++ {

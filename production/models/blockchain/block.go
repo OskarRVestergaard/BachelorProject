@@ -10,7 +10,7 @@ import (
 
 type Block struct {
 	IsGenesis  bool      //True only if the block is the genesis block
-	Vk         big.Int   //verification key
+	Vk         string    //verification key
 	Slot       int       //slot number
 	Draw       string    //winner ticket
 	BlockData  BlockData //Block data
@@ -28,7 +28,7 @@ func (block *Block) GetVal() (val string, isGenesis bool) {
 	if block.IsGenesis {
 		return "Genesis", true
 	}
-	return block.Vk.String() + strconv.Itoa(block.Slot) + block.Draw, false
+	return block.Vk + strconv.Itoa(block.Slot) + block.Draw, false
 }
 
 /*
@@ -50,7 +50,7 @@ returns a byte array representation, if you want the hash use HashOfBlock instea
 */
 func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
-	buffer.WriteString(block.Vk.String())
+	buffer.WriteString(block.Vk)
 	buffer.WriteString(strconv.Itoa(block.Slot))
 	buffer.WriteString(block.Draw)
 	buffer.WriteString(block.BlockData.ToString())
@@ -67,7 +67,7 @@ returns a byte array representation, to be used for signature calculation
 */
 func (block *Block) toByteArrayWithoutSign() []byte {
 	var buffer bytes.Buffer
-	buffer.WriteString(block.Vk.String())
+	buffer.WriteString(block.Vk)
 	buffer.WriteString(strconv.Itoa(block.Slot))
 	buffer.WriteString(block.Draw)
 	buffer.WriteString(block.BlockData.ToString())
@@ -84,7 +84,7 @@ Creates the default Genesis-block to be used in a blocktree
 func CreateGenesisBlock() Block {
 	return Block{
 		IsGenesis: true,
-		Vk:        big.Int{},
+		Vk:        "",
 		Slot:      0,
 		Draw:      "",
 		BlockData: BlockData{
@@ -95,14 +95,15 @@ func CreateGenesisBlock() Block {
 	}
 }
 
-func (block *Block) CalculateSignature(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) big.Int {
+func (block *Block) CalculateSignature(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
 	data := block.toByteArrayWithoutSign()
-	signature := signatureStrategy.Sign(data, secretSigningKey)
-	return *signature
+	hashedData := hash_strategy.HashByteArray(data)
+	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
+	block.Signature = *signature
 }
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
-	blockVerificationKey := block.Vk.String()
+	blockVerificationKey := block.Vk
 	blockHashWithoutSign := hash_strategy.HashByteArray(block.toByteArrayWithoutSign())
 	blockSignature := block.Signature
 	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, &blockSignature)

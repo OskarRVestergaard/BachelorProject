@@ -8,6 +8,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
 	"io"
@@ -90,9 +91,11 @@ func (p *Peer) startBlockHandler() {
 
 func (p *Peer) handleBlock(block blockchain.Block) {
 	//TODO The check are currently made here, this can hurt performance since some part might be done multiple times for a given block
-
-	//Check signature
-	//Other checks?
+	hasCorrectSignature := block.HasCorrectSignature(p.signatureStrategy)
+	if !hasCorrectSignature {
+		return
+	}
+	//Other checks? //TODO HERE!!!!!!
 	p.blockTreeMutex.Lock()
 	var t = p.blockTree.AddBlock(block)
 	switch t {
@@ -367,11 +370,13 @@ func (p *Peer) Mine() {
 }
 
 func (p *Peer) SendFakeBlockWithTransactions() {
+	var publicKey = utils.GetSomeKey(p.PublicToSecret)
+	var secretKey = p.PublicToSecret[publicKey]
 	var headBlock = p.blockTree.GetHead()
 	var headBlockHash = headBlock.HashOfBlock()
 	var blockWithCurrentlyUnhandledTransactions = blockchain.Block{
 		IsGenesis: false,
-		Vk:        big.Int{},
+		Vk:        publicKey,
 		Slot:      1,
 		Draw:      "+4 cards",
 		BlockData: blockchain.BlockData{
@@ -380,6 +385,7 @@ func (p *Peer) SendFakeBlockWithTransactions() {
 		ParentHash: headBlockHash,
 		Signature:  big.Int{},
 	}
+	blockWithCurrentlyUnhandledTransactions.CalculateSignature(p.signatureStrategy, secretKey)
 	var msg = Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.IpPort,
