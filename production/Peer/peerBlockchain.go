@@ -68,6 +68,11 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	for _, transaction := range transactions {
 		signatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !signatureIsCorrect {
+			if transaction.Amount == 63 {
+				print(transaction.From)
+				print(transaction.To)
+				print(transaction.Amount)
+			}
 			return
 		}
 	}

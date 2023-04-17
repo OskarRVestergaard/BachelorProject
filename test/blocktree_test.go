@@ -20,11 +20,15 @@ func TestBlockDelivery(t *testing.T) {
 	time.Sleep(5000 * time.Millisecond)
 
 	//send 2 more messages (1 from each)
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-	time.Sleep(5000 * time.Millisecond)
+	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //TODO WHY DOES SECOND TRANSACTION FROM PEER NOT VERIFY?
+	time.Sleep(15000 * time.Millisecond)
 	listOfPeers[0].SendFakeBlockWithTransactions(3)
 
 	time.Sleep(5000 * time.Millisecond)
-	time.Sleep(1000000 * time.Millisecond)
+
+	listOfPeers[1].SendFakeBlockWithTransactions(5)
+	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(10000 * time.Millisecond)
 	assert.True(t, true)
 }

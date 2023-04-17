@@ -10,5 +10,5 @@ type SignedTransaction struct {
 	From      string
 	To        string
 	Amount    int
-	Signature *big.Int
+	Signature big.Int
 }

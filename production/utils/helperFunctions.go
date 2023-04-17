@@ -29,7 +29,7 @@ func TransactionHasCorrectSignature(signatureStrategy signature_strategy.Signatu
 	hashedMessage := HashSignedTransactionToByteArrayWowSoCool(signedTrans)
 	publicKey := signedTrans.From
 	signature := signedTrans.Signature
-	return signatureStrategy.Verify(publicKey, hashedMessage, signature)
+	return signatureStrategy.Verify(publicKey, hashedMessage, &signature)
 }
 
 func HashSignedTransactionToByteArrayWowSoCool(transaction blockchain.SignedTransaction) []byte {
