@@ -1,23 +1,23 @@
 package networkservice
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/Peer"
 	"math/rand"
 	"net"
 	"strconv"
 	"time"
 )
 
-func SetupPeers(noOfPeers int, noOfNames int) ([]*models.Peer, []string) {
+func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 
-	listOfPeers := make([]*models.Peer, noOfPeers)
+	listOfPeers := make([]*Peer.Peer, noOfPeers)
 
 	var connectedPeers []string
 
 	pkList := make([]string, noOfNames)
 
 	for i := 0; i < noOfPeers; i++ {
-		var p models.Peer
+		var p Peer.Peer
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p

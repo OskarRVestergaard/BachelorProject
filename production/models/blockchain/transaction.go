@@ -1,4 +1,4 @@
-package messages
+package blockchain
 
 import (
 	"github.com/google/uuid"

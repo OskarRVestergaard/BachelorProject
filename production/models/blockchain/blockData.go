@@ -1,13 +1,12 @@
 package blockchain
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models/messages"
 	"strconv"
 )
 
 type BlockData struct {
 	Hardness     int
-	Transactions []messages.SignedTransaction
+	Transactions []SignedTransaction
 }
 
 func (blockData *BlockData) ToString() string {
