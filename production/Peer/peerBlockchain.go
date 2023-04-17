@@ -22,16 +22,16 @@ func (p *Peer) Mine() {
 	}
 }
 
-func (p *Peer) SendFakeBlockWithTransactions() {
-	var publicKey = utils.GetSomeKey(p.PublicToSecret)
-	var secretKey = p.PublicToSecret[publicKey]
+func (p *Peer) SendFakeBlockWithTransactions(slot int) {
+	var verificationKey = utils.GetSomeKey(p.PublicToSecret)
+	var secretKey = p.PublicToSecret[verificationKey]
 	var headBlock = p.blockTree.GetHead()
 	var headBlockHash = headBlock.HashOfBlock()
 	var blockWithCurrentlyUnhandledTransactions = blockchain.Block{
 		IsGenesis: false,
-		Vk:        publicKey,
-		Slot:      1,
-		Draw:      "+4 cards",
+		Vk:        verificationKey,
+		Slot:      slot,
+		Draw:      "TO BE USED when mining is implemented, currently every block is valid if it is signed (and not genesis)",
 		BlockData: blockchain.BlockData{
 			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain) This is both something the create of the block should take care of, but also something that the receiver needs to check
 		},
@@ -66,7 +66,8 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	//Check correctness of transactions
 	transactions := block.BlockData.Transactions
 	for _, transaction := range transactions {
-		if !utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction) {
+		signatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
+		if !signatureIsCorrect {
 			return
 		}
 	}

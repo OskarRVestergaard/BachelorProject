@@ -9,23 +9,22 @@ import (
 
 func TestBlockDelivery(t *testing.T) {
 	noOfPeers := 2
-	noOfMsgs := 1
+	noOfMsgs := 2
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames)             //setup peer
-	controlLedger := networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList) //send msg
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
+	//networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 
-	time.Sleep(1000 * time.Millisecond)
-
-	for i := 0; i < noOfPeers; i++ {
-		listOfPeers[i].PrintLedger()
-	}
-
-	printControlLedger(controlLedger)
-	listOfPeers[1].SendFakeBlockWithTransactions()
 	time.Sleep(5000 * time.Millisecond)
 
+	//listOfPeers[1].SendFakeBlockWithTransactions(1)
+	time.Sleep(5000 * time.Millisecond)
+
+	//send 2 more messages (1 from each)
+	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+	time.Sleep(5000 * time.Millisecond)
+	listOfPeers[0].SendFakeBlockWithTransactions(3)
+
+	time.Sleep(5000 * time.Millisecond)
+	time.Sleep(1000000 * time.Millisecond)
 	assert.True(t, true)
-	//for i := 0; i < noOfPeers; i++ {
-	//	accountsOfPeer := listOfPeers[i].Ledger.Accounts
-	//}
 }

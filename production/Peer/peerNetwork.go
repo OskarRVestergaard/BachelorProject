@@ -158,7 +158,8 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
 	hashedMessage := utils.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
 	publicKey := msg.SignedTransaction.From
-	if secretSigningKey, ok := p.PublicToSecret[from]; ok {
+	secretSigningKey, foundSecretKey := p.PublicToSecret[from]
+	if foundSecretKey {
 		signatureToAssign := p.signatureStrategy.Sign(hashedMessage, secretSigningKey)
 		msg.SignedTransaction.Signature = signatureToAssign
 	}
