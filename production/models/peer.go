@@ -95,7 +95,16 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	if !hasCorrectSignature {
 		return
 	}
-	//Other checks? //TODO HERE!!!!!!
+	//Check correctness of transactions
+	transactions := block.BlockData.Transactions
+	for _, transaction := range transactions {
+		if !utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction) {
+			return
+		}
+	}
+
+	//ONLY ADD TRANSACTION THAT DO NOT EXIST
+
 	p.blockTreeMutex.Lock()
 	var t = p.blockTree.AddBlock(block)
 	switch t {
@@ -244,12 +253,8 @@ func (p *Peer) handleMessage(msg Message) {
 	switch msgType {
 	case constants.SignedTransaction:
 		p.validMutex.Lock()
-
 		// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
-		hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
-		publicKey := msg.SignedTransaction.From
-		signature := msg.SignedTransaction.Signature
-		if p.signatureStrategy.Verify(publicKey, hashedMessage, signature) {
+		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
 			p.addTransaction((msg).SignedTransaction)
 		} else {
 			p.Ledger.Mutex.Lock()
@@ -380,7 +385,7 @@ func (p *Peer) SendFakeBlockWithTransactions() {
 		Slot:      1,
 		Draw:      "+4 cards",
 		BlockData: blockchain.BlockData{
-			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain)
+			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain) This is both something the create of the block should take care of, but also something that the receiver needs to check
 		},
 		ParentHash: headBlockHash,
 		Signature:  big.Int{},

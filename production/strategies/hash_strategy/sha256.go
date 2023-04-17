@@ -29,6 +29,7 @@ func HashSignedTransactionToByteArrayWowSoCool(transaction messages.SignedTransa
 	t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
 	t = strings.Replace(t, ";", "", -1)
 	//Todo This is NOT!!!!! safe, different predictable signed transactions use the same signature! - Daniel
+	//TODO Also the ID should be used right?
 	h := sha256.New()
 	h.Write([]byte(t))
 

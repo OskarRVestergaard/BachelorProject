@@ -1,6 +1,11 @@
 package utils
 
-import "math/big"
+import (
+	"github.com/OskarRVestergaard/BachelorProject/production/models/messages"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"math/big"
+)
 
 func GetSomeKey[t comparable](m map[t]t) t {
 	for k := range m {
@@ -16,4 +21,11 @@ func ConvertStringToBigInt(str string) *big.Int {
 		return result
 	}
 	panic("Unable to convert string to bigint: " + str)
+}
+
+func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans messages.SignedTransaction) bool {
+	hashedMessage := hash_strategy.HashSignedTransactionToByteArrayWowSoCool(signedTrans)
+	publicKey := signedTrans.From
+	signature := signedTrans.Signature
+	return signatureStrategy.Verify(publicKey, hashedMessage, signature)
 }
