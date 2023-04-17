@@ -53,8 +53,7 @@ type Peer struct {
 	unfinalizedTransactions []messages.SignedTransaction
 	blockTreeMutex          sync.Mutex
 	blockTree               *blockchain.Blocktree
-	unhandledBlocks         []blockchain.Block
-	unhandledBlocksMutex    sync.Mutex
+	unhandledBlocks         chan blockchain.Block
 	//TODO FinalizedBlockChain (Is actually not needed, just add transaction to ledger, and do cleanup on unfinilized tranactions and blocktree)
 }
 
@@ -75,28 +74,43 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.blockTreeMutex.Lock()
 	p.blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
 	p.blockTreeMutex.Unlock()
-	p.unhandledBlocksMutex.Lock()
-	p.unhandledBlocks = make([]blockchain.Block, 0, 20)
-	p.unhandledBlocksMutex.Unlock()
+	p.unhandledBlocks = make(chan blockchain.Block, 20)
 
 	time.Sleep(1500 * time.Millisecond)
-	go p.startBlockAdder()
+	go p.startBlockHandler()
 	go p.startListener()
 }
 
-func (p *Peer) startBlockAdder() {
+func (p *Peer) startBlockHandler() {
 	for {
-		p.unhandledBlocksMutex.Lock()
-		if len(p.unhandledBlocks) > 0 {
-			p.blockTreeMutex.Lock()
-			var t = p.blockTree.AddBlock(p.unhandledBlocks[0]) //index?
-			print(t)
-			//remove from unhandled
-			p.blockTreeMutex.Unlock()
-		}
-		p.unhandledBlocksMutex.Unlock()
-		time.Sleep(100 * time.Millisecond)
+		blockToHandle := <-p.unhandledBlocks
+		go p.handleBlock(blockToHandle)
 	}
+}
+
+func (p *Peer) handleBlock(block blockchain.Block) {
+	//Check signature
+	//Other checks?
+	p.blockTreeMutex.Lock()
+	var t = p.blockTree.AddBlock(block)
+	switch t {
+	case -2:
+		//Block with isGenesis true, not a real block and should be ignored
+	case -1:
+		//Block is in tree already and can be ignored
+	case 0:
+		//Parent is not in the tree, try to add later
+		p.blockTreeMutex.Unlock()
+		time.Sleep(200 * time.Millisecond)
+		p.blockTreeMutex.Lock()
+		p.unhandledBlocks <- block
+	case 1:
+		//Block successfully added to the tree
+	default:
+		p.blockTreeMutex.Unlock()
+		panic("addBlockReturnValueNotUnderstood")
+	}
+	p.blockTreeMutex.Unlock()
 }
 
 func (p *Peer) startListener() {
@@ -252,10 +266,10 @@ func (p *Peer) handleMessage(msg Message) {
 		}
 		p.FloodMessage(Message{MessageType: constants.JoinMessage, MessageSender: p.IpPort})
 	case constants.BlockDelivery:
-		//TODO Verify that the block is correct! Do not just add
-		p.unhandledBlocksMutex.Lock()
-		p.unhandledBlocks = append(p.unhandledBlocks, msg.MessageBlocks...)
-		p.unhandledBlocksMutex.Unlock()
+		//TODO Verify that the block is correct! Do not just add (Should this be done here or later?)
+		for _, block := range msg.MessageBlocks {
+			p.unhandledBlocks <- block
+		}
 	default:
 		println(p.IpPort + ": received a UNKNOWN message type from: " + (msg).MessageSender)
 	}
@@ -369,7 +383,7 @@ func (p *Peer) SendFakeBlockWithTransactions() {
 		MessageBlocks: []blockchain.Block{blockWithCurrentlyUnhandledTransactions},
 	}
 	go p.FloodMessage(msg)
-	p.unhandledBlocksMutex.Lock()
-	p.unhandledBlocks = append(p.unhandledBlocks, msg.MessageBlocks...)
-	p.unhandledBlocksMutex.Unlock()
+	for _, block := range msg.MessageBlocks {
+		p.unhandledBlocks <- block
+	}
 }
