@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 )
 
@@ -15,7 +15,7 @@ func GetSomeKey[t comparable](m map[t]t) t {
 
 func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans blockchain.SignedTransaction) bool {
 	transByteArray := signedTrans.ToByteArrayWithoutSign()
-	hashedMessage := hash_strategy.HashByteArray(transByteArray)
+	hashedMessage := sha256.HashByteArray(transByteArray)
 	publicKey := signedTrans.From
 	signature := signedTrans.Signature
 	result := signatureStrategy.Verify(publicKey, hashedMessage, signature)

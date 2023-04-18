@@ -67,11 +67,6 @@ func (signatureScheme RSASig) KeyGen() (string, string) {
 
 func (signatureScheme RSASig) Sign(hash []byte, secretKey string) []byte {
 	n, d := SplitKey(secretKey)
-	//
-	//t := transaction.From + transaction.To + strconv.Itoa(transaction.Amount)
-	//t = strings.Replace(t, ";", "", -1)
-	//
-	//hashed := hash_strategy.Hash_SHA256(t)
 	sign := Decrypt(new(big.Int).SetBytes(hash), n, d)
 	return sign.Bytes()
 }

@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"bytes"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/google/uuid"
 	"strconv"
 )
@@ -32,4 +34,11 @@ func (signedTransaction *SignedTransaction) ToByteArrayWithoutSign() []byte {
 	buffer.WriteString(";_;")
 	buffer.WriteString(strconv.Itoa(signedTransaction.Amount))
 	return buffer.Bytes()
+}
+
+func (signedTransaction *SignedTransaction) SignTransaction(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
+	byteArrayTransaction := signedTransaction.ToByteArrayWithoutSign()
+	hashedTransaction := sha256.HashByteArray(byteArrayTransaction)
+	signature := signatureStrategy.Sign(hashedTransaction, secretSigningKey)
+	signedTransaction.Signature = signature
 }
