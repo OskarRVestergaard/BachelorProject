@@ -14,20 +14,22 @@ type SignedTransaction struct {
 	Signature []byte
 }
 
-// TODO ADD SOME SORT OF SEPERATOR BETWEEN THEM, SINCE THIS IS ONLY ONE WAY, AND CAN BE EXPLOITED
 func (signedTransaction *SignedTransaction) ToByteArray() []byte {
-	var firstBytes = signedTransaction.ToByteArrayWithoutSign()
-	firstBytes = append(firstBytes, signedTransaction.Signature...)
-	return firstBytes
+	var buffer bytes.Buffer
+	buffer.Write(signedTransaction.ToByteArrayWithoutSign())
+	buffer.WriteString(";_;")
+	buffer.Write(signedTransaction.Signature)
+	return buffer.Bytes()
 }
 
-// TODO ADD SOME SORT OF SEPERATOR BETWEEN THEM, SINCE THIS IS ONLY ONE WAY, AND CAN BE EXPLOITED
 func (signedTransaction *SignedTransaction) ToByteArrayWithoutSign() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(signedTransaction.Id.String())
+	buffer.WriteString(";_;")
 	buffer.WriteString(signedTransaction.From)
+	buffer.WriteString(";_;")
 	buffer.WriteString(signedTransaction.To)
+	buffer.WriteString(";_;")
 	buffer.WriteString(strconv.Itoa(signedTransaction.Amount))
-
 	return buffer.Bytes()
 }
