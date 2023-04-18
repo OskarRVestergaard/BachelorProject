@@ -42,6 +42,50 @@ func (tree *Blocktree) GetHead() Block {
 }
 
 /*
+GetDifferenceInTransactions
+
+returns the defference between transactions on block and list given
+*/
+func (tree *Blocktree) GetDifferenceInTransactions(unhandledTransactions []SignedTransaction) []SignedTransaction {
+	var TransactionsOnBlockTree []SignedTransaction
+	var TransOnBlock []SignedTransaction
+	var TransactionsInBlock func(block Block) []SignedTransaction
+	TransactionsInBlock = func(block Block) []SignedTransaction {
+		if block.IsGenesis {
+			return TransactionsOnBlockTree
+		}
+		TransOnBlock = append(TransOnBlock, block.BlockData.Transactions...)
+
+		return TransactionsInBlock(tree.HashToBlock(block.ParentHash))
+	}
+
+	TransactionsInBlock(tree.GetHead())
+	difference := differenceBetweenTwoTransactionLists(unhandledTransactions, TransOnBlock)
+	print("asd")
+	print(difference)
+
+	return difference
+}
+func differenceBetweenTwoTransactionLists(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
+	//https://www.tutorialspoint.com/golang-program-to-calculate-difference-between-two-slices
+	var difference []SignedTransaction
+	for _, val1 := range list1 {
+		found := false
+		for _, val2 := range list2 {
+			if val1.Id == val2.Id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			difference = append(difference, val1)
+		}
+	}
+	return difference
+
+}
+
+/*
 HashToBlock
 
 returns the Block that hashes to the parameter
