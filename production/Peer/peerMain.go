@@ -22,6 +22,7 @@ type Peer struct {
 	ActiveConnections       map[string]models.Void
 	Encoders                map[string]*gob.Encoder
 	Ledger                  *models.Ledger
+	decoderMutex            sync.Mutex
 	acMutex                 sync.Mutex
 	encMutex                sync.Mutex
 	floodMutex              sync.Mutex
@@ -37,7 +38,7 @@ type Peer struct {
 
 func (p *Peer) RunPeer(IpPort string) {
 	p.signatureStrategy = signature_strategy.RSASig{}
-	//p.signatureStrategy = signature_strategy.ECDSASig{} //Might be passing wrong xy?
+	//p.signatureStrategy = signature_strategy.ECDSASig{} //Might be passing wrong xy? Prob not though
 	p.lotteryStrategy = lottery_strategy.PoW{}
 	p.IpPort = IpPort
 	p.acMutex.Lock()

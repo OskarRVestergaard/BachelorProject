@@ -81,21 +81,25 @@ func (p *Peer) Receiver(conn net.Conn) {
 	msg := &blockchain.Message{}
 	dec := gob.NewDecoder(conn)
 	for {
+		p.decoderMutex.Lock()
 		err := dec.Decode(msg)
 		savedMsg := *msg
 		if err == io.EOF {
 			err2 := conn.Close()
 			print(err2.Error())
+			p.encMutex.Unlock()
 			return
 		}
 		if err != nil {
 			println(err.Error())
 			err2 := conn.Close()
 			print(err2.Error())
+			p.encMutex.Unlock()
 			return
 		}
 		handled := savedMsg
 		p.handleMessage(handled)
+		p.decoderMutex.Unlock()
 	}
 }
 
@@ -106,7 +110,17 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 	case constants.SignedTransaction:
 		p.validMutex.Lock()
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			p.addTransaction((msg).SignedTransaction)
+			oldSign := msg.SignedTransaction.Signature
+			signatureCopy := make([]byte, len(oldSign))
+			copy(signatureCopy, oldSign)
+			deepCopyTransaction := blockchain.SignedTransaction{
+				Id:        msg.SignedTransaction.Id,
+				From:      msg.SignedTransaction.From,
+				To:        msg.SignedTransaction.To,
+				Amount:    msg.SignedTransaction.Amount,
+				Signature: signatureCopy,
+			}
+			p.addTransaction(deepCopyTransaction)
 		} else {
 			p.Ledger.Mutex.Lock()
 			p.Ledger.UTA++
@@ -148,7 +162,6 @@ func (p *Peer) startListener() {
 
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.floodMutex.Lock()
-
 	t := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 
 	p.validMutex.Lock()

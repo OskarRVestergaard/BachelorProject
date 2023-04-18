@@ -57,7 +57,7 @@ func MakeLedger() *models.Ledger {
 	return ledger
 }
 
-// TODO Eventually this needs to also be uphold
+// TODO Eventually this needs to also be upheld
 func (p *Peer) validTransaction(from string, amount int) bool {
 	if amount == 0 {
 		println("Invalid SignedTransaction with the amount 0")
