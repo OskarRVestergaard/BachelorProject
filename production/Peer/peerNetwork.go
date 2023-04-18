@@ -146,7 +146,10 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 func (p *Peer) startListener() {
 	ln, _ := net.Listen("tcp", p.IpPort)
 	for {
-		conn, _ := ln.Accept()
+		conn, err := ln.Accept()
+		if err != nil {
+			panic("Error happened for listener: " + err.Error())
+		}
 		p.AddIpPort(conn.LocalAddr().String())
 		go p.Receiver(conn)
 	}

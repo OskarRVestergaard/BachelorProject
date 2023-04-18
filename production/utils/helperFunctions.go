@@ -18,7 +18,8 @@ func TransactionHasCorrectSignature(signatureStrategy signature_strategy.Signatu
 	hashedMessage := hash_strategy.HashByteArray(transByteArray)
 	publicKey := signedTrans.From
 	signature := signedTrans.Signature
-	return signatureStrategy.Verify(publicKey, hashedMessage, signature)
+	result := signatureStrategy.Verify(publicKey, hashedMessage, signature)
+	return result
 }
 
 func MakeDeepCopyOfTransaction(transaction blockchain.SignedTransaction) (copyOfTransaction blockchain.SignedTransaction) {

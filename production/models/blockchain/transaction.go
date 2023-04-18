@@ -28,7 +28,6 @@ func (signedTransaction *SignedTransaction) ToByteArrayWithoutSign() []byte {
 	buffer.WriteString(signedTransaction.From)
 	buffer.WriteString(signedTransaction.To)
 	buffer.WriteString(strconv.Itoa(signedTransaction.Amount))
-	buffer.WriteString(string(signedTransaction.Signature))
 
 	return buffer.Bytes()
 }
