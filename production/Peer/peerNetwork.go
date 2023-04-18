@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
@@ -110,17 +111,8 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 	case constants.SignedTransaction:
 		p.validMutex.Lock()
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			oldSign := msg.SignedTransaction.Signature
-			signatureCopy := make([]byte, len(oldSign))
-			copy(signatureCopy, oldSign)
-			deepCopyTransaction := blockchain.SignedTransaction{
-				Id:        msg.SignedTransaction.Id,
-				From:      msg.SignedTransaction.From,
-				To:        msg.SignedTransaction.To,
-				Amount:    msg.SignedTransaction.Amount,
-				Signature: signatureCopy,
-			}
-			p.addTransaction(deepCopyTransaction)
+			deepCopyOfTransaction := utils.MakeDeepCopyOfTransaction(msg.SignedTransaction)
+			p.addTransaction(deepCopyOfTransaction)
 		} else {
 			p.Ledger.Mutex.Lock()
 			p.Ledger.UTA++
@@ -167,8 +159,8 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.validMutex.Lock()
 	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
 
-	// TODO: WOW MAGI SOM LAVER SIGNED TRANSACTION TIL EN BESKED DER KAN HASHES BURDE MÅSKE FIXES ORDENTLIGT PÅ ET TIDSPUNKT :D MVH Winther Wonderboy
-	hashedMessage := utils.HashSignedTransactionToByteArrayWowSoCool(msg.SignedTransaction)
+	byteArrayTransaction := msg.SignedTransaction.ToByteArrayWithoutSign()
+	hashedMessage := hash_strategy.HashByteArray(byteArrayTransaction)
 	publicKey := msg.SignedTransaction.From
 	secretSigningKey, foundSecretKey := p.PublicToSecret[from]
 	if foundSecretKey {

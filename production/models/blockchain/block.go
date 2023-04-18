@@ -47,6 +47,7 @@ ToByteArray
 
 returns a byte array representation, if you want the hash use HashOfBlock instead
 */
+//TODO ADD SOME SORT OF SEPERATOR BETWEEN THEM, SINCE THIS IS ONLY ONE WAY, AND CAN BE EXPLOITED
 func (block *Block) ToByteArray() []byte {
 	var firstBytes = block.toByteArrayWithoutSign()
 	firstBytes = append(firstBytes, block.Signature...)
@@ -58,6 +59,7 @@ ToByteArrayWithoutSign
 
 returns a byte array representation, to be used for signature calculation
 */
+//TODO ADD SOME SORT OF SEPERATOR BETWEEN THEM, SINCE THIS IS ONLY ONE WAY, AND CAN BE EXPLOITED
 func (block *Block) toByteArrayWithoutSign() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(block.Vk)
