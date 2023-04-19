@@ -42,3 +42,22 @@ func (signedTransaction *SignedTransaction) SignTransaction(signatureStrategy si
 	signature := signatureStrategy.Sign(hashedTransaction, secretSigningKey)
 	signedTransaction.Signature = signature
 }
+
+func getTransactionsInList1ButNotList2(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
+	//Currently, since the lists are unsorted the algortihm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+	var difference []SignedTransaction
+	found := false
+	for _, val1 := range list1 {
+		found = false
+		for _, val2 := range list2 {
+			if val1.Id == val2.Id {
+				found = true
+			}
+		}
+		if !found {
+			difference = append(difference, val1)
+		}
+	}
+
+	return difference
+}

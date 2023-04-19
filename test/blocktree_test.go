@@ -20,19 +20,19 @@ func TestBlockDelivery(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	listOfPeers[0].SendFakeBlockWithTransactions(8)
+	listOfPeers[0].SendBlockWithTransactions(8, "DebugDraw")
 
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
 	time.Sleep(1000 * time.Millisecond)
 
-	listOfPeers[0].SendFakeBlockWithTransactions(6)
+	listOfPeers[0].SendBlockWithTransactions(6, "DebugDraw")
 
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
 	time.Sleep(1000 * time.Millisecond)
 
-	listOfPeers[0].SendFakeBlockWithTransactions(11)
+	listOfPeers[0].SendBlockWithTransactions(11, "DebugDraw")
 	time.Sleep(1000 * time.Millisecond)
 	time.Sleep(1000 * time.Millisecond)
 	assert.True(t, true)

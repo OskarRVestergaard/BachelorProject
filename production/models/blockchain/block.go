@@ -92,12 +92,11 @@ func CreateGenesisBlock() Block {
 	}
 }
 
-func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) int {
+func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
 	data := block.toByteArrayWithoutSign()
 	hashedData := sha256.HashByteArray(data)
 	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
 	block.Signature = signature
-	return 1
 }
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {

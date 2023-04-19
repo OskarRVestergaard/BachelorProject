@@ -21,30 +21,43 @@ func (p *Peer) Mine() {
 	}
 }
 
-func (p *Peer) SendFakeBlockWithTransactions(slot int) {
-	var verificationKey = utils.GetSomeKey(p.PublicToSecret)
-	var secretKey = p.PublicToSecret[verificationKey]
-	var headBlock = p.blockTree.GetHead()
-	var headBlockHash = headBlock.HashOfBlock()
-	var blockWithCurrentlyUnhandledTransactions = blockchain.Block{
+func (p *Peer) createBlock(verificationKey string, slot int, draw string) blockchain.Block {
+	secretKey, foundSk := p.PublicToSecret[verificationKey]
+	if !foundSk {
+		panic("Tried to create a block but peer did not have the associated SecretKey")
+	}
+	p.blockTreeMutex.Lock()
+	headBlock := p.blockTree.GetHead()
+	headBlockHash := headBlock.HashOfBlock()
+	transactionsToAdd := p.blockTree.GetTransactionsNotInTree(p.unfinalizedTransactions)
+	resultBlock := blockchain.Block{
 		IsGenesis: false,
 		Vk:        verificationKey,
 		Slot:      slot,
-		Draw:      "TO BE USED when mining is implemented, currently every block is valid if it is signed (and not genesis)",
+		Draw:      draw,
 		BlockData: blockchain.BlockData{
-			Transactions: p.unfinalizedTransactions, //TODO Should only add not already added transactions (ones not in the chain) This is both something the create of the block should take care of, but also something that the receiver needs to check
+			Transactions: transactionsToAdd,
 		},
 		ParentHash: headBlockHash,
 		Signature:  nil,
 	}
-	errorCode := blockWithCurrentlyUnhandledTransactions.SignBlock(p.signatureStrategy, secretKey)
-	if errorCode != 1 {
-		return
+	resultBlock.SignBlock(p.signatureStrategy, secretKey)
+	p.blockTreeMutex.Unlock()
+	if resultBlock.HasCorrectSignature(p.signatureStrategy) {
+		return resultBlock
+	} else {
+		panic("Created block but gave it a wrong signature")
 	}
-	var msg = blockchain.Message{
+}
+
+func (p *Peer) SendBlockWithTransactions(slot int, draw string) {
+	verificationKey := utils.GetSomeKey(p.PublicToSecret)
+	blockWithTransactions := p.createBlock(verificationKey, slot, draw)
+
+	msg := blockchain.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.IpPort,
-		MessageBlocks: []blockchain.Block{blockWithCurrentlyUnhandledTransactions},
+		MessageBlocks: []blockchain.Block{blockWithTransactions},
 	}
 	go p.FloodMessage(msg)
 	for _, block := range msg.MessageBlocks {
