@@ -1,7 +1,6 @@
 package Peer
 
 import (
-	"fmt"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -10,7 +9,6 @@ import (
 
 // TODO FIX LATER
 func (p *Peer) Mine() {
-	fmt.Println("We're there. All I can see are turtle tracks. Whaddaya say we give Bowser the old Brooklyn one-two?")
 	var hasPotentialWinner bool
 	for k := range p.PublicToSecret {
 		hasPotentialWinner, _ = p.lotteryStrategy.Mine(k, "PrevHash")
@@ -22,6 +20,7 @@ func (p *Peer) Mine() {
 }
 
 func (p *Peer) createBlock(verificationKey string, slot int, draw string) blockchain.Block {
+	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.PublicToSecret[verificationKey]
 	if !foundSk {
 		panic("Tried to create a block but peer did not have the associated SecretKey")
@@ -74,6 +73,8 @@ func (p *Peer) startBlockHandler() {
 
 func (p *Peer) handleBlock(block blockchain.Block) {
 	//TODO The check are currently made here, this can hurt performance since some part might be done multiple times for a given block
+	//TODO Needs to verify the draw
+	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	blockSignatureIsCorrect := block.HasCorrectSignature(p.signatureStrategy)
 	if !blockSignatureIsCorrect {
 		return
@@ -86,8 +87,6 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 			return
 		}
 	}
-
-	//ONLY ADD TRANSACTION THAT DO NOT ALREADY EXIST
 
 	p.blockTreeMutex.Lock()
 	var t = p.blockTree.AddBlock(block)
