@@ -1,8 +1,7 @@
 package lottery_strategy
 
 import (
-	"bytes"
-	"crypto/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"math/big"
 	"strconv"
 )
@@ -12,18 +11,16 @@ type PoW struct {
 
 var hardness = 2
 
-func (lottery PoW) Mine(vk string, a string) (bool, *big.Int) {
-	//c := 1
-	aByte := []byte(a)
+func (lottery PoW) Mine(vk string, aBlockToExtend []byte) (bool, *big.Int) {
+
 	vkByte := []byte(vk)
-	H := sha256.New()
+	aAndVk := append(vkByte, aBlockToExtend...)
 	loopCon := 1000
 
 	for c := 1; c < loopCon; c++ {
-
-		temp := [][]byte{aByte, []byte(strconv.Itoa(c)), vkByte}
-		H.Write(bytes.Join(temp, []byte("")))
-		hm := new(big.Int).SetBytes(H.Sum(nil))
+		tempToHash := append(aAndVk, strconv.Itoa(c)...) //TODO Change so aAndVk not a problem, and not string counting (prob not important)
+		hash := sha256.HashByteArray(tempToHash)
+		hm := new(big.Int).SetBytes(hash)
 		originalHm := big.NewInt(0)
 		originalHm.Set(hm)
 		hm = hm.Rsh(hm, uint(256-hardness))

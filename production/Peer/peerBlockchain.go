@@ -7,18 +7,6 @@ import (
 	"time"
 )
 
-// TODO FIX LATER
-func (p *Peer) Mine() {
-	var hasPotentialWinner bool
-	for k := range p.PublicToSecret {
-		hasPotentialWinner, _ = p.lotteryStrategy.Mine(k, "PrevHash")
-	}
-
-	if hasPotentialWinner {
-		// do block stuff IDK
-	}
-}
-
 func (p *Peer) createBlock(verificationKey string, slot int, draw string) blockchain.Block {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.PublicToSecret[verificationKey]

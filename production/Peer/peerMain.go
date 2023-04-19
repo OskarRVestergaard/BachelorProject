@@ -39,7 +39,7 @@ type Peer struct {
 func (p *Peer) RunPeer(IpPort string) {
 	//p.signatureStrategy = signature_strategy.RSASig{}
 	p.signatureStrategy = signature_strategy.ECDSASig{} //Might be passing wrong xy? Prob not though
-	p.lotteryStrategy = lottery_strategy.PoW{}
+	//p.lotteryStrategy = lottery_strategy.PoW{} //TODO Add Again
 	p.IpPort = IpPort
 	p.acMutex.Lock()
 	p.ActiveConnections = make(map[string]models.Void)
