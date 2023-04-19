@@ -22,7 +22,6 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 		Unhandled = append(Unhandled, b)
 		parent := blockTree.GetHead()
 		if i%3 == 0 {
-			//onChain = append(onChain, b)
 			var trans []blockchain.SignedTransaction
 			trans = append(trans, b)
 			blockTree.AddBlock(blockchain.Block{
@@ -37,11 +36,9 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 				ParentHash: parent.HashOfBlock(),
 				Signature:  nil,
 			})
-
 		}
-
 	}
-	blockTree.GetDifferenceInTransactions(Unhandled)
-	assert.Equal(t, len(blockTree.GetDifferenceInTransactions(Unhandled)), 36)
+	dif := blockTree.GetTransactionsNotInTree(Unhandled)
+	assert.Equal(t, 66, len(dif))
 
 }

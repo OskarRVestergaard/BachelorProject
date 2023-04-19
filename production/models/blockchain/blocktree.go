@@ -42,45 +42,46 @@ func (tree *Blocktree) GetHead() Block {
 }
 
 /*
-GetDifferenceInTransactions
+GetTransactionsNotInTree
 
-returns the defference between transactions on block and list given
+returns the difference between transactions on block and list given
 */
-func (tree *Blocktree) GetDifferenceInTransactions(unhandledTransactions []SignedTransaction) []SignedTransaction {
-	var TransactionsOnBlockTree []SignedTransaction
-	var TransOnBlock []SignedTransaction
-	var TransactionsInBlock func(block Block) []SignedTransaction
-	TransactionsInBlock = func(block Block) []SignedTransaction {
-		if block.IsGenesis {
-			return TransactionsOnBlockTree
-		}
-		TransOnBlock = append(TransOnBlock, block.BlockData.Transactions...)
+func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []SignedTransaction) []SignedTransaction {
 
-		return TransactionsInBlock(tree.HashToBlock(block.ParentHash))
-	}
-
-	TransactionsInBlock(tree.GetHead())
-	difference := differenceBetweenTwoTransactionLists(unhandledTransactions, TransOnBlock)
-	print("asd")
-	print(difference)
+	head := tree.GetHead()
+	transactionsAccumulator := make([]SignedTransaction, 0)
+	transactionsInChain := tree.getTransactionsInChain(transactionsAccumulator, head)
+	difference := getTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
 
 	return difference
 }
-func differenceBetweenTwoTransactionLists(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
-	//https://www.tutorialspoint.com/golang-program-to-calculate-difference-between-two-slices
+
+func (tree *Blocktree) getTransactionsInChain(accumulator []SignedTransaction, block Block) []SignedTransaction {
+
+	if block.IsGenesis {
+		return accumulator
+	}
+	accumulator = append(accumulator, block.BlockData.Transactions...)
+
+	return tree.getTransactionsInChain(accumulator, tree.HashToBlock(block.ParentHash))
+}
+
+func getTransactionsInList1ButNotList2(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
+	//Currently, since the lists are unsorted the algortihm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
 	var difference []SignedTransaction
+	found := false
 	for _, val1 := range list1 {
-		found := false
+		found = false
 		for _, val2 := range list2 {
 			if val1.Id == val2.Id {
 				found = true
-				break
 			}
 		}
 		if !found {
 			difference = append(difference, val1)
 		}
 	}
+
 	return difference
 
 }
