@@ -26,7 +26,7 @@ func TestBlockDelivery(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	listOfPeers[1].SendFakeBlockWithTransactions(6)
+	listOfPeers[0].SendFakeBlockWithTransactions(6)
 
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 

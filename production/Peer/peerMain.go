@@ -37,8 +37,8 @@ type Peer struct {
 }
 
 func (p *Peer) RunPeer(IpPort string) {
-	p.signatureStrategy = signature_strategy.RSASig{}
-	//p.signatureStrategy = signature_strategy.ECDSASig{} //Might be passing wrong xy? Prob not though
+	//p.signatureStrategy = signature_strategy.RSASig{}
+	p.signatureStrategy = signature_strategy.ECDSASig{} //Might be passing wrong xy? Prob not though
 	p.lotteryStrategy = lottery_strategy.PoW{}
 	p.IpPort = IpPort
 	p.acMutex.Lock()
@@ -58,10 +58,4 @@ func (p *Peer) RunPeer(IpPort string) {
 	time.Sleep(1500 * time.Millisecond)
 	go p.startBlockHandler()
 	go p.startListener()
-}
-
-func (p *Peer) addTransaction(t blockchain.SignedTransaction) {
-	p.unfinalizedTransMutex.Lock()
-	p.unfinalizedTransactions = append(p.unfinalizedTransactions, t)
-	p.unfinalizedTransMutex.Unlock()
 }

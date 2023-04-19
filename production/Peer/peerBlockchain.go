@@ -37,7 +37,7 @@ func (p *Peer) SendFakeBlockWithTransactions(slot int) {
 		ParentHash: headBlockHash,
 		Signature:  nil,
 	}
-	errorCode := blockWithCurrentlyUnhandledTransactions.CalculateSignature(p.signatureStrategy, secretKey)
+	errorCode := blockWithCurrentlyUnhandledTransactions.SignBlock(p.signatureStrategy, secretKey)
 	if errorCode != 1 {
 		return
 	}
@@ -98,4 +98,10 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 		panic("addBlockReturnValueNotUnderstood")
 	}
 	p.blockTreeMutex.Unlock()
+}
+
+func (p *Peer) addTransaction(t blockchain.SignedTransaction) {
+	p.unfinalizedTransMutex.Lock()
+	p.unfinalizedTransactions = append(p.unfinalizedTransactions, t)
+	p.unfinalizedTransMutex.Unlock()
 }

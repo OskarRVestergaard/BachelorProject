@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"bytes"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"strconv"
 )
@@ -33,12 +33,11 @@ func (block *Block) GetVal() (val string, isGenesis bool) {
 /*
 HashOfBlock
 
-returns a byte array representation of the block to be used for hashing'
-//TODO Make into a hashing function instead? maybe pass hashing strategy, when this is interfaced
+returns a byte array representation of the block to be used for hashing
 */
 func (block *Block) HashOfBlock() []byte {
 	byteArrayString := block.ToByteArray()
-	hash := hash_strategy.HashByteArray(byteArrayString)
+	hash := sha256.HashByteArray(byteArrayString)
 	return hash
 }
 
@@ -47,11 +46,12 @@ ToByteArray
 
 returns a byte array representation, if you want the hash use HashOfBlock instead
 */
-//TODO ADD SOME SORT OF SEPERATOR BETWEEN THEM, SINCE THIS IS ONLY ONE WAY, AND CAN BE EXPLOITED
 func (block *Block) ToByteArray() []byte {
-	var firstBytes = block.toByteArrayWithoutSign()
-	firstBytes = append(firstBytes, block.Signature...)
-	return firstBytes
+	var buffer bytes.Buffer
+	buffer.Write(block.toByteArrayWithoutSign())
+	buffer.WriteString(";_;")
+	buffer.Write(block.Signature)
+	return buffer.Bytes()
 }
 
 /*
@@ -59,15 +59,17 @@ ToByteArrayWithoutSign
 
 returns a byte array representation, to be used for signature calculation
 */
-//TODO ADD SOME SORT OF SEPERATOR BETWEEN THEM, SINCE THIS IS ONLY ONE WAY, AND CAN BE EXPLOITED
 func (block *Block) toByteArrayWithoutSign() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(block.Vk)
+	buffer.WriteString(";_;")
 	buffer.WriteString(strconv.Itoa(block.Slot))
+	buffer.WriteString(";_;")
 	buffer.WriteString(block.Draw)
+	buffer.WriteString(";_;")
 	buffer.WriteString(block.BlockData.ToString())
-	buffer.WriteString(string(block.ParentHash))
-
+	buffer.WriteString(";_;")
+	buffer.Write(block.ParentHash)
 	return buffer.Bytes()
 }
 
@@ -90,9 +92,9 @@ func CreateGenesisBlock() Block {
 	}
 }
 
-func (block *Block) CalculateSignature(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) int {
+func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) int {
 	data := block.toByteArrayWithoutSign()
-	hashedData := hash_strategy.HashByteArray(data)
+	hashedData := sha256.HashByteArray(data)
 	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
 	block.Signature = signature
 	return 1
@@ -100,7 +102,7 @@ func (block *Block) CalculateSignature(signatureStrategy signature_strategy.Sign
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
 	blockVerificationKey := block.Vk
-	blockHashWithoutSign := hash_strategy.HashByteArray(block.toByteArrayWithoutSign())
+	blockHashWithoutSign := sha256.HashByteArray(block.toByteArrayWithoutSign())
 	blockSignature := block.Signature
 	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, blockSignature)
 	return result

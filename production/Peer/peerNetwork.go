@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
@@ -146,7 +145,10 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 func (p *Peer) startListener() {
 	ln, _ := net.Listen("tcp", p.IpPort)
 	for {
-		conn, _ := ln.Accept()
+		conn, err := ln.Accept()
+		if err != nil {
+			panic("Error happened for listener: " + err.Error())
+		}
 		p.AddIpPort(conn.LocalAddr().String())
 		go p.Receiver(conn)
 	}
@@ -154,29 +156,17 @@ func (p *Peer) startListener() {
 
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.floodMutex.Lock()
-	t := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 
 	p.validMutex.Lock()
-	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: t}
 
-	byteArrayTransaction := msg.SignedTransaction.ToByteArrayWithoutSign()
-	hashedMessage := hash_strategy.HashByteArray(byteArrayTransaction)
-	publicKey := msg.SignedTransaction.From
 	secretSigningKey, foundSecretKey := p.PublicToSecret[from]
 	if foundSecretKey {
-		signatureToAssign := p.signatureStrategy.Sign(hashedMessage, secretSigningKey)
-		msg.SignedTransaction.Signature = signatureToAssign
+		trans.SignTransaction(p.signatureStrategy, secretSigningKey)
 	}
-	signature := msg.SignedTransaction.Signature
-	if p.signatureStrategy.Verify(publicKey, hashedMessage, signature) {
-		p.addTransaction(msg.SignedTransaction)
-	} else {
-		p.Ledger.Mutex.Lock()
-		p.Ledger.UTA++
-		p.Ledger.Mutex.Unlock()
-	}
+	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: p.IpPort, SignedTransaction: trans}
+	p.addTransaction(trans)
 	p.validMutex.Unlock()
 	p.FloodMessage(msg)
 	p.floodMutex.Unlock()
-
 }
