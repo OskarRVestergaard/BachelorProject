@@ -14,26 +14,26 @@ func TestBlockDelivery(t *testing.T) {
 	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	listOfPeers[0].SendFakeBlockWithTransactions(8)
 
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	listOfPeers[0].SendFakeBlockWithTransactions(6)
 
 	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	listOfPeers[0].SendFakeBlockWithTransactions(11)
-	time.Sleep(10000 * time.Millisecond)
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 	assert.True(t, true)
 }

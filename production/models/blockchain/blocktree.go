@@ -42,6 +42,51 @@ func (tree *Blocktree) GetHead() Block {
 }
 
 /*
+GetTransactionsNotInTree
+
+returns the difference between transactions on block and list given
+*/
+func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []SignedTransaction) []SignedTransaction {
+
+	head := tree.GetHead()
+	transactionsAccumulator := make([]SignedTransaction, 0)
+	transactionsInChain := tree.getTransactionsInChain(transactionsAccumulator, head)
+	difference := getTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
+
+	return difference
+}
+
+func (tree *Blocktree) getTransactionsInChain(accumulator []SignedTransaction, block Block) []SignedTransaction {
+
+	if block.IsGenesis {
+		return accumulator
+	}
+	accumulator = append(accumulator, block.BlockData.Transactions...)
+
+	return tree.getTransactionsInChain(accumulator, tree.HashToBlock(block.ParentHash))
+}
+
+func getTransactionsInList1ButNotList2(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
+	//Currently, since the lists are unsorted the algortihm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+	var difference []SignedTransaction
+	found := false
+	for _, val1 := range list1 {
+		found = false
+		for _, val2 := range list2 {
+			if val1.Id == val2.Id {
+				found = true
+			}
+		}
+		if !found {
+			difference = append(difference, val1)
+		}
+	}
+
+	return difference
+
+}
+
+/*
 HashToBlock
 
 returns the Block that hashes to the parameter
