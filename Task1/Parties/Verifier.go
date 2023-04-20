@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"math/big"
 	"strconv"
 )
@@ -20,9 +20,9 @@ func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 	for _, value := range triple.OpenValues {
 		isOdd := position%2 == 1
 		if isOdd {
-			currentHash = hash_strategy.HashByteArray(append(value, currentHash...))
+			currentHash = sha256.HashByteArray(append(value, currentHash...))
 		} else {
-			currentHash = hash_strategy.HashByteArray(append(currentHash, value...))
+			currentHash = sha256.HashByteArray(append(currentHash, value...))
 		}
 		position = position / 2
 	}
@@ -50,7 +50,7 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 	toBeHashed := []byte(V.parameters.Id)
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
-	hash := hash_strategy.HashByteArray(toBeHashed)
+	hash := sha256.HashByteArray(toBeHashed)
 	return bytes.Equal(hash, shouldBe)
 }
 

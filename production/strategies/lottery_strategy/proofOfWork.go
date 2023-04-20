@@ -1,49 +1,74 @@
 package lottery_strategy
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"math/big"
-	"strconv"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 )
 
 type PoW struct {
 }
 
-var hardness = 2
+func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash []byte, newBlockHashes chan []byte, winningDraws chan WinningLotteryParams) {
+	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashes, winningDraws)
+}
 
-func (lottery PoW) Mine(vk string, a string) (bool, *big.Int) {
-	//c := 1
-	aByte := []byte(a)
-	vkByte := []byte(vk)
-	H := sha256.New()
-	loopCon := 1000
+func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash []byte, newBlockHashes chan []byte, winningDraws chan WinningLotteryParams) {
+	parentHash := initialHash
+	for {
+		done := make(chan struct{})
+		go lottery.mine(vk, parentHash, hardness, done, winningDraws)
+		parentHash = <-newBlockHashes
+		done <- struct{}{}
+	}
+}
 
-	for c := 1; c < loopCon; c++ {
-
-		temp := [][]byte{aByte, []byte(strconv.Itoa(c)), vkByte}
-		H.Write(bytes.Join(temp, []byte("")))
-		hm := new(big.Int).SetBytes(H.Sum(nil))
-		originalHm := big.NewInt(0)
-		originalHm.Set(hm)
-		hm = hm.Rsh(hm, uint(256-hardness))
-
-		zero := big.NewInt(0)
-
-		if zero.Cmp(hm) == 0 {
-			println("I won :)")
-			return true, originalHm
+func (lottery *PoW) mine(vk string, parentHash []byte, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
+	c := 0
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			c = c + 1
+			draw := WinningLotteryParams{
+				Vk:         vk,
+				ParentHash: parentHash,
+				Counter:    c,
+			}
+			hashOfTicket := sha256.HashByteArray(draw.ToByteArray())
+			if verify(hashOfTicket, hardness) {
+				winningDraws <- draw
+				_ = <-done
+				return
+			}
 		}
 	}
 
-	return false, big.NewInt(0)
 }
 
-func (lottery PoW) Verify(block string) bool {
-	loopCon := 100
-	for testHash := 0; testHash < loopCon; testHash++ {
-		println(hardness)
+func verify(hashedTicket []byte, hardness int) bool {
+	byteAmount := hardness / 8
+	restAmount := hardness - 8*byteAmount
+	for i := 0; i < byteAmount; i++ {
+		if hashedTicket[i] != 0 {
+			return false
+		}
 	}
-
+	byteToCheck := hashedTicket[byteAmount]
+	for i := 0; i < restAmount; i++ {
+		if (byteToCheck >> (7 - i)) != 0 {
+			return false
+		}
+	}
 	return true
+}
+
+func (lottery *PoW) Verify(vk string, parentHash []byte, hardness int, counter int) bool {
+	draw := WinningLotteryParams{
+		Vk:         vk,
+		ParentHash: parentHash,
+		Counter:    counter,
+	}
+	hashed := sha256.HashByteArray(draw.ToByteArray())
+
+	return verify(hashed, hardness)
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/networkservice"
+	networkservice2 "github.com/OskarRVestergaard/BachelorProject/test/networkservice"
 	"time"
 )
 
@@ -10,8 +10,8 @@ func main() {
 	noOfPeers := 2
 	noOfMsgs := 2
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	listOfPeers, pkList := networkservice2.SetupPeers(noOfPeers, noOfNames) //setup peer
+	networkservice2.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 
 	time.Sleep(3000 * time.Millisecond)
 

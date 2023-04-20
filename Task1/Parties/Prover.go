@@ -2,7 +2,7 @@ package Parties
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/hash_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"strconv"
 )
 
@@ -30,7 +30,7 @@ func (P *Prover) pebbleGraph() {
 			}
 		}
 
-		P.pebbledGraph.Value[i] = hash_strategy.HashByteArray(toBeHashed)
+		P.pebbledGraph.Value[i] = sha256.HashByteArray(toBeHashed)
 	}
 }
 
@@ -55,7 +55,7 @@ func (P *Prover) createMerkleTreeFromGraph() {
 		leftChild := tree.Nodes[(i+1)*2-1]
 		rightChild := tree.Nodes[(i+1)*2]
 		toBeHashed := append(leftChild, rightChild...)
-		tree.Nodes[i] = hash_strategy.HashByteArray(toBeHashed)
+		tree.Nodes[i] = sha256.HashByteArray(toBeHashed)
 	}
 	P.merkleTree = &tree
 	P.commitment = P.merkleTree.GetRootCommitment()

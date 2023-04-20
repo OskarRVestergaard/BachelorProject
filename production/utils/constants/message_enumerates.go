@@ -7,5 +7,5 @@ const (
 	JoinMessage       = "joinMessage"
 	GetPeersMessage   = "getPeersMessage"
 	PeerMapDelivery   = "peerMapDelivery"
-	Block             = "block"
+	BlockDelivery     = "blockDelivery"
 )
