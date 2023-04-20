@@ -1,5 +1,10 @@
 package blockchain
 
+import (
+	"sync"
+	"time"
+)
+
 /*
 Blocktree
 
@@ -8,8 +13,11 @@ Blocktree
 Use the NewBlockTree method for creating a block tree!
 */
 type Blocktree struct {
-	treeMap map[string]node
-	head    node
+	treeMap                map[string]node
+	head                   node
+	subscriberChannelMutex sync.Mutex
+	subscriberChannelList  []chan []byte
+	newHeadBlocks          chan Block
 }
 
 /*
@@ -29,7 +37,14 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 	var genesisHash = genesisBlock.HashOfBlock()
 	var genesisStringHash = string(genesisHash)
 	treeMap[genesisStringHash] = genesisNode
-	return &Blocktree{treeMap: treeMap, head: genesisNode}
+	newHeadBlocks := make(chan Block)
+	tree := &Blocktree{
+		treeMap:       treeMap,
+		head:          genesisNode,
+		newHeadBlocks: newHeadBlocks,
+	}
+	tree.startSubscriptionHandler()
+	return tree
 }
 
 /*
@@ -87,6 +102,7 @@ returns -1 if block is already in the tree.
 returns -2 if block is marked as genesis block
 */
 func (tree *Blocktree) AddBlock(block Block) int {
+
 	//Refuse to add a new genesisBlock
 	if block.IsGenesis {
 		return -2
@@ -117,6 +133,34 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	var newNodeGreater = newNode.hasGreaterPathWeightThan(tree.head)
 	if newNodeGreater == 1 {
 		tree.head = newNode
+		tree.newHeadBlocks <- newNode.block
 	}
 	return 1
+}
+
+func (tree *Blocktree) startSubscriptionHandler() {
+	tree.subscriberChannelMutex.Lock()
+	tree.subscriberChannelList = make([]chan []byte, 0)
+	go tree.subscriptionSubroutine()
+	tree.subscriberChannelMutex.Unlock()
+}
+
+func (tree *Blocktree) subscriptionSubroutine() {
+	for {
+		newBlock := <-tree.newHeadBlocks
+		tree.subscriberChannelMutex.Lock()
+		for _, channel := range tree.subscriberChannelList {
+			channel <- newBlock.ToByteArray()
+		}
+		tree.subscriberChannelMutex.Unlock()
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func (tree *Blocktree) SubScribeToGetHead() (headHashes chan []byte) {
+	newChannel := make(chan []byte)
+	tree.subscriberChannelMutex.Lock()
+	tree.subscriberChannelList = append(tree.subscriberChannelList, newChannel)
+	tree.subscriberChannelMutex.Unlock()
+	return newChannel
 }

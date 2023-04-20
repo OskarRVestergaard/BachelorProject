@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -28,7 +29,11 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 				IsGenesis: false,
 				Vk:        "",
 				Slot:      0,
-				Draw:      "",
+				Draw: lottery_strategy.WinningLotteryParams{
+					Vk:         "DEBUG",
+					ParentHash: nil,
+					Counter:    0,
+				},
 				BlockData: blockchain.BlockData{
 					Hardness:     0,
 					Transactions: trans,

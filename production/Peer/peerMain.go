@@ -33,7 +33,7 @@ type Peer struct {
 	blockTreeMutex          sync.Mutex
 	blockTree               *blockchain.Blocktree
 	unhandledBlocks         chan blockchain.Block
-	//TODO FinalizedBlockChain (Is actually not needed, just add transaction to ledger, and do cleanup on unfinilized tranactions and blocktree)
+	hardness                int
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -53,6 +53,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
 	p.blockTreeMutex.Unlock()
 	p.unhandledBlocks = make(chan blockchain.Block, 20)
+	p.hardness = p.blockTree.GetHead().BlockData.Hardness
 
 	time.Sleep(1500 * time.Millisecond)
 	go p.startBlockHandler()
