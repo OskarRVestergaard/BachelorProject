@@ -40,7 +40,7 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 }
 
 func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.WinningLotteryParams) {
-	verificationKey := utils.GetSomeKey(p.PublicToSecret)
+	verificationKey := utils.GetSomeKey(p.PublicToSecret) //todo maybe make sure that it is the same public key that was used for the draw
 	blockWithTransactions := p.createBlock(verificationKey, slot, draw)
 
 	msg := blockchain.Message{

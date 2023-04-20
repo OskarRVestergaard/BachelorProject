@@ -64,21 +64,20 @@ returns the difference between transactions on block and list given
 func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []SignedTransaction) []SignedTransaction {
 
 	head := tree.GetHead()
-	transactionsAccumulator := make([]SignedTransaction, 0)
-	transactionsInChain := tree.getTransactionsInChain(transactionsAccumulator, head)
+	transactionsInChain := tree.getTransactionsInChain(head)
 	difference := getTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
 
 	return difference
 }
 
-func (tree *Blocktree) getTransactionsInChain(accumulator []SignedTransaction, block Block) []SignedTransaction {
-
-	if block.IsGenesis {
-		return accumulator
+func (tree *Blocktree) getTransactionsInChain(block Block) []SignedTransaction {
+	transactionsAccumulator := make([]SignedTransaction, 0)
+	for !block.IsGenesis {
+		transactionsAccumulator = append(transactionsAccumulator, block.BlockData.Transactions...)
+		nextHash := block.ParentHash
+		block = tree.HashToBlock(nextHash)
 	}
-	accumulator = append(accumulator, block.BlockData.Transactions...)
-
-	return tree.getTransactionsInChain(accumulator, tree.HashToBlock(block.ParentHash))
+	return transactionsAccumulator
 }
 
 /*
@@ -150,7 +149,7 @@ func (tree *Blocktree) subscriptionSubroutine() {
 		newBlock := <-tree.newHeadBlocks
 		tree.subscriberChannelMutex.Lock()
 		for _, channel := range tree.subscriberChannelList {
-			channel <- newBlock.ToByteArray()
+			channel <- newBlock.HashOfBlock()
 		}
 		tree.subscriberChannelMutex.Unlock()
 		time.Sleep(50 * time.Millisecond)

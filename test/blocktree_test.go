@@ -53,11 +53,12 @@ func TestPOWNetwork(t *testing.T) {
 	for _, peer := range listOfPeers {
 		peer.StartMining()
 	}
-	//for i := 0; i < 10; i++ {
-	//	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-	//	time.Sleep(5000 * time.Millisecond)
-	//}
+	for i := 0; i < 10; i++ {
+		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+		time.Sleep(5000 * time.Millisecond)
+	}
 	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(100000 * time.Millisecond)
 
 	assert.True(t, true)
 }
