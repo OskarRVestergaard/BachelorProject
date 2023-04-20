@@ -79,7 +79,10 @@ func (p *Peer) verifyBlock(block blockchain.Block) bool {
 	if !bytes.Equal(block.Draw.ParentHash, block.ParentHash) {
 		return false
 	}
-	return p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter)
+	if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
+		return false
+	}
+	return true
 }
 
 func (p *Peer) verifyTransactions(transactions []blockchain.SignedTransaction) bool {
