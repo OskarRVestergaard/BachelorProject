@@ -44,7 +44,7 @@ func TestBlockDelivery(t *testing.T) {
 	assert.True(t, true)
 }
 
-func TestPOWNetwork(t *testing.T) {
+func TestPOWNetwork2Peers(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 3
 	noOfNames := 2
@@ -63,5 +63,31 @@ func TestPOWNetwork(t *testing.T) {
 	time.Sleep(15000 * time.Millisecond)
 	time.Sleep(15000 * time.Millisecond)
 
+	assert.True(t, true)
+}
+
+func TestPOWNetwork4Peers(t *testing.T) {
+	noOfPeers := 4
+	noOfMsgs := 2
+	noOfNames := 4
+	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
+	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	for _, peer := range listOfPeers {
+		peer.StartMining()
+	}
+	for i := 0; i < 4; i++ {
+		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+		time.Sleep(10000 * time.Millisecond)
+	}
+	time.Sleep(20000 * time.Millisecond)
+
+	res1 := listOfPeers[0].GetBlockTree()
+	res2 := listOfPeers[1].GetBlockTree()
+	res3 := listOfPeers[2].GetBlockTree()
+	res4 := listOfPeers[3].GetBlockTree()
+	print(res1.GetHead().Slot)
+	print(res2.GetHead().Slot)
+	print(res3.GetHead().Slot)
+	print(res4.GetHead().Slot)
 	assert.True(t, true)
 }

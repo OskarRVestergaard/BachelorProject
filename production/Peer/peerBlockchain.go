@@ -100,6 +100,7 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	}
 
 	p.blockTreeMutex.Lock()
+	block = utils.MakeDeepCopyOfBlock(block)
 	var t = p.blockTree.AddBlock(block)
 	switch t {
 	case -3:
@@ -155,4 +156,8 @@ func (p *Peer) blockCreater(wins chan lottery_strategy.WinningLotteryParams) {
 		p.blockTreeMutex.Unlock()
 		p.SendBlockWithTransactions(slot, newWin)
 	}
+}
+
+func (p *Peer) GetBlockTree() *blockchain.Blocktree {
+	return p.blockTree
 }

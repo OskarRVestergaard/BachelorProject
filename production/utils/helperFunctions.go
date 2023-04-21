@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 )
@@ -34,4 +35,49 @@ func MakeDeepCopyOfTransaction(transaction blockchain.SignedTransaction) (copyOf
 		Signature: signatureCopy,
 	}
 	return deepCopyTransaction
+}
+
+func MakeDeepCopyOfBlock(block blockchain.Block) (copyOfBlock blockchain.Block) {
+
+	oldSign := block.Signature
+	signatureCopy := make([]byte, len(oldSign))
+	copy(signatureCopy, oldSign)
+
+	oldHash := block.ParentHash
+	hashCopy := make([]byte, len(oldHash))
+	copy(hashCopy, oldHash)
+
+	oldTransactions := block.BlockData.Transactions
+	transactionsCopy := make([]blockchain.SignedTransaction, len(oldTransactions))
+	for i, transaction := range oldTransactions {
+		transactionsCopy[i] = MakeDeepCopyOfTransaction(transaction)
+	}
+
+	deepCopyBlock := blockchain.Block{
+		IsGenesis: block.IsGenesis,
+		Vk:        block.Vk,
+		Slot:      block.Slot,
+		Draw:      MakeDeepCopyOfWinningParams(block.Draw),
+		BlockData: blockchain.BlockData{
+			Hardness:     block.BlockData.Hardness,
+			Transactions: transactionsCopy,
+		},
+		ParentHash: hashCopy,
+		Signature:  signatureCopy,
+	}
+	return deepCopyBlock
+}
+
+func MakeDeepCopyOfWinningParams(params lottery_strategy.WinningLotteryParams) (copyOfParams lottery_strategy.WinningLotteryParams) {
+
+	oldHash := params.ParentHash
+	hashCopy := make([]byte, len(oldHash))
+	copy(hashCopy, oldHash)
+
+	deepCopyParams := lottery_strategy.WinningLotteryParams{
+		Vk:         params.Vk,
+		ParentHash: hashCopy,
+		Counter:    params.Counter,
+	}
+	return deepCopyParams
 }
