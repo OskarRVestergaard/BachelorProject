@@ -79,7 +79,7 @@ func TestPOWNetwork4Peers(t *testing.T) {
 		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(10000 * time.Millisecond)
 	}
-	time.Sleep(20000 * time.Millisecond)
+	time.Sleep(40000 * time.Millisecond)
 
 	res1 := listOfPeers[0].GetBlockTree()
 	res2 := listOfPeers[1].GetBlockTree()

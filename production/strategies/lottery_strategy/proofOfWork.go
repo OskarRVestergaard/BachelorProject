@@ -13,7 +13,7 @@ func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash []byte, n
 
 func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash []byte, newBlockHashes chan []byte, winningDraws chan WinningLotteryParams) {
 	parentHash := initialHash
-	for {
+	for i := 0; i < 2; i++ { //TODO CHANGE
 		done := make(chan struct{})
 		go lottery.mine(vk, parentHash, hardness, done, winningDraws)
 		parentHash = <-newBlockHashes

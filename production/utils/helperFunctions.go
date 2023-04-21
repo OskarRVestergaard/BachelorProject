@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
@@ -80,4 +81,28 @@ func MakeDeepCopyOfWinningParams(params lottery_strategy.WinningLotteryParams) (
 		Counter:    params.Counter,
 	}
 	return deepCopyParams
+}
+
+func MakeDeepCopyOfMessage(msg blockchain.Message) (copyOfMessage blockchain.Message) {
+
+	oldBlocks := msg.MessageBlocks
+	blocksCopy := make([]blockchain.Block, len(oldBlocks))
+	for i, block := range oldBlocks {
+		blocksCopy[i] = MakeDeepCopyOfBlock(block)
+	}
+
+	oldPeers := msg.PeerMap
+	peersCopy := make(map[string]models.Void, len(oldPeers))
+	for k, v := range oldPeers {
+		peersCopy[k] = v
+	}
+
+	deepCopyMessage := blockchain.Message{
+		MessageType:       msg.MessageType,
+		MessageSender:     msg.MessageSender,
+		SignedTransaction: MakeDeepCopyOfTransaction(msg.SignedTransaction),
+		MessageBlocks:     blocksCopy,
+		PeerMap:           peersCopy,
+	}
+	return deepCopyMessage
 }

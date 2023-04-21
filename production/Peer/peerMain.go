@@ -16,24 +16,27 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 */
 
 type Peer struct {
-	signatureStrategy       signature_strategy.SignatureInterface
-	lotteryStrategy         lottery_strategy.LotteryInterface
-	IpPort                  string
-	ActiveConnections       map[string]models.Void
-	Encoders                map[string]*gob.Encoder
-	Ledger                  *models.Ledger
-	decoderMutex            sync.Mutex
-	acMutex                 sync.Mutex
-	encMutex                sync.Mutex
-	floodMutex              sync.Mutex
-	validMutex              sync.Mutex
-	PublicToSecret          map[string]string
-	unfinalizedTransMutex   sync.Mutex
-	unfinalizedTransactions []blockchain.SignedTransaction
-	blockTreeMutex          sync.Mutex
-	blockTree               *blockchain.Blocktree
-	unhandledBlocks         chan blockchain.Block
-	hardness                int
+	signatureStrategy          signature_strategy.SignatureInterface
+	lotteryStrategy            lottery_strategy.LotteryInterface
+	IpPort                     string
+	ActiveConnections          map[string]models.Void
+	Encoders                   map[string]*gob.Encoder
+	Ledger                     *models.Ledger
+	decoderMutex               sync.Mutex
+	acMutex                    sync.Mutex
+	encMutex                   sync.Mutex
+	floodMutex                 sync.Mutex
+	validMutex                 sync.Mutex
+	PublicToSecret             map[string]string
+	unfinalizedTransMutex      sync.Mutex
+	unfinalizedTransactions    []blockchain.SignedTransaction
+	blockTreeMutex             sync.Mutex
+	blockTree                  *blockchain.Blocktree
+	unhandledBlocks            chan blockchain.Block
+	hardness                   int
+	maximumTransactionsInBlock int
+	MessageLog                 []blockchain.Message
+	logMutex                   sync.Mutex
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -54,6 +57,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.blockTreeMutex.Unlock()
 	p.unhandledBlocks = make(chan blockchain.Block, 20)
 	p.hardness = p.blockTree.GetHead().BlockData.Hardness
+	p.maximumTransactionsInBlock = 10
 
 	time.Sleep(1500 * time.Millisecond)
 	go p.startBlockHandler()

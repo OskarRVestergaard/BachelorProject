@@ -31,7 +31,7 @@ func (p *Peer) Connect(ip string, port int) {
 }
 
 func (p *Peer) FloodMessage(msg blockchain.Message) {
-
+	p.logMessage(msg)
 	p.acMutex.Lock()
 	ac := p.ActiveConnections
 	p.acMutex.Unlock()
@@ -78,12 +78,11 @@ func (p *Peer) AddIpPort(ipPort string) {
 
 func (p *Peer) Receiver(conn net.Conn) {
 
-	msg := &blockchain.Message{}
 	dec := gob.NewDecoder(conn)
 	for {
+		newMsg := &blockchain.Message{}
 		p.decoderMutex.Lock()
-		err := dec.Decode(msg)
-		savedMsg := *msg
+		err := dec.Decode(newMsg)
 		if err == io.EOF {
 			err2 := conn.Close()
 			print(err2.Error())
@@ -97,8 +96,9 @@ func (p *Peer) Receiver(conn net.Conn) {
 			p.encMutex.Unlock()
 			return
 		}
-		handled := savedMsg
-		p.handleMessage(handled)
+		msgCopy := utils.MakeDeepCopyOfMessage(*newMsg)
+		p.logMessage(msgCopy)
+		p.handleMessage(msgCopy)
 		p.decoderMutex.Unlock()
 	}
 }
@@ -169,4 +169,10 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.validMutex.Unlock()
 	p.FloodMessage(msg)
 	p.floodMutex.Unlock()
+}
+
+func (p *Peer) logMessage(msg blockchain.Message) {
+	p.logMutex.Lock()
+	p.MessageLog = append(p.MessageLog, msg)
+	p.logMutex.Unlock()
 }

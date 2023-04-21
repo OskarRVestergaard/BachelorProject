@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams) blockchain.Block {
+func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams) (newBlock blockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.PublicToSecret[verificationKey]
 	if !foundSk {
@@ -17,7 +17,22 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 	}
 	p.blockTreeMutex.Lock()
 	parentHash := draw.ParentHash
-	transactionsToAdd := p.blockTree.GetTransactionsNotInTree(p.unfinalizedTransactions) //TODO If optimization is made, also do it here
+	allTransactionsToAdd := p.blockTree.GetTransactionsNotInTree(p.unfinalizedTransactions)
+	var transactionsToAdd []blockchain.SignedTransaction
+	if len(allTransactionsToAdd) == 0 {
+		return blockchain.Block{}, true
+	}
+	if len(allTransactionsToAdd) < p.maximumTransactionsInBlock {
+		transactionsToAdd = allTransactionsToAdd
+	}
+	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
+		transactionsToAdd = make([]blockchain.SignedTransaction, p.maximumTransactionsInBlock)
+		for i := 0; i < p.maximumTransactionsInBlock; i++ {
+			transactionsToAdd[i] = allTransactionsToAdd[i]
+			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
+		}
+	}
+	//
 	resultBlock := blockchain.Block{
 		IsGenesis: false,
 		Vk:        verificationKey,
@@ -30,18 +45,21 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 		Signature:  nil,
 	}
 	resultBlock.SignBlock(p.signatureStrategy, secretKey)
-	p.blockTreeMutex.Unlock()
 	if resultBlock.HasCorrectSignature(p.signatureStrategy) {
-		return resultBlock
+		p.blockTreeMutex.Unlock()
+		return resultBlock, false
 	} else {
+		p.blockTreeMutex.Unlock()
 		panic("Something went wrong, created block but gave it a wrong signature")
 	}
 }
 
 func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.WinningLotteryParams) {
 	verificationKey := utils.GetSomeKey(p.PublicToSecret) //todo maybe make sure that it is the same public key that was used for the draw
-	blockWithTransactions := p.createBlock(verificationKey, slot, draw)
-
+	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw)
+	if isEmpty {
+		return
+	}
 	msg := blockchain.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.IpPort,
@@ -68,9 +86,6 @@ func (p *Peer) verifyBlock(block blockchain.Block) bool {
 	}
 	if !p.verifyTransactions(block.BlockData.Transactions) {
 		return false
-	}
-	if block.Draw.Vk == "DEBUG" { //TODO REMOVE THIS!
-		return true
 	}
 	if block.Draw.Vk != block.Vk {
 		return false
@@ -118,7 +133,7 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
 		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
 		p.blockTreeMutex.Unlock()
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond) //Needs to be enough time for the other block to arrive
 		p.blockTreeMutex.Lock()
 		p.unhandledBlocks <- block
 	case 1:
