@@ -55,10 +55,13 @@ func TestPOWNetwork(t *testing.T) {
 	}
 	for i := 0; i < 10; i++ {
 		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(4000 * time.Millisecond)
 	}
-	time.Sleep(10000 * time.Millisecond)
-	time.Sleep(100000 * time.Millisecond)
+	time.Sleep(20000 * time.Millisecond)
+	time.Sleep(15000 * time.Millisecond)
+	time.Sleep(15000 * time.Millisecond)
+	time.Sleep(15000 * time.Millisecond)
+	time.Sleep(15000 * time.Millisecond)
 
 	assert.True(t, true)
 }

@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -13,11 +14,21 @@ Blocktree
 Use the NewBlockTree method for creating a block tree!
 */
 type Blocktree struct {
-	treeMap                map[string]node
+	treeMap                map[[32]byte]node
 	head                   node
 	subscriberChannelMutex sync.Mutex
 	subscriberChannelList  []chan []byte
 	newHeadBlocks          chan Block
+}
+
+func byteSliceTo32ByteArray(bytes []byte) [32]byte {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Tried to convert a byte slice to a hash-value but failed, probably because the slice had the wrong size!")
+		}
+	}()
+	s4 := (*[32]byte)(bytes)
+	return *s4
 }
 
 /*
@@ -29,15 +40,15 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 	if !genesisBlock.IsGenesis {
 		return nil
 	}
-	var treeMap = map[string]node{}
+	var treeMap = map[[32]byte]node{}
 	var genesisNode = node{
 		block:  genesisBlock,
 		length: 0,
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
-	var genesisStringHash = string(genesisHash)
+	var genesisStringHash = byteSliceTo32ByteArray(genesisHash)
 	treeMap[genesisStringHash] = genesisNode
-	newHeadBlocks := make(chan Block)
+	newHeadBlocks := make(chan Block, 20)
 	tree := &Blocktree{
 		treeMap:       treeMap,
 		head:          genesisNode,
@@ -72,10 +83,15 @@ func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []SignedTr
 
 func (tree *Blocktree) getTransactionsInChain(block Block) []SignedTransaction {
 	transactionsAccumulator := make([]SignedTransaction, 0)
+	i := 0
 	for !block.IsGenesis {
 		transactionsAccumulator = append(transactionsAccumulator, block.BlockData.Transactions...)
 		nextHash := block.ParentHash
 		block = tree.HashToBlock(nextHash)
+		i++
+		if i > 100 {
+			panic("InfiniteLoop")
+		}
 	}
 	return transactionsAccumulator
 }
@@ -86,7 +102,11 @@ HashToBlock
 returns the Block that hashes to the parameter
 */
 func (tree *Blocktree) HashToBlock(hash []byte) Block {
-	return tree.treeMap[string(hash)].block
+	result, foundKey := tree.treeMap[byteSliceTo32ByteArray(hash)]
+	if !foundKey {
+		panic("Hash given to tree is not in tree!")
+	}
+	return result.block
 }
 
 /*
@@ -99,6 +119,8 @@ returns 0 if the parent is not in the tree.
 returns -1 if block is already in the tree.
 
 returns -2 if block is marked as genesis block
+
+returns -3 if slot number is not greater than parent
 */
 func (tree *Blocktree) AddBlock(block Block) int {
 
@@ -108,17 +130,24 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Check that this block is not already in the tree
-	var newBlockHash = string(block.HashOfBlock())
+	var newBlockHash = byteSliceTo32ByteArray(block.HashOfBlock())
 	var _, isAlreadyInTree = tree.treeMap[newBlockHash]
 	if isAlreadyInTree {
 		return -1
 	}
 
 	//Find parent
-	var parentHash = string(block.ParentHash)
+	var parentHash = byteSliceTo32ByteArray(block.ParentHash)
 	var parentNode, parentIsInTree = tree.treeMap[parentHash]
 	if !parentIsInTree {
 		return 0
+	}
+
+	//Check that slot is greater
+	var newSlot = block.Slot
+	var parentSlot = parentNode.block.Slot
+	if newSlot <= parentSlot {
+		return -3
 	}
 
 	//Create and add the new block
@@ -149,7 +178,9 @@ func (tree *Blocktree) subscriptionSubroutine() {
 		newBlock := <-tree.newHeadBlocks
 		tree.subscriberChannelMutex.Lock()
 		for _, channel := range tree.subscriberChannelList {
-			channel <- newBlock.HashOfBlock()
+			go func(c chan []byte) {
+				c <- newBlock.HashOfBlock()
+			}(channel)
 		}
 		tree.subscriberChannelMutex.Unlock()
 		time.Sleep(50 * time.Millisecond)

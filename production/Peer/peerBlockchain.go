@@ -16,8 +16,7 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 		panic("Tried to create a block but peer did not have the associated SecretKey")
 	}
 	p.blockTreeMutex.Lock()
-	headBlock := p.blockTree.GetHead()
-	headBlockHash := headBlock.HashOfBlock()
+	parentHash := draw.ParentHash
 	transactionsToAdd := p.blockTree.GetTransactionsNotInTree(p.unfinalizedTransactions) //TODO If optimization is made, also do it here
 	resultBlock := blockchain.Block{
 		IsGenesis: false,
@@ -27,7 +26,7 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 		BlockData: blockchain.BlockData{
 			Transactions: transactionsToAdd,
 		},
-		ParentHash: headBlockHash,
+		ParentHash: parentHash,
 		Signature:  nil,
 	}
 	resultBlock.SignBlock(p.signatureStrategy, secretKey)
@@ -77,7 +76,7 @@ func (p *Peer) verifyBlock(block blockchain.Block) bool {
 		return false
 	}
 	if !bytes.Equal(block.Draw.ParentHash, block.ParentHash) {
-		return false
+		return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
 	}
 	if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
 		return false
@@ -103,11 +102,17 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	p.blockTreeMutex.Lock()
 	var t = p.blockTree.AddBlock(block)
 	switch t {
+	case -3:
+		print("debug")
+		//Slot number is not greater than parent
 	case -2:
+		print("debug")
 		//Block with isGenesis true, not a real block and should be ignored
 	case -1:
+		print("debug")
 		//Block is in tree already and can be ignored
 	case 0:
+		print("debug")
 		//Parent is not in the tree, try to add later
 		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
 		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
@@ -116,6 +121,7 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 		p.blockTreeMutex.Lock()
 		p.unhandledBlocks <- block
 	case 1:
+		print("debug")
 		//Block successfully added to the tree
 	default:
 		p.blockTreeMutex.Unlock()
@@ -143,7 +149,10 @@ func (p *Peer) StartMining() {
 func (p *Peer) blockCreater(wins chan lottery_strategy.WinningLotteryParams) {
 	for {
 		newWin := <-wins
-		slot := p.blockTree.GetHead().Slot + 1
+		p.blockTreeMutex.Lock()
+		head := p.blockTree.GetHead()
+		slot := head.Slot + 1
+		p.blockTreeMutex.Unlock()
 		p.SendBlockWithTransactions(slot, newWin)
 	}
 }
