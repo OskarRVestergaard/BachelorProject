@@ -13,7 +13,7 @@ func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash []byte, n
 
 func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash []byte, newBlockHashes chan []byte, winningDraws chan WinningLotteryParams) {
 	parentHash := initialHash
-	for i := 0; i < 2; i++ { //TODO CHANGE
+	for {
 		done := make(chan struct{})
 		go lottery.mine(vk, parentHash, hardness, done, winningDraws)
 		parentHash = <-newBlockHashes
@@ -34,7 +34,7 @@ func (lottery *PoW) mine(vk string, parentHash []byte, hardness int, done chan s
 				ParentHash: parentHash,
 				Counter:    c,
 			}
-			hashOfTicket := sha256.HashByteArray(draw.ToByteArray())
+			hashOfTicket := sha256.HashByteArrayToByteArray(draw.ToByteArray())
 			if verify(hashOfTicket, hardness) {
 				winningDraws <- draw
 				_ = <-done
@@ -68,7 +68,7 @@ func (lottery *PoW) Verify(vk string, parentHash []byte, hardness int, counter i
 		ParentHash: parentHash,
 		Counter:    counter,
 	}
-	hashed := sha256.HashByteArray(draw.ToByteArray())
+	hashed := sha256.HashByteArrayToByteArray(draw.ToByteArray())
 
 	return verify(hashed, hardness)
 }

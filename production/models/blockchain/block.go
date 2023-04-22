@@ -38,7 +38,7 @@ returns a byte array representation of the block to be used for hashing
 */
 func (block *Block) HashOfBlock() []byte {
 	byteArrayString := block.ToByteArray()
-	hash := sha256.HashByteArray(byteArrayString)
+	hash := sha256.HashByteArrayToByteArray(byteArrayString)
 	return hash
 }
 
@@ -99,14 +99,14 @@ func CreateGenesisBlock() Block {
 
 func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
 	data := block.toByteArrayWithoutSign()
-	hashedData := sha256.HashByteArray(data)
+	hashedData := sha256.HashByteArrayToByteArray(data)
 	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
 	block.Signature = signature
 }
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
 	blockVerificationKey := block.Vk
-	blockHashWithoutSign := sha256.HashByteArray(block.toByteArrayWithoutSign())
+	blockHashWithoutSign := sha256.HashByteArrayToByteArray(block.toByteArrayWithoutSign())
 	blockSignature := block.Signature
 	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, blockSignature)
 	return result

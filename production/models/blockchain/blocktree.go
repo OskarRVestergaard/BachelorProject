@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"log"
 	"sync"
 	"time"
@@ -14,20 +15,20 @@ Blocktree
 Use the NewBlockTree method for creating a block tree!
 */
 type Blocktree struct {
-	treeMap                map[[32]byte]node
+	treeMap                map[sha256.HashValue]node
 	head                   node
 	subscriberChannelMutex sync.Mutex
 	subscriberChannelList  []chan []byte
 	newHeadBlocks          chan Block
 }
 
-func byteSliceTo32ByteArray(bytes []byte) [32]byte {
+func byteSliceTo32ByteArray(bytes []byte) sha256.HashValue {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("Tried to convert a byte slice to a hash-value but failed, probably because the slice had the wrong size!")
 		}
 	}()
-	s4 := (*[32]byte)(bytes)
+	s4 := (*sha256.HashValue)(bytes)
 	return *s4
 }
 
@@ -40,7 +41,7 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 	if !genesisBlock.IsGenesis {
 		return nil
 	}
-	var treeMap = map[[32]byte]node{}
+	var treeMap = map[sha256.HashValue]node{}
 	var genesisNode = node{
 		block:  genesisBlock,
 		length: 0,

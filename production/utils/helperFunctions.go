@@ -17,7 +17,7 @@ func GetSomeKey[t comparable](m map[t]t) t {
 
 func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans blockchain.SignedTransaction) bool {
 	transByteArray := signedTrans.ToByteArrayWithoutSign()
-	hashedMessage := sha256.HashByteArray(transByteArray)
+	hashedMessage := sha256.HashByteArrayToByteArray(transByteArray)
 	publicKey := signedTrans.From
 	signature := signedTrans.Signature
 	result := signatureStrategy.Verify(publicKey, hashedMessage, signature)

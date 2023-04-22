@@ -58,12 +58,11 @@ func TestPOWNetwork2Peers(t *testing.T) {
 		time.Sleep(4000 * time.Millisecond)
 	}
 	time.Sleep(20000 * time.Millisecond)
-	time.Sleep(15000 * time.Millisecond)
-	time.Sleep(15000 * time.Millisecond)
-	time.Sleep(15000 * time.Millisecond)
-	time.Sleep(15000 * time.Millisecond)
-
-	assert.True(t, true)
+	//TODO Add way to stop mining, such that the network will stabilize
+	tree1 := listOfPeers[0].GetBlockTree()
+	tree2 := listOfPeers[1].GetBlockTree()
+	assert.Equal(t, tree1, tree2)
+	print("test")
 }
 
 func TestPOWNetwork4Peers(t *testing.T) {
@@ -79,7 +78,7 @@ func TestPOWNetwork4Peers(t *testing.T) {
 		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(10000 * time.Millisecond)
 	}
-	time.Sleep(40000 * time.Millisecond)
+	time.Sleep(100000 * time.Millisecond)
 
 	res1 := listOfPeers[0].GetBlockTree()
 	res2 := listOfPeers[1].GetBlockTree()

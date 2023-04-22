@@ -47,7 +47,9 @@ func (p *Peer) FloodMessage(msg blockchain.Message) {
 
 func (p *Peer) SendMessageTo(ipPort string, msg blockchain.Message) error {
 	var enc *gob.Encoder
-
+	p.sentMutex.Lock()
+	p.sentCounter = p.sentCounter + 1
+	p.sentMutex.Unlock()
 	p.encMutex.Lock()
 	if val, isIn := p.Encoders[ipPort]; isIn {
 		enc = val
@@ -61,7 +63,7 @@ func (p *Peer) SendMessageTo(ipPort string, msg blockchain.Message) error {
 		p.Encoders[ipPort] = enc
 	}
 
-	err := enc.Encode(msg)
+	err := enc.Encode(utils.MakeDeepCopyOfMessage(msg))
 	if err != nil {
 		p.encMutex.Unlock()
 		return err
@@ -83,6 +85,9 @@ func (p *Peer) Receiver(conn net.Conn) {
 		newMsg := &blockchain.Message{}
 		p.decoderMutex.Lock()
 		err := dec.Decode(newMsg)
+		p.receivedMutex.Lock()
+		p.receivedCounter = p.receivedCounter + 1
+		p.receivedMutex.Unlock()
 		if err == io.EOF {
 			err2 := conn.Close()
 			print(err2.Error())

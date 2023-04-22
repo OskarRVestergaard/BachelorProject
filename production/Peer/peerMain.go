@@ -37,6 +37,10 @@ type Peer struct {
 	maximumTransactionsInBlock int
 	MessageLog                 []blockchain.Message
 	logMutex                   sync.Mutex
+	sentMutex                  sync.Mutex
+	receivedMutex              sync.Mutex
+	sentCounter                int
+	receivedCounter            int
 }
 
 func (p *Peer) RunPeer(IpPort string) {
