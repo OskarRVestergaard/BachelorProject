@@ -12,7 +12,8 @@ import (
 func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 	var Unhandled []blockchain.SignedTransaction
 
-	var blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	var blockTree, blockTreeCreationWentWell = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	assert.True(t, blockTreeCreationWentWell)
 	for i := 0; i < 100; i++ {
 		var b = blockchain.SignedTransaction{
 			Id:        uuid.New(),

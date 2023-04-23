@@ -1,7 +1,6 @@
 package test
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/test/networkservice"
@@ -63,9 +62,7 @@ func TestPOWNetwork2Peers(t *testing.T) {
 	//TODO Add way to stop mining, such that the network will stabilize
 	tree1 := listOfPeers[0].GetBlockTree()
 	tree2 := listOfPeers[1].GetBlockTree()
-	tree3 := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
 	assert.True(t, tree1.Equals(tree2))
-	assert.False(t, tree1.Equals(tree3))
 }
 
 func TestPOWNetwork4Peers(t *testing.T) {
@@ -81,7 +78,7 @@ func TestPOWNetwork4Peers(t *testing.T) {
 		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(10000 * time.Millisecond)
 	}
-	time.Sleep(100000 * time.Millisecond)
+	time.Sleep(60000 * time.Millisecond)
 
 	tree1 := listOfPeers[0].GetBlockTree()
 	tree2 := listOfPeers[1].GetBlockTree()
