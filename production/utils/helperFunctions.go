@@ -44,9 +44,7 @@ func MakeDeepCopyOfBlock(block blockchain.Block) (copyOfBlock blockchain.Block) 
 	signatureCopy := make([]byte, len(oldSign))
 	copy(signatureCopy, oldSign)
 
-	oldHash := block.ParentHash
-	hashCopy := make([]byte, len(oldHash))
-	copy(hashCopy, oldHash)
+	hashCopy := block.ParentHash //Array is by default copied by value
 
 	oldTransactions := block.BlockData.Transactions
 	transactionsCopy := make([]blockchain.SignedTransaction, len(oldTransactions))
@@ -71,9 +69,7 @@ func MakeDeepCopyOfBlock(block blockchain.Block) (copyOfBlock blockchain.Block) 
 
 func MakeDeepCopyOfWinningParams(params lottery_strategy.WinningLotteryParams) (copyOfParams lottery_strategy.WinningLotteryParams) {
 
-	oldHash := params.ParentHash
-	hashCopy := make([]byte, len(oldHash))
-	copy(hashCopy, oldHash)
+	hashCopy := params.ParentHash //Array is by default copied by value
 
 	deepCopyParams := lottery_strategy.WinningLotteryParams{
 		Vk:         params.Vk,

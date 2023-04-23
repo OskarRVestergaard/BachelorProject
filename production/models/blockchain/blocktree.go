@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
-	"log"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -18,18 +18,8 @@ type Blocktree struct {
 	treeMap                map[sha256.HashValue]node
 	head                   node
 	subscriberChannelMutex sync.Mutex
-	subscriberChannelList  []chan []byte
+	subscriberChannelList  []chan sha256.HashValue
 	newHeadBlocks          chan Block
-}
-
-func byteSliceTo32ByteArray(bytes []byte) sha256.HashValue {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Println("Tried to convert a byte slice to a hash-value but failed, probably because the slice had the wrong size!")
-		}
-	}()
-	s4 := (*sha256.HashValue)(bytes)
-	return *s4
 }
 
 /*
@@ -47,8 +37,7 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 		length: 0,
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
-	var genesisStringHash = byteSliceTo32ByteArray(genesisHash)
-	treeMap[genesisStringHash] = genesisNode
+	treeMap[genesisHash] = genesisNode
 	newHeadBlocks := make(chan Block, 20)
 	tree := &Blocktree{
 		treeMap:       treeMap,
@@ -102,8 +91,8 @@ HashToBlock
 
 returns the Block that hashes to the parameter
 */
-func (tree *Blocktree) HashToBlock(hash []byte) Block {
-	result, foundKey := tree.treeMap[byteSliceTo32ByteArray(hash)]
+func (tree *Blocktree) HashToBlock(hash sha256.HashValue) Block {
+	result, foundKey := tree.treeMap[hash]
 	if !foundKey {
 		panic("Hash given to tree is not in tree!")
 	}
@@ -131,14 +120,14 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Check that this block is not already in the tree
-	var newBlockHash = byteSliceTo32ByteArray(block.HashOfBlock())
+	var newBlockHash = block.HashOfBlock()
 	var _, isAlreadyInTree = tree.treeMap[newBlockHash]
 	if isAlreadyInTree {
 		return -1
 	}
 
 	//Find parent
-	var parentHash = byteSliceTo32ByteArray(block.ParentHash)
+	var parentHash = block.ParentHash
 	var parentNode, parentIsInTree = tree.treeMap[parentHash]
 	if !parentIsInTree {
 		return 0
@@ -169,7 +158,7 @@ func (tree *Blocktree) AddBlock(block Block) int {
 
 func (tree *Blocktree) startSubscriptionHandler() {
 	tree.subscriberChannelMutex.Lock()
-	tree.subscriberChannelList = make([]chan []byte, 0)
+	tree.subscriberChannelList = make([]chan sha256.HashValue, 0)
 	go tree.subscriptionSubroutine()
 	tree.subscriberChannelMutex.Unlock()
 }
@@ -179,7 +168,7 @@ func (tree *Blocktree) subscriptionSubroutine() {
 		newBlock := <-tree.newHeadBlocks
 		tree.subscriberChannelMutex.Lock()
 		for _, channel := range tree.subscriberChannelList {
-			go func(c chan []byte) {
+			go func(c chan sha256.HashValue) {
 				c <- newBlock.HashOfBlock()
 			}(channel)
 		}
@@ -188,10 +177,18 @@ func (tree *Blocktree) subscriptionSubroutine() {
 	}
 }
 
-func (tree *Blocktree) SubScribeToGetHead() (headHashes chan []byte) {
-	newChannel := make(chan []byte)
+func (tree *Blocktree) SubScribeToGetHead() (headHashes chan sha256.HashValue) {
+	newChannel := make(chan sha256.HashValue)
 	tree.subscriberChannelMutex.Lock()
 	tree.subscriberChannelList = append(tree.subscriberChannelList, newChannel)
 	tree.subscriberChannelMutex.Unlock()
 	return newChannel
+}
+
+func (tree *Blocktree) Equals(comparisonTree *Blocktree) bool {
+	//Is not thread safe, since the tree could change during operation
+	if !reflect.DeepEqual(tree.treeMap, comparisonTree.treeMap) {
+		return false
+	}
+	return reflect.DeepEqual(tree.head.block, comparisonTree.head.block)
 }

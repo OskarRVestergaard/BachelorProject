@@ -14,7 +14,7 @@ type Block struct {
 	Slot       int                                   //slot number
 	Draw       lottery_strategy.WinningLotteryParams //winner ticket
 	BlockData  BlockData                             //Block data
-	ParentHash []byte                                //block hash of some previous hash
+	ParentHash sha256.HashValue                      //block hash of some previous hash
 	Signature  []byte                                //signature
 }
 
@@ -36,9 +36,9 @@ HashOfBlock
 
 returns a byte array representation of the block to be used for hashing
 */
-func (block *Block) HashOfBlock() []byte {
+func (block *Block) HashOfBlock() sha256.HashValue {
 	byteArrayString := block.ToByteArray()
-	hash := sha256.HashByteArrayToByteArray(byteArrayString)
+	hash := sha256.HashByteArray(byteArrayString)
 	return hash
 }
 
@@ -70,7 +70,7 @@ func (block *Block) toByteArrayWithoutSign() []byte {
 	buffer.WriteString(";_;")
 	buffer.WriteString(block.BlockData.ToString())
 	buffer.WriteString(";_;")
-	buffer.Write(block.ParentHash)
+	buffer.Write(sha256.ToSlice(block.ParentHash))
 	return buffer.Bytes()
 }
 
@@ -86,13 +86,13 @@ func CreateGenesisBlock() Block {
 		Slot:      0,
 		Draw: lottery_strategy.WinningLotteryParams{
 			Vk:         "",
-			ParentHash: nil,
+			ParentHash: [32]byte{},
 			Counter:    0,
 		},
 		BlockData: BlockData{
 			Hardness: 23,
 		},
-		ParentHash: nil,
+		ParentHash: [32]byte{},
 		Signature:  nil,
 	}
 }

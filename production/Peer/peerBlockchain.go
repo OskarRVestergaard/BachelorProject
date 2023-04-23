@@ -1,7 +1,6 @@
 package Peer
 
 import (
-	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -90,7 +89,7 @@ func (p *Peer) verifyBlock(block blockchain.Block) bool {
 	if block.Draw.Vk != block.Vk {
 		return false
 	}
-	if !bytes.Equal(block.Draw.ParentHash, block.ParentHash) {
+	if block.Draw.ParentHash != block.ParentHash {
 		return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
 	}
 	if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
@@ -119,16 +118,12 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	var t = p.blockTree.AddBlock(block)
 	switch t {
 	case -3:
-		print("debug")
 		//Slot number is not greater than parent
 	case -2:
-		print("debug")
 		//Block with isGenesis true, not a real block and should be ignored
 	case -1:
-		print("debug")
 		//Block is in tree already and can be ignored
 	case 0:
-		print("debug")
 		//Parent is not in the tree, try to add later
 		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
 		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)

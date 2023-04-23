@@ -7,13 +7,13 @@ import (
 type PoW struct {
 }
 
-func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash []byte, newBlockHashes chan []byte, winningDraws chan WinningLotteryParams) {
+func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams) {
 	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashes, winningDraws)
 }
 
-func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash []byte, newBlockHashes chan []byte, winningDraws chan WinningLotteryParams) {
+func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams) {
 	parentHash := initialHash
-	for {
+	for i := 0; i < 3; i++ { //TODO Make it stop mining when given a command to do so (maybe for loop running through both receiving hashes and receiving stop mining, this would be active thou)
 		done := make(chan struct{})
 		go lottery.mine(vk, parentHash, hardness, done, winningDraws)
 		parentHash = <-newBlockHashes
@@ -21,7 +21,7 @@ func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash [
 	}
 }
 
-func (lottery *PoW) mine(vk string, parentHash []byte, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
+func (lottery *PoW) mine(vk string, parentHash sha256.HashValue, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
 	c := 0
 	for {
 		select {
@@ -34,7 +34,7 @@ func (lottery *PoW) mine(vk string, parentHash []byte, hardness int, done chan s
 				ParentHash: parentHash,
 				Counter:    c,
 			}
-			hashOfTicket := sha256.HashByteArrayToByteArray(draw.ToByteArray())
+			hashOfTicket := sha256.HashByteArray(draw.ToByteSlice())
 			if verify(hashOfTicket, hardness) {
 				winningDraws <- draw
 				_ = <-done
@@ -45,7 +45,7 @@ func (lottery *PoW) mine(vk string, parentHash []byte, hardness int, done chan s
 
 }
 
-func verify(hashedTicket []byte, hardness int) bool {
+func verify(hashedTicket sha256.HashValue, hardness int) bool {
 	byteAmount := hardness / 8
 	restAmount := hardness - 8*byteAmount
 	for i := 0; i < byteAmount; i++ {
@@ -62,13 +62,13 @@ func verify(hashedTicket []byte, hardness int) bool {
 	return true
 }
 
-func (lottery *PoW) Verify(vk string, parentHash []byte, hardness int, counter int) bool {
+func (lottery *PoW) Verify(vk string, parentHash sha256.HashValue, hardness int, counter int) bool {
 	draw := WinningLotteryParams{
 		Vk:         vk,
 		ParentHash: parentHash,
 		Counter:    counter,
 	}
-	hashed := sha256.HashByteArrayToByteArray(draw.ToByteArray())
+	hashed := sha256.HashByteArray(draw.ToByteSlice())
 
 	return verify(hashed, hardness)
 }
