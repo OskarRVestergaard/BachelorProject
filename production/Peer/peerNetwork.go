@@ -22,6 +22,7 @@ func (p *Peer) printNewNetworkStarted() {
 
 func (p *Peer) Connect(ip string, port int) {
 	ipPort := ip + ":" + strconv.Itoa(port)
+	print(p.IpPort + " Connecting to " + ipPort + "\n")
 	err := p.SendMessageTo(ipPort, blockchain.Message{MessageType: constants.GetPeersMessage, MessageSender: p.IpPort})
 
 	if err != nil {

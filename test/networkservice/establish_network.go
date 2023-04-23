@@ -11,8 +11,6 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 
 	listOfPeers := make([]*Peer.Peer, noOfPeers)
 
-	var connectedPeers []string
-
 	pkList := make([]string, noOfNames)
 
 	for i := 0; i < noOfPeers; i++ {
@@ -24,14 +22,13 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 		// TODO maybe go p.RunPeer
 	}
 	listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
-	connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
 	time.Sleep(2500 * time.Millisecond)
-	for i := 1; i < noOfPeers; i++ {
-		for j := 0; j < i-1; j++ {
+	for i := 0; i < noOfPeers; i++ {
+		for j := 0; j < i; j++ {
 			if j == i {
 				continue
 			}
-			ipPort := connectedPeers[j]
+			ipPort := listOfPeers[j].IpPort
 			ip := ipPort[0:(len(ipPort) - 6)]
 			port := ipPort[len(ipPort)-5:]
 
@@ -41,7 +38,6 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 			}
 			listOfPeers[i].Connect(ip, port2)
 		}
-		connectedPeers = append(connectedPeers, listOfPeers[i].IpPort)
 	}
 	println("finished setting up connections")
 	println("Starting simulation")
