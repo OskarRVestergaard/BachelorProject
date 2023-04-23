@@ -7,7 +7,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"sync"
-	"time"
 )
 
 /*
@@ -30,9 +29,9 @@ type Peer struct {
 	PublicToSecret             map[string]string
 	unfinalizedTransMutex      sync.Mutex
 	unfinalizedTransactions    []blockchain.SignedTransaction
-	blockTreeMutex             sync.Mutex
-	blockTree                  *blockchain.Blocktree
+	blockTreeChan              chan blockchain.Blocktree
 	unhandledBlocks            chan blockchain.Block
+	unhandledMessages          chan blockchain.Message
 	hardness                   int
 	maximumTransactionsInBlock int
 	MessageLog                 []blockchain.Message
@@ -56,14 +55,18 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.encMutex.Unlock()
 	p.AddIpPort(IpPort)
 	p.PublicToSecret = make(map[string]string)
-	p.blockTreeMutex.Lock()
-	p.blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
-	p.blockTreeMutex.Unlock()
+	p.blockTreeChan = make(chan blockchain.Blocktree, 1)
+	newBlockTree, blockTreeCreationWentWell := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	if !blockTreeCreationWentWell {
+		panic("Could not generate new blocktree")
+	}
 	p.unhandledBlocks = make(chan blockchain.Block, 20)
-	p.hardness = p.blockTree.GetHead().BlockData.Hardness
+	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = 10
+	p.unhandledMessages = make(chan blockchain.Message, 50)
+	p.blockTreeChan <- newBlockTree
 
-	time.Sleep(1500 * time.Millisecond)
 	go p.startBlockHandler()
 	go p.startListener()
+	go p.messageHandlerLoop()
 }

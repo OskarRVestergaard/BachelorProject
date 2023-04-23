@@ -34,7 +34,6 @@ func (p *Peer) FloodMessage(msg blockchain.Message) {
 	p.logMessage(msg)
 	p.acMutex.Lock()
 	ac := p.ActiveConnections
-	p.acMutex.Unlock()
 	for e := range ac {
 		if e != p.IpPort {
 			err := p.SendMessageTo(e, msg)
@@ -43,6 +42,7 @@ func (p *Peer) FloodMessage(msg blockchain.Message) {
 			}
 		}
 	}
+	p.acMutex.Unlock()
 }
 
 func (p *Peer) SendMessageTo(ipPort string, msg blockchain.Message) error {
@@ -78,7 +78,7 @@ func (p *Peer) AddIpPort(ipPort string) {
 	p.acMutex.Unlock()
 }
 
-func (p *Peer) Receiver(conn net.Conn) {
+func (p *Peer) Receiver(conn net.Conn) { //Also a loop
 
 	dec := gob.NewDecoder(conn)
 	for {
@@ -103,8 +103,15 @@ func (p *Peer) Receiver(conn net.Conn) {
 		}
 		msgCopy := utils.MakeDeepCopyOfMessage(*newMsg)
 		p.logMessage(msgCopy)
-		p.handleMessage(msgCopy)
+		p.unhandledMessages <- msgCopy
 		p.decoderMutex.Unlock()
+	}
+}
+
+func (p *Peer) messageHandlerLoop() {
+	for {
+		msg := <-p.unhandledMessages
+		p.handleMessage(msg)
 	}
 }
 
@@ -128,8 +135,8 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 	case constants.GetPeersMessage:
 		p.acMutex.Lock()
 		ac := p.ActiveConnections
-		p.acMutex.Unlock()
 		err := p.SendMessageTo((msg).MessageSender, blockchain.Message{MessageType: constants.PeerMapDelivery, MessageSender: p.IpPort, PeerMap: ac})
+		p.acMutex.Unlock()
 		if err != nil {
 			println(err.Error())
 		}
@@ -147,7 +154,7 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 	}
 }
 
-func (p *Peer) startListener() {
+func (p *Peer) startListener() { //Go NewTCPListenerLoop
 	ln, _ := net.Listen("tcp", p.IpPort)
 	for {
 		conn, err := ln.Accept()

@@ -3,7 +3,6 @@ package blockchain
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"reflect"
-	"sync"
 	"time"
 )
 
@@ -13,23 +12,23 @@ Blocktree
 # A struct representing a Blocktree without any signature or transaction verification
 
 Use the NewBlockTree method for creating a block tree!
+The struct methods are NOT thread safe
 */
 type Blocktree struct {
-	treeMap                map[sha256.HashValue]node
-	head                   node
-	subscriberChannelMutex sync.Mutex
-	subscriberChannelList  []chan sha256.HashValue
-	newHeadBlocks          chan Block
+	treeMap               map[sha256.HashValue]node
+	head                  node
+	subscriberChannelList []chan sha256.HashValue
+	newHeadBlocks         chan Block
 }
 
 /*
 NewBlocktree
 
-Constructor for making a new Blocktree, returns nil if isGenesis is false
+Constructor for making a new Blocktree, second parameter false if something went wrong such as the genesisBlock having IsGenesis equaling false
 */
-func NewBlocktree(genesisBlock Block) *Blocktree {
+func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
-		return nil
+		return Blocktree{}, false
 	}
 	var treeMap = map[sha256.HashValue]node{}
 	var genesisNode = node{
@@ -39,13 +38,13 @@ func NewBlocktree(genesisBlock Block) *Blocktree {
 	var genesisHash = genesisBlock.HashOfBlock()
 	treeMap[genesisHash] = genesisNode
 	newHeadBlocks := make(chan Block, 20)
-	tree := &Blocktree{
+	tree := Blocktree{
 		treeMap:       treeMap,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
 	}
 	tree.startSubscriptionHandler()
-	return tree
+	return tree, true
 }
 
 /*
@@ -157,35 +156,29 @@ func (tree *Blocktree) AddBlock(block Block) int {
 }
 
 func (tree *Blocktree) startSubscriptionHandler() {
-	tree.subscriberChannelMutex.Lock()
 	tree.subscriberChannelList = make([]chan sha256.HashValue, 0)
 	go tree.subscriptionSubroutine()
-	tree.subscriberChannelMutex.Unlock()
 }
 
 func (tree *Blocktree) subscriptionSubroutine() {
 	for {
 		newBlock := <-tree.newHeadBlocks
-		tree.subscriberChannelMutex.Lock()
 		for _, channel := range tree.subscriberChannelList {
 			go func(c chan sha256.HashValue) {
 				c <- newBlock.HashOfBlock()
 			}(channel)
 		}
-		tree.subscriberChannelMutex.Unlock()
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
 func (tree *Blocktree) SubScribeToGetHead() (headHashes chan sha256.HashValue) {
 	newChannel := make(chan sha256.HashValue)
-	tree.subscriberChannelMutex.Lock()
 	tree.subscriberChannelList = append(tree.subscriberChannelList, newChannel)
-	tree.subscriberChannelMutex.Unlock()
 	return newChannel
 }
 
-func (tree *Blocktree) Equals(comparisonTree *Blocktree) bool {
+func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
 	//Is not thread safe, since the tree could change during operation
 	if !reflect.DeepEqual(tree.treeMap, comparisonTree.treeMap) {
 		return false
