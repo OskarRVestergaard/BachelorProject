@@ -23,10 +23,25 @@ func (network *Network) GetAddress() Address {
 	return network.ownAddress
 }
 
-func (network *Network) StartNetwork(add Address) (receivedMessages chan blockchain.Message) {
-	network.ownAddress = add
+func (network *Network) EstablishConnectionTo(address Address) error {
+	if !network.isKnownAddress(address) {
+		var conn, err = net.Dial("tcp", address.ToString())
+		if err != nil {
+			return err
+		}
+
+		enc := gob.NewEncoder(conn)
+		encoders := <-network.encoders
+		encoders[address] = enc
+		network.encoders <- encoders
+	}
+	return nil
+}
+
+func (network *Network) StartNetwork(address Address) (receivedMessages chan blockchain.Message) {
+	network.ownAddress = address
 	connectionChannel := make(chan net.Conn, 4)
-	network.incomingMessages = make(chan blockchain.Message, 20)
+	network.incomingMessages = make(chan blockchain.Message, 50)
 	network.outgoingMessages = make(chan outgoingMessage, 20)
 	network.encoders = make(chan map[Address]*gob.Encoder, 1)
 	encodersMap := make(map[Address]*gob.Encoder)

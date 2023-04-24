@@ -3,7 +3,7 @@ package test
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
-	"github.com/OskarRVestergaard/BachelorProject/test/networkservice"
+	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -13,8 +13,8 @@ func TestBlockDelivery(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 3
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 	debugDraw := lottery_strategy.WinningLotteryParams{
 		Vk:         "DEBUG",
 		ParentHash: sha256.HashValue{},
@@ -23,19 +23,19 @@ func TestBlockDelivery(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
 	time.Sleep(1000 * time.Millisecond)
 
 	listOfPeers[0].SendBlockWithTransactions(8, debugDraw)
 
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
 	time.Sleep(1000 * time.Millisecond)
 
 	listOfPeers[0].SendBlockWithTransactions(6, debugDraw)
 
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 
 	time.Sleep(1000 * time.Millisecond)
 
@@ -49,13 +49,13 @@ func TestPOWNetwork2Peers(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 3
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 	for _, peer := range listOfPeers {
 		peer.StartMining()
 	}
 	for i := 0; i < 10; i++ {
-		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(4000 * time.Millisecond)
 	}
 	time.Sleep(20000 * time.Millisecond)
@@ -69,13 +69,13 @@ func TestPOWNetwork4Peers(t *testing.T) {
 	noOfPeers := 4
 	noOfMsgs := 2
 	noOfNames := 4
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
-	networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 	for _, peer := range listOfPeers {
 		peer.StartMining()
 	}
 	for i := 0; i < 4; i++ {
-		networkservice.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(10000 * time.Millisecond)
 	}
 	time.Sleep(100000 * time.Millisecond)

@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
-	networkservice2 "github.com/OskarRVestergaard/BachelorProject/test/networkservice"
+	networkservice2 "github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"reflect"

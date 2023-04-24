@@ -1,7 +1,7 @@
 package main
 
 import (
-	networkservice2 "github.com/OskarRVestergaard/BachelorProject/test/networkservice"
+	networkservice2 "github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"time"
 )
 
@@ -24,8 +24,8 @@ func main() {
 	//
 	//noOfPeers := 2
 	//noOfNames := 2
-	////listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
-	//listOfPeers, _ := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
+	////listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
+	//listOfPeers, _ := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
 	////println(pkList)
 	//println(listOfPeers[1].IpPort)
 	////println(listOfPeers[1].PublicToSecret[])

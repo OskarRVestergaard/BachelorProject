@@ -1,4 +1,4 @@
-package networkservice
+package test_utils
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/Peer"
