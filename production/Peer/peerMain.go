@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"sync"
@@ -40,20 +41,21 @@ type Peer struct {
 	receivedMutex              sync.Mutex
 	sentCounter                int
 	receivedCounter            int
+	network                    network.Network
 }
 
 func (p *Peer) RunPeer(IpPort string) {
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &lottery_strategy.PoW{}
-	p.IpPort = IpPort
-	p.acMutex.Lock()
-	p.ActiveConnections = make(map[string]models.Void)
-	p.acMutex.Unlock()
+	address, err := network.StringToAddress(IpPort)
+	if err != nil {
+		panic("Could not parse IpPort: " + err.Error())
+	}
+	p.network = network.Network{}
+	messagesFromNetwork := p.network.StartNetwork(address)
+
 	p.Ledger = MakeLedger()
-	p.encMutex.Lock()
-	p.Encoders = make(map[string]*gob.Encoder)
-	p.encMutex.Unlock()
-	p.AddIpPort(IpPort)
+
 	p.PublicToSecret = make(map[string]string)
 	p.blockTreeChan = make(chan blockchain.Blocktree, 1)
 	newBlockTree, blockTreeCreationWentWell := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
@@ -66,7 +68,6 @@ func (p *Peer) RunPeer(IpPort string) {
 	p.unhandledMessages = make(chan blockchain.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
-	go p.startBlockHandler()
-	go p.startListener()
-	go p.messageHandlerLoop()
+	go p.blockHandlerLoop()
+	go p.messageHandlerLoop(messagesFromNetwork)
 }

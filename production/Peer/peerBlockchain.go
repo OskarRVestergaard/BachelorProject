@@ -72,7 +72,7 @@ func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.Winning
 	p.blockTreeChan <- blocktree
 }
 
-func (p *Peer) startBlockHandler() {
+func (p *Peer) blockHandlerLoop() {
 	for {
 		blockToHandle := <-p.unhandledBlocks
 		go p.handleBlock(blockToHandle)
