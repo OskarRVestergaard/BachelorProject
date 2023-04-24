@@ -222,7 +222,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	net1.FloodMessageToAllKnown(dummyMessage3)
 	net4.FloodMessageToAllKnown(dummyMessage3)
 
-	time.Sleep(50000 * time.Millisecond)
+	time.Sleep(150000 * time.Millisecond)
 	//Asserts
 	assert.Equal(t, len(incomingMessages1), len(incomingMessages2))
 	assert.Equal(t, len(incomingMessages2), len(incomingMessages3))

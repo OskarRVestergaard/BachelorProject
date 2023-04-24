@@ -42,7 +42,7 @@ func (network *Network) StartNetwork(address Address) (receivedMessages chan blo
 	network.ownAddress = address
 	connectionChannel := make(chan net.Conn, 4)
 	network.incomingMessages = make(chan blockchain.Message, 50)
-	network.outgoingMessages = make(chan outgoingMessage, 20)
+	network.outgoingMessages = make(chan outgoingMessage, 100)
 	network.encoders = make(chan map[Address]*gob.Encoder, 1)
 	encodersMap := make(map[Address]*gob.Encoder)
 	network.encoders <- encodersMap
