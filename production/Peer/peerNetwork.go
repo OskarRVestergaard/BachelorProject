@@ -156,7 +156,10 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 }
 
 func (p *Peer) startListener() { //Go NewTCPListenerLoop
-	ln, _ := net.Listen("tcp", p.IpPort)
+	ln, err2 := net.Listen("tcp", p.IpPort)
+	if err2 != nil {
+		panic(err2.Error())
+	}
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
