@@ -173,8 +173,8 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	}
 
 	dummyMessage2 := blockchain.Message{
-		MessageType:   "9",
-		MessageSender: "5",
+		MessageType:   "3",
+		MessageSender: "4",
 		SignedTransaction: blockchain.SignedTransaction{
 			Id:        randomId,
 			From:      "431",
@@ -187,8 +187,8 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	}
 
 	dummyMessage3 := blockchain.Message{
-		MessageType:       "",
-		MessageSender:     "",
+		MessageType:       "5",
+		MessageSender:     "6",
 		SignedTransaction: blockchain.SignedTransaction{},
 		MessageBlocks:     nil,
 		PeerMap:           nil,
@@ -199,7 +199,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	incomingMessages2 := net2.StartNetwork(addr2)
 	incomingMessages3 := net3.StartNetwork(addr3)
 	incomingMessages4 := net4.StartNetwork(addr4)
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	_ = net1.EstablishConnectionTo(addr2)
 	_ = net1.EstablishConnectionTo(addr3)
@@ -215,15 +215,23 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	_ = net4.EstablishConnectionTo(addr1)
 
 	net1.FloodMessageToAllKnown(dummyMessage1)
+	incomingMessages1 <- dummyMessage1
 	net4.FloodMessageToAllKnown(dummyMessage2)
+	incomingMessages4 <- dummyMessage2
 	net3.FloodMessageToAllKnown(dummyMessage3)
+	incomingMessages3 <- dummyMessage3
 	net1.FloodMessageToAllKnown(dummyMessage2)
+	incomingMessages1 <- dummyMessage2
 	net2.FloodMessageToAllKnown(dummyMessage1)
+	incomingMessages2 <- dummyMessage1
 	net1.FloodMessageToAllKnown(dummyMessage3)
+	incomingMessages1 <- dummyMessage3
 	net4.FloodMessageToAllKnown(dummyMessage3)
+	incomingMessages4 <- dummyMessage3
 
-	time.Sleep(150000 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 	//Asserts
+	assert.Equal(t, 7, len(incomingMessages2))
 	assert.Equal(t, len(incomingMessages1), len(incomingMessages2))
 	assert.Equal(t, len(incomingMessages2), len(incomingMessages3))
 	assert.Equal(t, len(incomingMessages3), len(incomingMessages4))
