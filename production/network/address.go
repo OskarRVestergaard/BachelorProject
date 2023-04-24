@@ -1,6 +1,9 @@
 package network
 
-import "strconv"
+import (
+	"net"
+	"strconv"
+)
 
 type Address struct {
 	Ip   string
@@ -22,4 +25,13 @@ func StringToAddress(str string) (Address, error) {
 		Port: port,
 	}
 	return result, err
+}
+
+func ConnToRemoteAddress(conn net.Conn) (Address, error) {
+	addr := conn.RemoteAddr()
+	result, err := StringToAddress(addr.String())
+	if err != nil {
+		return Address{}, err
+	}
+	return result, nil
 }
