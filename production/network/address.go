@@ -11,7 +11,7 @@ type Address struct {
 }
 
 func (a Address) ToString() string {
-	return a.Ip + strconv.Itoa(a.Port)
+	return a.Ip + ":" + strconv.Itoa(a.Port)
 }
 
 func StringToAddress(str string) (Address, error) {
