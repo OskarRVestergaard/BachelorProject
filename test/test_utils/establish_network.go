@@ -20,7 +20,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 		listOfPeers[i] = &p
 		p.RunPeer("127.0.0.1:" + port)
 	}
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	for i := 0; i < noOfPeers; i++ {
 		for j := 0; j < noOfPeers; j++ {
 			if j == i {
@@ -30,13 +30,14 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 			listOfPeers[i].Connect(addr.Ip, addr.Port)
 		}
 	}
-	println("finished setting up connections")
-	println("Starting simulation")
 
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
 	}
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
+	println("finished setting up connections")
+	println("Starting simulation")
+
 	return listOfPeers, pkList
 }
 

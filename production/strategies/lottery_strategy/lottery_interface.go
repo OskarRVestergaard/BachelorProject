@@ -7,7 +7,7 @@ import (
 )
 
 type LotteryInterface interface {
-	StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams)
+	StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams, stopMinerSignal chan struct{})
 	Verify(vk string, parentHash sha256.HashValue, hardness int, counter int) bool
 }
 

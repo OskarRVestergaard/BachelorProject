@@ -52,42 +52,57 @@ func TestPOWNetwork2Peers(t *testing.T) {
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
 	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 	for _, peer := range listOfPeers {
-		peer.StartMining()
+		err := peer.StartMining()
+		if err != nil {
+			print(err.Error())
+		}
 	}
 	for i := 0; i < 10; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(2000 * time.Millisecond)
 	}
-	time.Sleep(5000 * time.Millisecond)
-	//TODO Add way to stop mining, such that the network will stabilize
+	for _, peer := range listOfPeers {
+		err := peer.StopMining()
+		if err != nil {
+			print(err.Error())
+		}
+	}
+	time.Sleep(3000 * time.Millisecond)
 	tree1 := listOfPeers[0].GetBlockTree()
 	tree2 := listOfPeers[1].GetBlockTree()
 	assert.True(t, tree1.Equals(tree2))
 }
 
-func TestPOWNetwork4Peers(t *testing.T) {
-	noOfPeers := 4
+func TestPOWNetwork16Peers(t *testing.T) {
+	noOfPeers := 16
 	noOfMsgs := 2
-	noOfNames := 4
+	noOfNames := 16
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
 	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
 	for _, peer := range listOfPeers {
-		peer.StartMining()
+		err := peer.StartMining()
+		if err != nil {
+			print(err.Error())
+		}
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 4; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(6000 * time.Millisecond)
 	}
-	time.Sleep(5000 * time.Millisecond)
-
-	tree1 := listOfPeers[0].GetBlockTree()
-	tree2 := listOfPeers[1].GetBlockTree()
-	tree3 := listOfPeers[2].GetBlockTree()
-	tree4 := listOfPeers[3].GetBlockTree()
-	test1 := tree1.Equals(tree2)
-	test2 := tree2.Equals(tree3)
-	test3 := tree3.Equals(tree4)
-	assert.True(t, test1)
-	assert.True(t, test2)
-	assert.True(t, test3)
+	for _, peer := range listOfPeers {
+		err := peer.StopMining()
+		if err != nil {
+			print(err.Error())
+		}
+	}
+	time.Sleep(10000 * time.Millisecond)
+	for i, _ := range listOfPeers {
+		if i != 0 {
+			tree1 := listOfPeers[i-1].GetBlockTree()
+			tree2 := listOfPeers[i].GetBlockTree()
+			test := tree1.Equals(tree2)
+			assert.True(t, test)
+		}
+	}
+	assert.True(t, true)
 }

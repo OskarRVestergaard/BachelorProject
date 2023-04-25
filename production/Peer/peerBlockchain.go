@@ -1,6 +1,7 @@
 package Peer
 
 import (
+	"errors"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -150,7 +151,11 @@ func (p *Peer) addTransaction(t blockchain.SignedTransaction) {
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *Peer) StartMining() {
+func (p *Peer) StartMining() error {
+	noActiveMiner := p.isMiningMutex.TryLock()
+	if !noActiveMiner {
+		return errors.New("peer is already mining")
+	}
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys)
 	p.publicToSecret <- secretKeys
@@ -159,10 +164,22 @@ func (p *Peer) StartMining() {
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
 	winningDraws := make(chan lottery_strategy.WinningLotteryParams, 10)
-	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws)
+	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
+	return nil
+}
+
+func (p *Peer) StopMining() error {
+	noActiveMiner := p.isMiningMutex.TryLock()
+	if noActiveMiner {
+		p.isMiningMutex.Unlock()
+		return errors.New("peer is already not mining")
+	}
+	p.stopMiningSignal <- struct{}{}
+	p.isMiningMutex.Unlock()
+	return nil
 }
 
 func (p *Peer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {

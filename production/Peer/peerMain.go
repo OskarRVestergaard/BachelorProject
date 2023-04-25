@@ -6,6 +6,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"sync"
 )
 
 /*
@@ -25,6 +26,8 @@ type Peer struct {
 	hardness                   int
 	maximumTransactionsInBlock int
 	network                    network.Network
+	stopMiningSignal           chan struct{}
+	isMiningMutex              sync.Mutex
 }
 
 func (p *Peer) RunPeer(IpPort string) {
@@ -38,6 +41,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	messagesFromNetwork := p.network.StartNetwork(address)
 
 	p.Ledger = MakeLedger()
+	p.stopMiningSignal = make(chan struct{})
 
 	p.unfinalizedTransactions = make(chan []blockchain.SignedTransaction, 1)
 	p.unfinalizedTransactions <- make([]blockchain.SignedTransaction, 0, 100)

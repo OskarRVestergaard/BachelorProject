@@ -7,16 +7,49 @@ import (
 type PoW struct {
 }
 
-func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams) {
-	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashes, winningDraws)
+type internalCombination struct {
+	minerShouldContinue bool
+	parentHash          sha256.HashValue
 }
 
-func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams) {
-	parentHash := initialHash
-	for i := 0; i < 20; i++ { //TODO Make it stop mining when given a command to do so (maybe for loop running through both receiving hashes and receiving stop mining, this would be active thou)
+func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams, stopMinerSignal chan struct{}) {
+	newBlockHashesInternal := make(chan internalCombination)
+	lottery.combineChannels(newBlockHashes, stopMinerSignal, newBlockHashesInternal)
+	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashesInternal, winningDraws)
+}
+
+func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan internalCombination) {
+	go func() {
+		for {
+			newParentHash := <-newHashes
+			combination := internalCombination{
+				minerShouldContinue: true,
+				parentHash:          newParentHash,
+			}
+			internalStruct <- combination
+		}
+	}()
+	go func() {
+		for {
+			_ = <-stopMiner
+			combination := internalCombination{
+				minerShouldContinue: false,
+				parentHash:          sha256.HashValue{},
+			}
+			internalStruct <- combination
+		}
+	}()
+}
+
+func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan internalCombination, winningDraws chan WinningLotteryParams) {
+	internalStruct := internalCombination{
+		minerShouldContinue: true,
+		parentHash:          initialHash,
+	}
+	for internalStruct.minerShouldContinue {
 		done := make(chan struct{})
-		go lottery.mine(vk, parentHash, hardness, done, winningDraws)
-		parentHash = <-newBlockHashes
+		go lottery.mine(vk, internalStruct.parentHash, hardness, done, winningDraws)
+		internalStruct = <-newBlockHashesInternal
 		done <- struct{}{}
 	}
 }
