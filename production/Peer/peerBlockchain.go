@@ -20,10 +20,7 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 	p.unfinalizedTransactions <- unfinalizedTransactions
 
 	var transactionsToAdd []blockchain.SignedTransaction
-	if len(allTransactionsToAdd) == 0 {
-		return blockchain.Block{}, true
-	}
-	if len(allTransactionsToAdd) < p.maximumTransactionsInBlock {
+	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
 		transactionsToAdd = allTransactionsToAdd
 	}
 	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
@@ -72,7 +69,7 @@ func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.Winning
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
-	p.network.FloodMessageToAllKnown(msg)
+	p.network.FloodMessageToAllKnown(msg) //todo Why go here? Should not be nessesary, but causes deadlock otherwise
 }
 
 func (p *Peer) blockHandlerLoop() {
@@ -159,9 +156,11 @@ func (p *Peer) StartMining() {
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
 	newHeadHashes := blocktree.SubScribeToGetHead()
+	p.HeadHashesDEBUG = newHeadHashes
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
-	winningDraws := make(chan lottery_strategy.WinningLotteryParams)
+	winningDraws := make(chan lottery_strategy.WinningLotteryParams, 10)
+	p.WinningDrawDEBUG = winningDraws
 	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws)
 	go p.blockCreatingLoop(winningDraws)
 

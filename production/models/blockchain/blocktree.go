@@ -16,7 +16,7 @@ The struct methods are NOT thread safe
 */
 type Blocktree struct {
 	treeMap               map[sha256.HashValue]node
-	head                  node
+	head                  node //TODO Hide behind mutex or channel
 	subscriberChannelList chan []chan sha256.HashValue
 	newHeadBlocks         chan Block
 }
@@ -78,8 +78,8 @@ func (tree *Blocktree) getTransactionsInChain(block Block) []SignedTransaction {
 		nextHash := block.ParentHash
 		block = tree.HashToBlock(nextHash)
 		i++
-		if i > 100 {
-			panic("InfiniteLoop")
+		if i > 10000000 {
+			panic("There is probably a cycle in what was supposed to be a tree")
 		}
 	}
 	return transactionsAccumulator
@@ -177,10 +177,11 @@ func (tree *Blocktree) subscriptionSubroutine() {
 }
 
 func (tree *Blocktree) SubScribeToGetHead() (headHashes chan sha256.HashValue) {
-	newChannel := make(chan sha256.HashValue)
+	newChannel := make(chan sha256.HashValue, 10)
 	subscriberChannelList := <-tree.subscriberChannelList
 	subscriberChannelList = append(subscriberChannelList, newChannel)
 	tree.subscriberChannelList <- subscriberChannelList
+	newChannel <- tree.head.block.HashOfBlock()
 	return newChannel
 }
 

@@ -76,9 +76,9 @@ func TestPOWNetwork4Peers(t *testing.T) {
 	}
 	for i := 0; i < 5; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-		time.Sleep(12000 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
-	time.Sleep(20000 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 
 	tree1 := listOfPeers[0].GetBlockTree()
 	tree2 := listOfPeers[1].GetBlockTree()

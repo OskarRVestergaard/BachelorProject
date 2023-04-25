@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 )
 
@@ -25,6 +26,8 @@ type Peer struct {
 	hardness                   int
 	maximumTransactionsInBlock int
 	network                    network.Network
+	HeadHashesDEBUG            chan sha256.HashValue
+	WinningDrawDEBUG           chan lottery_strategy.WinningLotteryParams
 }
 
 func (p *Peer) RunPeer(IpPort string) {

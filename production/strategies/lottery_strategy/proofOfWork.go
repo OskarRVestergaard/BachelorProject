@@ -13,7 +13,7 @@ func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.Ha
 
 func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams) {
 	parentHash := initialHash
-	for i := 0; i < 10; i++ { //TODO Make it stop mining when given a command to do so (maybe for loop running through both receiving hashes and receiving stop mining, this would be active thou)
+	for i := 0; i < 20; i++ { //TODO Make it stop mining when given a command to do so (maybe for loop running through both receiving hashes and receiving stop mining, this would be active thou)
 		done := make(chan struct{})
 		go lottery.mine(vk, parentHash, hardness, done, winningDraws)
 		parentHash = <-newBlockHashes
