@@ -90,7 +90,7 @@ func CreateGenesisBlock() Block {
 			Counter:    0,
 		},
 		BlockData: BlockData{
-			Hardness: 23,
+			Hardness: 17,
 		},
 		ParentHash: [32]byte{},
 		Signature:  nil,

@@ -10,13 +10,15 @@ import (
 
 func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
-	secretKey, foundSk := p.PublicToSecret[verificationKey]
+	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
 		panic("Tried to create a block but peer did not have the associated SecretKey")
 	}
 	parentHash := draw.ParentHash
-	p.unfinalizedTransMutex.Lock()
-	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(p.unfinalizedTransactions)
+	unfinalizedTransactions := <-p.unfinalizedTransactions
+	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
+	p.unfinalizedTransactions <- unfinalizedTransactions
+
 	var transactionsToAdd []blockchain.SignedTransaction
 	if len(allTransactionsToAdd) == 0 {
 		return blockchain.Block{}, true
@@ -31,7 +33,6 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
 		}
 	}
-	p.unfinalizedTransMutex.Unlock()
 	//
 	resultBlock := blockchain.Block{
 		IsGenesis: false,
@@ -53,7 +54,9 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 }
 
 func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.WinningLotteryParams) {
-	verificationKey := utils.GetSomeKey(p.PublicToSecret) //todo maybe make sure that it is the same public key that was used for the draw
+	secretKeys := <-p.publicToSecret
+	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
+	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
 	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
 	if isEmpty {
@@ -65,11 +68,11 @@ func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.Winning
 		MessageSender: p.network.GetAddress().ToString(),
 		MessageBlocks: []blockchain.Block{blockWithTransactions},
 	}
-	go p.network.FloodMessageToAllKnown(msg)
 	for _, block := range msg.MessageBlocks {
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
+	p.network.FloodMessageToAllKnown(msg)
 }
 
 func (p *Peer) blockHandlerLoop() {
@@ -133,7 +136,7 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
 
 		p.blockTreeChan <- blocktree
-		time.Sleep(2000 * time.Millisecond) //Needs to be enough time for the other block to arrive
+		time.Sleep(1000 * time.Millisecond) //Needs to be enough time for the other block to arrive
 		p.unhandledBlocks <- block
 	case 1:
 		//Block successfully added to the tree
@@ -145,33 +148,35 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 }
 
 func (p *Peer) addTransaction(t blockchain.SignedTransaction) {
-	p.unfinalizedTransMutex.Lock()
-	p.unfinalizedTransactions = append(p.unfinalizedTransactions, t)
-	p.unfinalizedTransMutex.Unlock()
+	unfinalizedTransactions := <-p.unfinalizedTransactions
+	unfinalizedTransactions = append(unfinalizedTransactions, t)
+	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
 func (p *Peer) StartMining() {
-	verificationKey := utils.GetSomeKey(p.PublicToSecret)
+	secretKeys := <-p.publicToSecret
+	verificationKey := utils.GetSomeKey(secretKeys)
+	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
 	newHeadHashes := blocktree.SubScribeToGetHead()
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
 	winningDraws := make(chan lottery_strategy.WinningLotteryParams)
 	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws)
-	go p.blockCreater(winningDraws)
+	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
 }
 
-func (p *Peer) blockCreater(wins chan lottery_strategy.WinningLotteryParams) {
+func (p *Peer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {
 	for {
 		newWin := <-wins
 
-		blocktree := <-p.blockTreeChan
+		blocktree := <-p.blockTreeChan //todo GET SLOT BY OTHER METHOD INSTEAD
 		head := blocktree.GetHead()
 		slot := head.Slot + 1
 		p.blockTreeChan <- blocktree
-		p.SendBlockWithTransactions(slot, newWin)
+		go p.SendBlockWithTransactions(slot, newWin)
 	}
 }
 

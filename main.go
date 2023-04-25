@@ -28,7 +28,7 @@ func main() {
 	//listOfPeers, _ := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
 	////println(pkList)
 	//println(listOfPeers[1].IpPort)
-	////println(listOfPeers[1].PublicToSecret[])
+	////println(listOfPeers[1].publicToSecret[])
 	//for k, v := range listOfPeers {
 	//	fmt.Println(k, "value is", v)
 	//}

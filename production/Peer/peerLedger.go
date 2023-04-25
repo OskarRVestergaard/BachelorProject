@@ -9,7 +9,9 @@ import (
 
 func (p *Peer) CreateAccount() string {
 	secretKey, publicKey := p.signatureStrategy.KeyGen()
-	p.PublicToSecret[publicKey] = secretKey
+	keys := <-p.publicToSecret
+	keys[publicKey] = secretKey
+	p.publicToSecret <- keys
 	return publicKey
 }
 

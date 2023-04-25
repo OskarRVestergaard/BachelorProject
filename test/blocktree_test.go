@@ -74,9 +74,9 @@ func TestPOWNetwork4Peers(t *testing.T) {
 	for _, peer := range listOfPeers {
 		peer.StartMining()
 	}
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-		time.Sleep(3000 * time.Millisecond)
+		time.Sleep(12000 * time.Millisecond)
 	}
 	time.Sleep(20000 * time.Millisecond)
 
@@ -84,7 +84,10 @@ func TestPOWNetwork4Peers(t *testing.T) {
 	tree2 := listOfPeers[1].GetBlockTree()
 	tree3 := listOfPeers[2].GetBlockTree()
 	tree4 := listOfPeers[3].GetBlockTree()
-	assert.True(t, tree1.Equals(tree2))
-	assert.True(t, tree2.Equals(tree3))
-	assert.True(t, tree3.Equals(tree4))
+	test1 := tree1.Equals(tree2)
+	test2 := tree2.Equals(tree3)
+	test3 := tree3.Equals(tree4)
+	assert.True(t, test1)
+	assert.True(t, test2)
+	assert.True(t, test3)
 }

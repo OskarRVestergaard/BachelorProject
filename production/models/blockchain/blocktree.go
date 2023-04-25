@@ -17,7 +17,7 @@ The struct methods are NOT thread safe
 type Blocktree struct {
 	treeMap               map[sha256.HashValue]node
 	head                  node
-	subscriberChannelList []chan sha256.HashValue
+	subscriberChannelList chan []chan sha256.HashValue
 	newHeadBlocks         chan Block
 }
 
@@ -156,25 +156,31 @@ func (tree *Blocktree) AddBlock(block Block) int {
 }
 
 func (tree *Blocktree) startSubscriptionHandler() {
-	tree.subscriberChannelList = make([]chan sha256.HashValue, 0)
+	tree.subscriberChannelList = make(chan []chan sha256.HashValue, 1)
+	subscriberChannelList := make([]chan sha256.HashValue, 0)
+	tree.subscriberChannelList <- subscriberChannelList
 	go tree.subscriptionSubroutine()
 }
 
 func (tree *Blocktree) subscriptionSubroutine() {
 	for {
 		newBlock := <-tree.newHeadBlocks
-		for _, channel := range tree.subscriberChannelList {
+		subscriberChannelList := <-tree.subscriberChannelList
+		for _, channel := range subscriberChannelList {
 			go func(c chan sha256.HashValue) {
 				c <- newBlock.HashOfBlock()
 			}(channel)
 		}
+		tree.subscriberChannelList <- subscriberChannelList
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
 func (tree *Blocktree) SubScribeToGetHead() (headHashes chan sha256.HashValue) {
 	newChannel := make(chan sha256.HashValue)
-	tree.subscriberChannelList = append(tree.subscriberChannelList, newChannel)
+	subscriberChannelList := <-tree.subscriberChannelList
+	subscriberChannelList = append(subscriberChannelList, newChannel)
+	tree.subscriberChannelList <- subscriberChannelList
 	return newChannel
 }
 

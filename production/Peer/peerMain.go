@@ -6,7 +6,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
-	"sync"
 )
 
 /*
@@ -18,10 +17,8 @@ type Peer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            lottery_strategy.LotteryInterface
 	Ledger                     *models.Ledger
-	validMutex                 sync.Mutex
-	PublicToSecret             map[string]string
-	unfinalizedTransMutex      sync.Mutex
-	unfinalizedTransactions    []blockchain.SignedTransaction
+	publicToSecret             chan map[string]string
+	unfinalizedTransactions    chan []blockchain.SignedTransaction
 	blockTreeChan              chan blockchain.Blocktree
 	unhandledBlocks            chan blockchain.Block
 	unhandledMessages          chan blockchain.Message
@@ -42,7 +39,10 @@ func (p *Peer) RunPeer(IpPort string) {
 
 	p.Ledger = MakeLedger()
 
-	p.PublicToSecret = make(map[string]string)
+	p.unfinalizedTransactions = make(chan []blockchain.SignedTransaction, 1)
+	p.unfinalizedTransactions <- make([]blockchain.SignedTransaction, 0, 100)
+	p.publicToSecret = make(chan map[string]string, 1)
+	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan blockchain.Blocktree, 1)
 	newBlockTree, blockTreeCreationWentWell := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
 	if !blockTreeCreationWentWell {

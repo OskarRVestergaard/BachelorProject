@@ -38,12 +38,9 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 
 	switch msgType {
 	case constants.SignedTransaction:
-		p.validMutex.Lock()
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			deepCopyOfTransaction := utils.MakeDeepCopyOfTransaction(msg.SignedTransaction)
-			p.addTransaction(deepCopyOfTransaction)
+			p.addTransaction(utils.MakeDeepCopyOfTransaction(msg.SignedTransaction))
 		}
-		p.validMutex.Unlock()
 	case constants.JoinMessage:
 
 	case constants.GetPeersMessage:
@@ -60,17 +57,29 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 }
 
 func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
-	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
-
-	p.validMutex.Lock()
-
-	secretSigningKey, foundSecretKey := p.PublicToSecret[from]
-	if foundSecretKey {
-		trans.SignTransaction(p.signatureStrategy, secretSigningKey)
+	secretSigningKey, foundSecretKey := p.getSecretKey(from)
+	if !foundSecretKey {
+		return
 	}
+	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
 	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
 	p.addTransaction(trans)
-	p.validMutex.Unlock()
 	p.network.FloodMessageToAllKnown(msg)
+}
+
+/*
+getSecretKey
+
+returns the secret key associated with a given public key and return a boolean indicating whether the key is known
+*/
+func (p *Peer) getSecretKey(pk string) (secretKey string, isKnownKey bool) {
+	publicToSecret := <-p.publicToSecret
+	secretSigningKey, foundSecretKey := publicToSecret[pk]
+	p.publicToSecret <- publicToSecret
+	if !foundSecretKey {
+		return "", false
+	}
+	return secretSigningKey, true
 }
