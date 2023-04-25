@@ -6,7 +6,9 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"sync"
+	"time"
 )
 
 /*
@@ -30,7 +32,7 @@ type Peer struct {
 	isMiningMutex              sync.Mutex
 }
 
-func (p *Peer) RunPeer(IpPort string) {
+func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &lottery_strategy.PoW{}
 	address, err := network.StringToAddress(IpPort)
@@ -54,7 +56,7 @@ func (p *Peer) RunPeer(IpPort string) {
 	}
 	p.unhandledBlocks = make(chan blockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
-	p.maximumTransactionsInBlock = 10
+	p.maximumTransactionsInBlock = constants.BlockSize
 	p.unhandledMessages = make(chan blockchain.Message, 50)
 	p.blockTreeChan <- newBlockTree
 

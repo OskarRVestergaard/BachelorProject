@@ -9,6 +9,7 @@ import (
 
 func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 
+	startTime := time.Now()
 	listOfPeers := make([]*Peer.Peer, noOfPeers)
 
 	pkList := make([]string, noOfNames)
@@ -18,7 +19,7 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
-		p.RunPeer("127.0.0.1:" + port)
+		p.RunPeer("127.0.0.1:"+port, startTime)
 	}
 	time.Sleep(150 * time.Millisecond)
 	for i := 0; i < noOfPeers; i++ {

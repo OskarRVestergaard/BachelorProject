@@ -19,7 +19,7 @@ func (p *Peer) Connect(ip string, port int) {
 	}
 	ownIpPort := p.network.GetAddress().ToString()
 	print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
-	err := p.network.SendMessageTo(blockchain.Message{MessageType: constants.GetPeersMessage, MessageSender: ownIpPort}, addr)
+	err := p.network.SendMessageTo(blockchain.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
 
 	if err != nil {
 		panic(err.Error())
@@ -42,10 +42,6 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 			p.addTransaction(utils.MakeDeepCopyOfTransaction(msg.SignedTransaction))
 		}
 	case constants.JoinMessage:
-
-	case constants.GetPeersMessage:
-
-	case constants.PeerMapDelivery:
 
 	case constants.BlockDelivery:
 		for _, block := range msg.MessageBlocks {
