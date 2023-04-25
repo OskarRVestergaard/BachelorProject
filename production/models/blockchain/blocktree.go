@@ -1,7 +1,8 @@
 package blockchain
 
 import (
-	"sync"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"reflect"
 	"time"
 )
 
@@ -11,40 +12,39 @@ Blocktree
 # A struct representing a Blocktree without any signature or transaction verification
 
 Use the NewBlockTree method for creating a block tree!
+The struct methods are NOT thread safe
 */
 type Blocktree struct {
-	treeMap                map[string]node
-	head                   node
-	subscriberChannelMutex sync.Mutex
-	subscriberChannelList  []chan []byte
-	newHeadBlocks          chan Block
+	treeMap               map[sha256.HashValue]node
+	head                  node //TODO Hide behind mutex or channel
+	subscriberChannelList chan []chan sha256.HashValue
+	newHeadBlocks         chan Block
 }
 
 /*
 NewBlocktree
 
-Constructor for making a new Blocktree, returns nil if isGenesis is false
+Constructor for making a new Blocktree, second parameter false if something went wrong such as the genesisBlock having IsGenesis equaling false
 */
-func NewBlocktree(genesisBlock Block) *Blocktree {
+func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
-		return nil
+		return Blocktree{}, false
 	}
-	var treeMap = map[string]node{}
+	var treeMap = map[sha256.HashValue]node{}
 	var genesisNode = node{
 		block:  genesisBlock,
 		length: 0,
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
-	var genesisStringHash = string(genesisHash)
-	treeMap[genesisStringHash] = genesisNode
-	newHeadBlocks := make(chan Block)
-	tree := &Blocktree{
+	treeMap[genesisHash] = genesisNode
+	newHeadBlocks := make(chan Block, 20)
+	tree := Blocktree{
 		treeMap:       treeMap,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
 	}
 	tree.startSubscriptionHandler()
-	return tree
+	return tree, true
 }
 
 /*
@@ -72,10 +72,15 @@ func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []SignedTr
 
 func (tree *Blocktree) getTransactionsInChain(block Block) []SignedTransaction {
 	transactionsAccumulator := make([]SignedTransaction, 0)
+	i := 0
 	for !block.IsGenesis {
 		transactionsAccumulator = append(transactionsAccumulator, block.BlockData.Transactions...)
 		nextHash := block.ParentHash
 		block = tree.HashToBlock(nextHash)
+		i++
+		if i > 10000000 {
+			panic("There is probably a cycle in what was supposed to be a tree")
+		}
 	}
 	return transactionsAccumulator
 }
@@ -85,8 +90,12 @@ HashToBlock
 
 returns the Block that hashes to the parameter
 */
-func (tree *Blocktree) HashToBlock(hash []byte) Block {
-	return tree.treeMap[string(hash)].block
+func (tree *Blocktree) HashToBlock(hash sha256.HashValue) Block {
+	result, foundKey := tree.treeMap[hash]
+	if !foundKey {
+		panic("Hash given to tree is not in tree!")
+	}
+	return result.block
 }
 
 /*
@@ -99,6 +108,8 @@ returns 0 if the parent is not in the tree.
 returns -1 if block is already in the tree.
 
 returns -2 if block is marked as genesis block
+
+returns -3 if slot number is not greater than parent
 */
 func (tree *Blocktree) AddBlock(block Block) int {
 
@@ -108,17 +119,24 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Check that this block is not already in the tree
-	var newBlockHash = string(block.HashOfBlock())
+	var newBlockHash = block.HashOfBlock()
 	var _, isAlreadyInTree = tree.treeMap[newBlockHash]
 	if isAlreadyInTree {
 		return -1
 	}
 
 	//Find parent
-	var parentHash = string(block.ParentHash)
+	var parentHash = block.ParentHash
 	var parentNode, parentIsInTree = tree.treeMap[parentHash]
 	if !parentIsInTree {
 		return 0
+	}
+
+	//Check that slot is greater
+	var newSlot = block.Slot
+	var parentSlot = parentNode.block.Slot
+	if newSlot <= parentSlot {
+		return -3
 	}
 
 	//Create and add the new block
@@ -138,28 +156,39 @@ func (tree *Blocktree) AddBlock(block Block) int {
 }
 
 func (tree *Blocktree) startSubscriptionHandler() {
-	tree.subscriberChannelMutex.Lock()
-	tree.subscriberChannelList = make([]chan []byte, 0)
+	tree.subscriberChannelList = make(chan []chan sha256.HashValue, 1)
+	subscriberChannelList := make([]chan sha256.HashValue, 0)
+	tree.subscriberChannelList <- subscriberChannelList
 	go tree.subscriptionSubroutine()
-	tree.subscriberChannelMutex.Unlock()
 }
 
 func (tree *Blocktree) subscriptionSubroutine() {
 	for {
 		newBlock := <-tree.newHeadBlocks
-		tree.subscriberChannelMutex.Lock()
-		for _, channel := range tree.subscriberChannelList {
-			channel <- newBlock.HashOfBlock()
+		subscriberChannelList := <-tree.subscriberChannelList
+		for _, channel := range subscriberChannelList {
+			go func(c chan sha256.HashValue) {
+				c <- newBlock.HashOfBlock()
+			}(channel)
 		}
-		tree.subscriberChannelMutex.Unlock()
+		tree.subscriberChannelList <- subscriberChannelList
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
-func (tree *Blocktree) SubScribeToGetHead() (headHashes chan []byte) {
-	newChannel := make(chan []byte)
-	tree.subscriberChannelMutex.Lock()
-	tree.subscriberChannelList = append(tree.subscriberChannelList, newChannel)
-	tree.subscriberChannelMutex.Unlock()
+func (tree *Blocktree) SubScribeToGetHead() (headHashes chan sha256.HashValue) {
+	newChannel := make(chan sha256.HashValue, 10)
+	subscriberChannelList := <-tree.subscriberChannelList
+	subscriberChannelList = append(subscriberChannelList, newChannel)
+	tree.subscriberChannelList <- subscriberChannelList
+	newChannel <- tree.head.block.HashOfBlock()
 	return newChannel
+}
+
+func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
+	//Is not thread safe, since the tree could change during operation
+	if !reflect.DeepEqual(tree.treeMap, comparisonTree.treeMap) {
+		return false
+	}
+	return reflect.DeepEqual(tree.head.block, comparisonTree.head.block)
 }

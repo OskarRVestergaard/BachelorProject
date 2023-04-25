@@ -16,7 +16,7 @@ func TestMine(t *testing.T) {
 	vk := "4"
 	hardness := 20
 
-	miner.StartNewMiner(vk, hardness, blocksChannel, resultChannel)
+	miner.StartNewMiner(vk, hardness, blockToExtend, blocksChannel, resultChannel)
 
 	blocksChannel <- blockToExtend
 	result := <-resultChannel

@@ -1,11 +1,12 @@
 package Peer
 
 import (
-	"encoding/gob"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"sync"
 	"time"
 )
@@ -16,46 +17,51 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 */
 
 type Peer struct {
-	signatureStrategy       signature_strategy.SignatureInterface
-	lotteryStrategy         lottery_strategy.LotteryInterface
-	IpPort                  string
-	ActiveConnections       map[string]models.Void
-	Encoders                map[string]*gob.Encoder
-	Ledger                  *models.Ledger
-	decoderMutex            sync.Mutex
-	acMutex                 sync.Mutex
-	encMutex                sync.Mutex
-	floodMutex              sync.Mutex
-	validMutex              sync.Mutex
-	PublicToSecret          map[string]string
-	unfinalizedTransMutex   sync.Mutex
-	unfinalizedTransactions []blockchain.SignedTransaction
-	blockTreeMutex          sync.Mutex
-	blockTree               *blockchain.Blocktree
-	unhandledBlocks         chan blockchain.Block
-	hardness                int
+	signatureStrategy          signature_strategy.SignatureInterface
+	lotteryStrategy            lottery_strategy.LotteryInterface
+	Ledger                     *models.Ledger
+	publicToSecret             chan map[string]string
+	unfinalizedTransactions    chan []blockchain.SignedTransaction
+	blockTreeChan              chan blockchain.Blocktree
+	unhandledBlocks            chan blockchain.Block
+	unhandledMessages          chan blockchain.Message
+	hardness                   int
+	maximumTransactionsInBlock int
+	network                    network.Network
+	stopMiningSignal           chan struct{}
+	isMiningMutex              sync.Mutex
+	startTime                  time.Time
 }
 
-func (p *Peer) RunPeer(IpPort string) {
+func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
+	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &lottery_strategy.PoW{}
-	p.IpPort = IpPort
-	p.acMutex.Lock()
-	p.ActiveConnections = make(map[string]models.Void)
-	p.acMutex.Unlock()
-	p.Ledger = MakeLedger()
-	p.encMutex.Lock()
-	p.Encoders = make(map[string]*gob.Encoder)
-	p.encMutex.Unlock()
-	p.AddIpPort(IpPort)
-	p.PublicToSecret = make(map[string]string)
-	p.blockTreeMutex.Lock()
-	p.blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
-	p.blockTreeMutex.Unlock()
-	p.unhandledBlocks = make(chan blockchain.Block, 20)
-	p.hardness = p.blockTree.GetHead().BlockData.Hardness
+	address, err := network.StringToAddress(IpPort)
+	if err != nil {
+		panic("Could not parse IpPort: " + err.Error())
+	}
+	p.network = network.Network{}
+	messagesFromNetwork := p.network.StartNetwork(address)
 
-	time.Sleep(1500 * time.Millisecond)
-	go p.startBlockHandler()
-	go p.startListener()
+	p.Ledger = MakeLedger()
+	p.stopMiningSignal = make(chan struct{})
+
+	p.unfinalizedTransactions = make(chan []blockchain.SignedTransaction, 1)
+	p.unfinalizedTransactions <- make([]blockchain.SignedTransaction, 0, 100)
+	p.publicToSecret = make(chan map[string]string, 1)
+	p.publicToSecret <- make(map[string]string)
+	p.blockTreeChan = make(chan blockchain.Blocktree, 1)
+	newBlockTree, blockTreeCreationWentWell := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	if !blockTreeCreationWentWell {
+		panic("Could not generate new blocktree")
+	}
+	p.unhandledBlocks = make(chan blockchain.Block, 20)
+	p.hardness = newBlockTree.GetHead().BlockData.Hardness
+	p.maximumTransactionsInBlock = constants.BlockSize
+	p.unhandledMessages = make(chan blockchain.Message, 50)
+	p.blockTreeChan <- newBlockTree
+
+	go p.blockHandlerLoop()
+	go p.messageHandlerLoop(messagesFromNetwork)
 }

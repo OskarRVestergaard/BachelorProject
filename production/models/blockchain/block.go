@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"strconv"
 )
 
@@ -14,7 +15,7 @@ type Block struct {
 	Slot       int                                   //slot number
 	Draw       lottery_strategy.WinningLotteryParams //winner ticket
 	BlockData  BlockData                             //Block data
-	ParentHash []byte                                //block hash of some previous hash
+	ParentHash sha256.HashValue                      //block hash of some previous hash
 	Signature  []byte                                //signature
 }
 
@@ -36,7 +37,7 @@ HashOfBlock
 
 returns a byte array representation of the block to be used for hashing
 */
-func (block *Block) HashOfBlock() []byte {
+func (block *Block) HashOfBlock() sha256.HashValue {
 	byteArrayString := block.ToByteArray()
 	hash := sha256.HashByteArray(byteArrayString)
 	return hash
@@ -70,7 +71,7 @@ func (block *Block) toByteArrayWithoutSign() []byte {
 	buffer.WriteString(";_;")
 	buffer.WriteString(block.BlockData.ToString())
 	buffer.WriteString(";_;")
-	buffer.Write(block.ParentHash)
+	buffer.Write(sha256.ToSlice(block.ParentHash))
 	return buffer.Bytes()
 }
 
@@ -86,27 +87,27 @@ func CreateGenesisBlock() Block {
 		Slot:      0,
 		Draw: lottery_strategy.WinningLotteryParams{
 			Vk:         "",
-			ParentHash: nil,
+			ParentHash: [32]byte{},
 			Counter:    0,
 		},
 		BlockData: BlockData{
-			Hardness: 21,
+			Hardness: constants.Hardness,
 		},
-		ParentHash: nil,
+		ParentHash: [32]byte{},
 		Signature:  nil,
 	}
 }
 
 func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
 	data := block.toByteArrayWithoutSign()
-	hashedData := sha256.HashByteArray(data)
+	hashedData := sha256.HashByteArrayToByteArray(data)
 	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
 	block.Signature = signature
 }
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
 	blockVerificationKey := block.Vk
-	blockHashWithoutSign := sha256.HashByteArray(block.toByteArrayWithoutSign())
+	blockHashWithoutSign := sha256.HashByteArrayToByteArray(block.toByteArrayWithoutSign())
 	blockSignature := block.Signature
 	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, blockSignature)
 	return result

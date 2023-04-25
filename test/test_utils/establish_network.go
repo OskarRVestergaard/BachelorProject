@@ -1,8 +1,7 @@
-package networkservice
+package test_utils
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/Peer"
-	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -10,9 +9,8 @@ import (
 
 func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 
+	startTime := time.Now()
 	listOfPeers := make([]*Peer.Peer, noOfPeers)
-
-	var connectedPeers []string
 
 	pkList := make([]string, noOfNames)
 
@@ -21,34 +19,29 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = &p
-		p.RunPeer("127.0.0.1:" + port)
-		// TODO maybe go p.RunPeer
+		p.RunPeer("127.0.0.1:"+port, startTime)
 	}
-	listOfPeers[0].Connect("Piplup is best water pokemon", 18079)
-	connectedPeers = append(connectedPeers, listOfPeers[0].IpPort)
-	time.Sleep(250 * time.Millisecond)
-	for i := 1; i < noOfPeers; i++ {
-
-		ipPort := connectedPeers[rand.Intn(len(connectedPeers))]
-		ip := ipPort[0:(len(ipPort) - 6)]
-		port := ipPort[len(ipPort)-5:]
-
-		port2, _ := strconv.Atoi(port)
-		listOfPeers[i].Connect(ip, port2)
-
-		time.Sleep(250 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
+	for i := 0; i < noOfPeers; i++ {
+		for j := 0; j < noOfPeers; j++ {
+			if j == i {
+				continue
+			}
+			addr := listOfPeers[j].GetAddress()
+			listOfPeers[i].Connect(addr.Ip, addr.Port)
+		}
 	}
-	println("finished setting up connections")
-	println("Starting simulation")
 
 	for i := 0; i < noOfNames; i++ {
 		pkList[i] = listOfPeers[i%noOfPeers].CreateAccount()
 	}
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
+	println("finished setting up connections")
+	println("Starting simulation")
+
 	return listOfPeers, pkList
 }
 
-// TODO move to util
 func GetFreePort() (port int, err error) {
 	var a *net.TCPAddr
 	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {

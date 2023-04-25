@@ -20,9 +20,9 @@ func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 	for _, value := range triple.OpenValues {
 		isOdd := position%2 == 1
 		if isOdd {
-			currentHash = sha256.HashByteArray(append(value, currentHash...))
+			currentHash = sha256.HashByteArrayToByteArray(append(value, currentHash...))
 		} else {
-			currentHash = sha256.HashByteArray(append(currentHash, value...))
+			currentHash = sha256.HashByteArrayToByteArray(append(currentHash, value...))
 		}
 		position = position / 2
 	}
@@ -50,7 +50,7 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 	toBeHashed := []byte(V.parameters.Id)
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
-	hash := sha256.HashByteArray(toBeHashed)
+	hash := sha256.HashByteArrayToByteArray(toBeHashed)
 	return bytes.Equal(hash, shouldBe)
 }
 

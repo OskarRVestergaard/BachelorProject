@@ -3,6 +3,7 @@ package test
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -11,7 +12,8 @@ import (
 func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 	var Unhandled []blockchain.SignedTransaction
 
-	var blockTree = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	var blockTree, blockTreeCreationWentWell = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	assert.True(t, blockTreeCreationWentWell)
 	for i := 0; i < 100; i++ {
 		var b = blockchain.SignedTransaction{
 			Id:        uuid.New(),
@@ -31,7 +33,7 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 				Slot:      0,
 				Draw: lottery_strategy.WinningLotteryParams{
 					Vk:         "DEBUG",
-					ParentHash: nil,
+					ParentHash: sha256.HashValue{},
 					Counter:    0,
 				},
 				BlockData: blockchain.BlockData{

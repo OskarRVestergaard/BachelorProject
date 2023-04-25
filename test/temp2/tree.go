@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"github.com/OskarRVestergaard/BachelorProject/test/networkservice"
+	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"math"
 	"math/big"
 	"sort"
@@ -41,7 +41,7 @@ func validSlot(start time.Time, current time.Time, CurrentSlot int64, slotLength
 func calculateSlotLength() int {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := networkservice.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 

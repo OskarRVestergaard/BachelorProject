@@ -9,7 +9,9 @@ import (
 
 func (p *Peer) CreateAccount() string {
 	secretKey, publicKey := p.signatureStrategy.KeyGen()
-	p.PublicToSecret[publicKey] = secretKey
+	keys := <-p.publicToSecret
+	keys[publicKey] = secretKey
+	p.publicToSecret <- keys
 	return publicKey
 }
 
@@ -43,7 +45,7 @@ func (p *Peer) PrintLedger() {
 	sort.Strings(keys)
 
 	println()
-	print("Ledger of: " + p.IpPort + ": ")
+	print("Ledger of: " + p.network.GetAddress().ToString() + ": ")
 	for _, value := range keys {
 		print("[" + strconv.Itoa(l[value]) + "]")
 	}

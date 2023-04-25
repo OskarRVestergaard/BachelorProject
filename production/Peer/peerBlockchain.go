@@ -1,7 +1,7 @@
 package Peer
 
 import (
-	"bytes"
+	"errors"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -9,16 +9,29 @@ import (
 	"time"
 )
 
-func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams) blockchain.Block {
+func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
-	secretKey, foundSk := p.PublicToSecret[verificationKey]
+	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
 		panic("Tried to create a block but peer did not have the associated SecretKey")
 	}
-	p.blockTreeMutex.Lock()
-	headBlock := p.blockTree.GetHead()
-	headBlockHash := headBlock.HashOfBlock()
-	transactionsToAdd := p.blockTree.GetTransactionsNotInTree(p.unfinalizedTransactions) //TODO If optimization is made, also do it here
+	parentHash := draw.ParentHash
+	unfinalizedTransactions := <-p.unfinalizedTransactions
+	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
+	p.unfinalizedTransactions <- unfinalizedTransactions
+
+	var transactionsToAdd []blockchain.SignedTransaction
+	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
+		transactionsToAdd = allTransactionsToAdd
+	}
+	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
+		transactionsToAdd = make([]blockchain.SignedTransaction, p.maximumTransactionsInBlock)
+		for i := 0; i < p.maximumTransactionsInBlock; i++ {
+			transactionsToAdd[i] = allTransactionsToAdd[i]
+			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
+		}
+	}
+	//
 	resultBlock := blockchain.Block{
 		IsGenesis: false,
 		Vk:        verificationKey,
@@ -27,34 +40,46 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 		BlockData: blockchain.BlockData{
 			Transactions: transactionsToAdd,
 		},
-		ParentHash: headBlockHash,
+		ParentHash: parentHash,
 		Signature:  nil,
 	}
 	resultBlock.SignBlock(p.signatureStrategy, secretKey)
-	p.blockTreeMutex.Unlock()
 	if resultBlock.HasCorrectSignature(p.signatureStrategy) {
-		return resultBlock
+		return resultBlock, false
 	} else {
 		panic("Something went wrong, created block but gave it a wrong signature")
 	}
 }
 
-func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.WinningLotteryParams) {
-	verificationKey := utils.GetSomeKey(p.PublicToSecret) //todo maybe make sure that it is the same public key that was used for the draw
-	blockWithTransactions := p.createBlock(verificationKey, slot, draw)
-
+func (p *Peer) SendBlockWithTransactions(draw lottery_strategy.WinningLotteryParams) {
+	secretKeys := <-p.publicToSecret
+	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
+	p.publicToSecret <- secretKeys
+	blocktree := <-p.blockTreeChan
+	extendedOnSlot := blocktree.HashToBlock(draw.ParentHash).Slot
+	slot := utils.CalculateSlot(p.startTime)
+	for slot <= extendedOnSlot {
+		time.Sleep(constants.SlotLength / 10)
+		slot = utils.CalculateSlot(p.startTime)
+	}
+	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
+	if isEmpty {
+		p.blockTreeChan <- blocktree
+		return
+	}
 	msg := blockchain.Message{
 		MessageType:   constants.BlockDelivery,
-		MessageSender: p.IpPort,
+		MessageSender: p.network.GetAddress().ToString(),
 		MessageBlocks: []blockchain.Block{blockWithTransactions},
 	}
-	go p.FloodMessage(msg)
 	for _, block := range msg.MessageBlocks {
 		p.unhandledBlocks <- block
 	}
+	p.blockTreeChan <- blocktree
+	p.network.FloodMessageToAllKnown(msg) //todo Why go here? Should not be nessesary, but causes deadlock otherwise
 }
 
-func (p *Peer) startBlockHandler() {
+func (p *Peer) blockHandlerLoop() {
 	for {
 		blockToHandle := <-p.unhandledBlocks
 		go p.handleBlock(blockToHandle)
@@ -70,14 +95,11 @@ func (p *Peer) verifyBlock(block blockchain.Block) bool {
 	if !p.verifyTransactions(block.BlockData.Transactions) {
 		return false
 	}
-	if block.Draw.Vk == "DEBUG" { //TODO REMOVE THIS!
-		return true
-	}
 	if block.Draw.Vk != block.Vk {
 		return false
 	}
-	if !bytes.Equal(block.Draw.ParentHash, block.ParentHash) {
-		return false
+	if block.Draw.ParentHash != block.ParentHash {
+		return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
 	}
 	if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
 		return false
@@ -99,51 +121,82 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	if !p.verifyBlock(block) {
 		return
 	}
-
-	p.blockTreeMutex.Lock()
-	var t = p.blockTree.AddBlock(block)
+	blocktree := <-p.blockTreeChan
+	block = utils.MakeDeepCopyOfBlock(block)
+	var t = blocktree.AddBlock(block)
 	switch t {
+	case -3:
+		//Slot number is not greater than parent
+		p.blockTreeChan <- blocktree
 	case -2:
 		//Block with isGenesis true, not a real block and should be ignored
+		p.blockTreeChan <- blocktree
 	case -1:
 		//Block is in tree already and can be ignored
+		p.blockTreeChan <- blocktree
 	case 0:
 		//Parent is not in the tree, try to add later
 		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
 		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
-		p.blockTreeMutex.Unlock()
-		time.Sleep(200 * time.Millisecond)
-		p.blockTreeMutex.Lock()
+
+		p.blockTreeChan <- blocktree
+		time.Sleep(1000 * time.Millisecond) //Needs to be enough time for the other block to arrive
 		p.unhandledBlocks <- block
 	case 1:
 		//Block successfully added to the tree
+		p.blockTreeChan <- blocktree
 	default:
-		p.blockTreeMutex.Unlock()
+		p.blockTreeChan <- blocktree
 		panic("addBlockReturnValueNotUnderstood")
 	}
-	p.blockTreeMutex.Unlock()
 }
 
 func (p *Peer) addTransaction(t blockchain.SignedTransaction) {
-	p.unfinalizedTransMutex.Lock()
-	p.unfinalizedTransactions = append(p.unfinalizedTransactions, t)
-	p.unfinalizedTransMutex.Unlock()
+	unfinalizedTransactions := <-p.unfinalizedTransactions
+	unfinalizedTransactions = append(unfinalizedTransactions, t)
+	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *Peer) StartMining() {
-	verificationKey := utils.GetSomeKey(p.PublicToSecret)
-	newHeadHashes := p.blockTree.SubScribeToGetHead()
-	head := p.blockTree.GetHead()
+func (p *Peer) StartMining() error {
+	noActiveMiner := p.isMiningMutex.TryLock()
+	if !noActiveMiner {
+		return errors.New("peer is already mining")
+	}
+	secretKeys := <-p.publicToSecret
+	verificationKey := utils.GetSomeKey(secretKeys)
+	p.publicToSecret <- secretKeys
+	blocktree := <-p.blockTreeChan
+	newHeadHashes := blocktree.SubScribeToGetHead()
+	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
-	winningDraws := make(chan lottery_strategy.WinningLotteryParams)
-	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws)
-	go p.blockCreater(winningDraws)
+	winningDraws := make(chan lottery_strategy.WinningLotteryParams, 10)
+	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
+	go p.blockCreatingLoop(winningDraws)
+
+	p.blockTreeChan <- blocktree
+	return nil
 }
 
-func (p *Peer) blockCreater(wins chan lottery_strategy.WinningLotteryParams) {
+func (p *Peer) StopMining() error {
+	noActiveMiner := p.isMiningMutex.TryLock()
+	if noActiveMiner {
+		p.isMiningMutex.Unlock()
+		return errors.New("peer is already not mining")
+	}
+	p.stopMiningSignal <- struct{}{}
+	p.isMiningMutex.Unlock()
+	return nil
+}
+
+func (p *Peer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {
 	for {
 		newWin := <-wins
-		slot := p.blockTree.GetHead().Slot + 1
-		p.SendBlockWithTransactions(slot, newWin)
+		go p.SendBlockWithTransactions(newWin)
 	}
+}
+
+func (p *Peer) GetBlockTree() blockchain.Blocktree {
+	blocktree := <-p.blockTreeChan
+	p.blockTreeChan <- blocktree
+	return blocktree
 }

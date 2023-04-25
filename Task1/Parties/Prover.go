@@ -30,7 +30,7 @@ func (P *Prover) pebbleGraph() {
 			}
 		}
 
-		P.pebbledGraph.Value[i] = sha256.HashByteArray(toBeHashed)
+		P.pebbledGraph.Value[i] = sha256.HashByteArrayToByteArray(toBeHashed)
 	}
 }
 
@@ -55,7 +55,7 @@ func (P *Prover) createMerkleTreeFromGraph() {
 		leftChild := tree.Nodes[(i+1)*2-1]
 		rightChild := tree.Nodes[(i+1)*2]
 		toBeHashed := append(leftChild, rightChild...)
-		tree.Nodes[i] = sha256.HashByteArray(toBeHashed)
+		tree.Nodes[i] = sha256.HashByteArrayToByteArray(toBeHashed)
 	}
 	P.merkleTree = &tree
 	P.commitment = P.merkleTree.GetRootCommitment()
