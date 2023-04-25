@@ -27,7 +27,8 @@ func StringToAddress(str string) (Address, error) {
 	return result, err
 }
 
-func ConnToRemoteAddress(conn net.Conn) (Address, error) {
+// With current setup using the remote address leads to more problems
+func connToRemoteAddress(conn net.Conn) (Address, error) {
 	addr := conn.RemoteAddr()
 	result, err := StringToAddress(addr.String())
 	if err != nil {

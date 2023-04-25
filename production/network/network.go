@@ -24,14 +24,14 @@ func (network *Network) GetAddress() Address {
 }
 
 func (network *Network) EstablishConnectionTo(address Address) error {
-	if !network.isKnownAddress(address) {
+	encoders := <-network.encoders
+	if !network.isKnownAddress(address, encoders) {
 		var conn, err = net.Dial("tcp", address.ToString())
 		if err != nil {
 			return err
 		}
 
 		enc := gob.NewEncoder(conn)
-		encoders := <-network.encoders
 		encoders[address] = enc
 		network.encoders <- encoders
 	}
@@ -58,14 +58,14 @@ SendMessageTo
 might be blocking if the network is busy sending messages
 */
 func (network *Network) SendMessageTo(message blockchain.Message, address Address) error {
-	if !network.isKnownAddress(address) {
+	encoders := <-network.encoders
+	if !network.isKnownAddress(address, encoders) {
 		var conn, err = net.Dial("tcp", address.ToString())
 		if err != nil {
 			return err
 		}
 
 		enc := gob.NewEncoder(conn)
-		encoders := <-network.encoders
 		encoders[address] = enc
 		network.encoders <- encoders
 	}
@@ -98,10 +98,8 @@ type outgoingMessage struct {
 	destination Address
 }
 
-func (network *Network) isKnownAddress(address Address) bool {
-	encoders := <-network.encoders
+func (network *Network) isKnownAddress(address Address, encoders map[Address]*gob.Encoder) bool {
 	_, found := encoders[address]
-	network.encoders <- encoders
 	return found
 }
 
@@ -148,13 +146,6 @@ func (network *Network) connDelegationLoop(connections chan net.Conn) {
 }
 
 func (network *Network) connectionReceiverLoop(conn net.Conn) {
-	remoteAddress, connErr := ConnToRemoteAddress(conn)
-	if network.isKnownAddress(remoteAddress) {
-		return
-	}
-	if connErr != nil {
-		panic("Address given by connection failed parsing")
-	}
 	dec := gob.NewDecoder(conn)
 
 	for {

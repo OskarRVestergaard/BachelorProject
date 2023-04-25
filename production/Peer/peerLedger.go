@@ -43,7 +43,7 @@ func (p *Peer) PrintLedger() {
 	sort.Strings(keys)
 
 	println()
-	print("Ledger of: " + p.IpPort + ": ")
+	print("Ledger of: " + p.network.GetAddress().ToString() + ": ")
 	for _, value := range keys {
 		print("[" + strconv.Itoa(l[value]) + "]")
 	}

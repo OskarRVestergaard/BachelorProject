@@ -1,7 +1,6 @@
 package Peer
 
 import (
-	"encoding/gob"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
@@ -18,14 +17,7 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 type Peer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            lottery_strategy.LotteryInterface
-	IpPort                     string
-	ActiveConnections          map[string]models.Void
-	Encoders                   map[string]*gob.Encoder
 	Ledger                     *models.Ledger
-	decoderMutex               sync.Mutex
-	acMutex                    sync.Mutex
-	encMutex                   sync.Mutex
-	floodMutex                 sync.Mutex
 	validMutex                 sync.Mutex
 	PublicToSecret             map[string]string
 	unfinalizedTransMutex      sync.Mutex
@@ -35,12 +27,6 @@ type Peer struct {
 	unhandledMessages          chan blockchain.Message
 	hardness                   int
 	maximumTransactionsInBlock int
-	MessageLog                 []blockchain.Message
-	logMutex                   sync.Mutex
-	sentMutex                  sync.Mutex
-	receivedMutex              sync.Mutex
-	sentCounter                int
-	receivedCounter            int
 	network                    network.Network
 }
 

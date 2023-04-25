@@ -62,10 +62,10 @@ func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.Winning
 	}
 	msg := blockchain.Message{
 		MessageType:   constants.BlockDelivery,
-		MessageSender: p.IpPort,
+		MessageSender: p.network.GetAddress().ToString(),
 		MessageBlocks: []blockchain.Block{blockWithTransactions},
 	}
-	go p.FloodMessage(msg)
+	go p.network.FloodMessageToAllKnown(msg)
 	for _, block := range msg.MessageBlocks {
 		p.unhandledBlocks <- block
 	}
