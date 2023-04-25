@@ -1,49 +1,11 @@
 package test
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
-
-func TestBlockDelivery(t *testing.T) {
-	noOfPeers := 2
-	noOfMsgs := 3
-	noOfNames := 2
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
-	debugDraw := lottery_strategy.WinningLotteryParams{
-		Vk:         "DEBUG",
-		ParentHash: sha256.HashValue{},
-		Counter:    0,
-	}
-
-	time.Sleep(1000 * time.Millisecond)
-
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-
-	time.Sleep(1000 * time.Millisecond)
-
-	listOfPeers[0].SendBlockWithTransactions(8, debugDraw)
-
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-
-	time.Sleep(1000 * time.Millisecond)
-
-	listOfPeers[0].SendBlockWithTransactions(6, debugDraw)
-
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-
-	time.Sleep(1000 * time.Millisecond)
-
-	listOfPeers[0].SendBlockWithTransactions(11, debugDraw)
-	time.Sleep(1000 * time.Millisecond)
-	time.Sleep(1000 * time.Millisecond)
-	assert.True(t, true)
-}
 
 func TestPOWNetwork2Peers(t *testing.T) {
 	noOfPeers := 2

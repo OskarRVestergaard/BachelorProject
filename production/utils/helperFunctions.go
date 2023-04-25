@@ -6,6 +6,8 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
+	"time"
 )
 
 func GetSomeKey[t comparable](m map[t]t) t {
@@ -101,4 +103,10 @@ func MakeDeepCopyOfMessage(msg blockchain.Message) (copyOfMessage blockchain.Mes
 		PeerMap:           peersCopy,
 	}
 	return deepCopyMessage
+}
+
+func CalculateSlot(startTime time.Time) int {
+	timeDifference := time.Now().Sub(startTime)
+	slot := timeDifference.Milliseconds() / constants.SlotLength.Milliseconds()
+	return int(slot)
 }

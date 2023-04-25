@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"strconv"
 )
 
@@ -90,7 +91,7 @@ func CreateGenesisBlock() Block {
 			Counter:    0,
 		},
 		BlockData: BlockData{
-			Hardness: 20,
+			Hardness: constants.Hardness,
 		},
 		ParentHash: [32]byte{},
 		Signature:  nil,

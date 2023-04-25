@@ -51,11 +51,17 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 	}
 }
 
-func (p *Peer) SendBlockWithTransactions(slot int, draw lottery_strategy.WinningLotteryParams) {
+func (p *Peer) SendBlockWithTransactions(draw lottery_strategy.WinningLotteryParams) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
+	extendedOnSlot := blocktree.HashToBlock(draw.ParentHash).Slot
+	slot := utils.CalculateSlot(p.startTime)
+	for slot <= extendedOnSlot {
+		time.Sleep(constants.SlotLength / 10)
+		slot = utils.CalculateSlot(p.startTime)
+	}
 	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
 	if isEmpty {
 		p.blockTreeChan <- blocktree
@@ -185,12 +191,7 @@ func (p *Peer) StopMining() error {
 func (p *Peer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {
 	for {
 		newWin := <-wins
-
-		blocktree := <-p.blockTreeChan //todo GET SLOT BY OTHER METHOD INSTEAD
-		head := blocktree.GetHead()
-		slot := head.Slot + 1
-		p.blockTreeChan <- blocktree
-		go p.SendBlockWithTransactions(slot, newWin)
+		go p.SendBlockWithTransactions(newWin)
 	}
 }
 

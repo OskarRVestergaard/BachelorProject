@@ -1,3 +1,7 @@
 package constants
 
-var BlockSize = 10
+import "time"
+
+var BlockSize = 50
+var Hardness = 23
+var SlotLength = 200 * time.Millisecond

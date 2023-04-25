@@ -30,9 +30,11 @@ type Peer struct {
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
+	startTime                  time.Time
 }
 
 func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
+	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &lottery_strategy.PoW{}
 	address, err := network.StringToAddress(IpPort)
