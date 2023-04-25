@@ -156,11 +156,9 @@ func (p *Peer) StartMining() {
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
 	newHeadHashes := blocktree.SubScribeToGetHead()
-	p.HeadHashesDEBUG = newHeadHashes
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
 	winningDraws := make(chan lottery_strategy.WinningLotteryParams, 10)
-	p.WinningDrawDEBUG = winningDraws
 	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws)
 	go p.blockCreatingLoop(winningDraws)
 
