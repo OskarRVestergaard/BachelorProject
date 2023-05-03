@@ -68,7 +68,7 @@ func (lottery *PoW) mine(vk string, parentHash sha256.HashValue, hardness int, d
 				Counter:    c,
 			}
 			hashOfTicket := sha256.HashByteArray(draw.ToByteSlice())
-			if verify(hashOfTicket, hardness) {
+			if verifyPoW(hashOfTicket, hardness) {
 				winningDraws <- draw
 				_ = <-done
 				return
@@ -78,7 +78,7 @@ func (lottery *PoW) mine(vk string, parentHash sha256.HashValue, hardness int, d
 
 }
 
-func verify(hashedTicket sha256.HashValue, hardness int) bool {
+func verifyPoW(hashedTicket sha256.HashValue, hardness int) bool {
 	byteAmount := hardness / 8
 	restAmount := hardness - 8*byteAmount
 	for i := 0; i < byteAmount; i++ {
@@ -103,5 +103,5 @@ func (lottery *PoW) Verify(vk string, parentHash sha256.HashValue, hardness int,
 	}
 	hashed := sha256.HashByteArray(draw.ToByteSlice())
 
-	return verify(hashed, hardness)
+	return verifyPoW(hashed, hardness)
 }
