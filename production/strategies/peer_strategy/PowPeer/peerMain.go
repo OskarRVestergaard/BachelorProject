@@ -1,7 +1,6 @@
-package Peer
+package PowPeer
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
@@ -19,7 +18,6 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 type Peer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            lottery_strategy.LotteryInterface
-	Ledger                     *models.Ledger
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []blockchain.SignedTransaction
 	blockTreeChan              chan blockchain.Blocktree
@@ -44,7 +42,6 @@ func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
 	p.network = network.Network{}
 	messagesFromNetwork := p.network.StartNetwork(address)
 
-	p.Ledger = MakeLedger()
 	p.stopMiningSignal = make(chan struct{})
 
 	p.unfinalizedTransactions = make(chan []blockchain.SignedTransaction, 1)
@@ -64,4 +61,12 @@ func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
 
 	go p.blockHandlerLoop()
 	go p.messageHandlerLoop(messagesFromNetwork)
+}
+
+func (p *Peer) CreateAccount() string {
+	secretKey, publicKey := p.signatureStrategy.KeyGen()
+	keys := <-p.publicToSecret
+	keys[publicKey] = secretKey
+	p.publicToSecret <- keys
+	return publicKey
 }

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math/big"
 	"strconv"
 )

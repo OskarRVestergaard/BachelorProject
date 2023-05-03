@@ -1,4 +1,4 @@
-package Peer
+package PowPeer
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
@@ -26,6 +26,19 @@ func (p *Peer) Connect(ip string, port int) {
 	}
 }
 
+func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
+	secretSigningKey, foundSecretKey := p.getSecretKey(from)
+	if !foundSecretKey {
+		return
+	}
+	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
+	ipPort := p.network.GetAddress().ToString()
+	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
+	p.addTransaction(trans)
+	p.network.FloodMessageToAllKnown(msg)
+}
+
 func (p *Peer) messageHandlerLoop(incomingMessages chan blockchain.Message) {
 	for {
 		msg := <-incomingMessages
@@ -50,19 +63,6 @@ func (p *Peer) handleMessage(msg blockchain.Message) {
 	default:
 		println(p.network.GetAddress().ToString() + ": received a UNKNOWN message type ( " + msg.MessageType + " ) from: " + msg.MessageSender)
 	}
-}
-
-func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
-	secretSigningKey, foundSecretKey := p.getSecretKey(from)
-	if !foundSecretKey {
-		return
-	}
-	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
-	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
-	ipPort := p.network.GetAddress().ToString()
-	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
-	p.addTransaction(trans)
-	p.network.FloodMessageToAllKnown(msg)
 }
 
 /*

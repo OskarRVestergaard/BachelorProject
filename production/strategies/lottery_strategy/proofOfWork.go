@@ -1,7 +1,7 @@
 package lottery_strategy
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 )
 
 type PoW struct {

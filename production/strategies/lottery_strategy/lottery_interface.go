@@ -2,7 +2,7 @@ package lottery_strategy
 
 import (
 	"bytes"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"strconv"
 )
 

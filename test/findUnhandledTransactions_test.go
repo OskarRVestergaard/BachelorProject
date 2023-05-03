@@ -2,8 +2,8 @@ package test
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"

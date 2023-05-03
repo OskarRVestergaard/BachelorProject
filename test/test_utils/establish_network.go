@@ -1,24 +1,26 @@
 package test_utils
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/Peer"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/PowPeer"
 	"net"
 	"strconv"
 	"time"
 )
 
-func SetupPeers(noOfPeers int, noOfNames int) ([]*Peer.Peer, []string) {
+func SetupPeers(noOfPeers int, noOfNames int) ([]peer_strategy.PeerInterface, []string) {
 
 	startTime := time.Now()
-	listOfPeers := make([]*Peer.Peer, noOfPeers)
+	listOfPeers := make([]peer_strategy.PeerInterface, noOfPeers)
 
 	pkList := make([]string, noOfNames)
 
 	for i := 0; i < noOfPeers; i++ {
-		var p Peer.Peer
+		var p peer_strategy.PeerInterface
+		p = &PowPeer.Peer{}
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
-		listOfPeers[i] = &p
+		listOfPeers[i] = p
 		p.RunPeer("127.0.0.1:"+port, startTime)
 	}
 	time.Sleep(150 * time.Millisecond)
