@@ -15,7 +15,7 @@ This is a single Peer that both listens to and sends messages
 CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 */
 
-type Peer struct {
+type PoWPeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            lottery_strategy.LotteryInterface
 	publicToSecret             chan map[string]string
@@ -31,7 +31,7 @@ type Peer struct {
 	startTime                  time.Time
 }
 
-func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
+func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &lottery_strategy.PoW{}
@@ -63,7 +63,7 @@ func (p *Peer) RunPeer(IpPort string, startTime time.Time) {
 	go p.messageHandlerLoop(messagesFromNetwork)
 }
 
-func (p *Peer) CreateAccount() string {
+func (p *PoWPeer) CreateAccount() string {
 	secretKey, publicKey := p.signatureStrategy.KeyGen()
 	keys := <-p.publicToSecret
 	keys[publicKey] = secretKey

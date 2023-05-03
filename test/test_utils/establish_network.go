@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func SetupPeers(noOfPeers int, noOfNames int) ([]peer_strategy.PeerInterface, []string) {
+func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool) ([]peer_strategy.PeerInterface, []string) {
 
 	startTime := time.Now()
 	listOfPeers := make([]peer_strategy.PeerInterface, noOfPeers)
@@ -17,7 +17,11 @@ func SetupPeers(noOfPeers int, noOfNames int) ([]peer_strategy.PeerInterface, []
 
 	for i := 0; i < noOfPeers; i++ {
 		var p peer_strategy.PeerInterface
-		p = &PowPeer.Peer{}
+		if useProofOfSpace {
+			panic("ProofOfSpaceBlockchainNotImplemented")
+		} else {
+			p = &PowPeer.PoWPeer{}
+		}
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = p

@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-func (p *Peer) GetBlockTree() blockchain.Blocktree {
+func (p *PoWPeer) GetBlockTree() blockchain.Blocktree {
 	blocktree := <-p.blockTreeChan
 	p.blockTreeChan <- blocktree
 	return blocktree
 }
 
-func (p *Peer) StartMining() error {
+func (p *PoWPeer) StartMining() error {
 	noActiveMiner := p.isMiningMutex.TryLock()
 	if !noActiveMiner {
 		return errors.New("peer is already mining")
@@ -35,7 +35,7 @@ func (p *Peer) StartMining() error {
 	return nil
 }
 
-func (p *Peer) StopMining() error {
+func (p *PoWPeer) StopMining() error {
 	noActiveMiner := p.isMiningMutex.TryLock()
 	if noActiveMiner {
 		p.isMiningMutex.Unlock()
@@ -46,7 +46,7 @@ func (p *Peer) StopMining() error {
 	return nil
 }
 
-func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
+func (p *PoWPeer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -88,7 +88,7 @@ func (p *Peer) createBlock(verificationKey string, slot int, draw lottery_strate
 	}
 }
 
-func (p *Peer) sendBlockWithTransactions(draw lottery_strategy.WinningLotteryParams) {
+func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLotteryParams) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
@@ -116,14 +116,14 @@ func (p *Peer) sendBlockWithTransactions(draw lottery_strategy.WinningLotteryPar
 	p.network.FloodMessageToAllKnown(msg) //todo Why go here? Should not be nessesary, but causes deadlock otherwise
 }
 
-func (p *Peer) blockHandlerLoop() {
+func (p *PoWPeer) blockHandlerLoop() {
 	for {
 		blockToHandle := <-p.unhandledBlocks
 		go p.handleBlock(blockToHandle)
 	}
 }
 
-func (p *Peer) verifyBlock(block blockchain.Block) bool {
+func (p *PoWPeer) verifyBlock(block blockchain.Block) bool {
 	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	//TODO This is potentially very slow, but could be faster using dynamic programming in the case the chain best chain does not switch often
 	if !block.HasCorrectSignature(p.signatureStrategy) {
@@ -144,7 +144,7 @@ func (p *Peer) verifyBlock(block blockchain.Block) bool {
 	return true
 }
 
-func (p *Peer) verifyTransactions(transactions []blockchain.SignedTransaction) bool {
+func (p *PoWPeer) verifyTransactions(transactions []blockchain.SignedTransaction) bool {
 	for _, transaction := range transactions {
 		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !transactionSignatureIsCorrect {
@@ -154,7 +154,7 @@ func (p *Peer) verifyTransactions(transactions []blockchain.SignedTransaction) b
 	return true
 }
 
-func (p *Peer) handleBlock(block blockchain.Block) {
+func (p *PoWPeer) handleBlock(block blockchain.Block) {
 	if !p.verifyBlock(block) {
 		return
 	}
@@ -188,13 +188,13 @@ func (p *Peer) handleBlock(block blockchain.Block) {
 	}
 }
 
-func (p *Peer) addTransaction(t blockchain.SignedTransaction) {
+func (p *PoWPeer) addTransaction(t blockchain.SignedTransaction) {
 	unfinalizedTransactions := <-p.unfinalizedTransactions
 	unfinalizedTransactions = append(unfinalizedTransactions, t)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *Peer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {
+func (p *PoWPeer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {
 	for {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)

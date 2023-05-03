@@ -11,8 +11,8 @@ func TestPOWNetwork2Peers(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 3
 	noOfNames := 2
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)             //send msg
 	for _, peer := range listOfPeers {
 		err := peer.StartMining()
 		if err != nil {
@@ -39,8 +39,8 @@ func TestPOWNetwork16Peers(t *testing.T) {
 	noOfPeers := 16
 	noOfMsgs := 2
 	noOfNames := 16
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)      //send msg
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)             //send msg
 	for _, peer := range listOfPeers {
 		err := peer.StartMining()
 		if err != nil {

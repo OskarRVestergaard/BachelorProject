@@ -27,6 +27,6 @@ func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []peer_strategy.PeerInter
 
 }
 
-func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*PowPeer.Peer, pkList []string) {
+func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*PowPeer.PoWPeer, pkList []string) {
 
 }

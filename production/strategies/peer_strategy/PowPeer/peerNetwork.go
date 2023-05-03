@@ -8,11 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func (p *Peer) GetAddress() network.Address {
+func (p *PoWPeer) GetAddress() network.Address {
 	return p.network.GetAddress()
 }
 
-func (p *Peer) Connect(ip string, port int) {
+func (p *PoWPeer) Connect(ip string, port int) {
 	addr := network.Address{
 		Ip:   ip,
 		Port: port,
@@ -26,7 +26,7 @@ func (p *Peer) Connect(ip string, port int) {
 	}
 }
 
-func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
+func (p *PoWPeer) FloodSignedTransaction(from string, to string, amount int) {
 	secretSigningKey, foundSecretKey := p.getSecretKey(from)
 	if !foundSecretKey {
 		return
@@ -39,14 +39,14 @@ func (p *Peer) FloodSignedTransaction(from string, to string, amount int) {
 	p.network.FloodMessageToAllKnown(msg)
 }
 
-func (p *Peer) messageHandlerLoop(incomingMessages chan blockchain.Message) {
+func (p *PoWPeer) messageHandlerLoop(incomingMessages chan blockchain.Message) {
 	for {
 		msg := <-incomingMessages
 		p.handleMessage(msg)
 	}
 }
 
-func (p *Peer) handleMessage(msg blockchain.Message) {
+func (p *PoWPeer) handleMessage(msg blockchain.Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {
@@ -70,7 +70,7 @@ getSecretKey
 
 returns the secret key associated with a given public key and return a boolean indicating whether the key is known
 */
-func (p *Peer) getSecretKey(pk string) (secretKey string, isKnownKey bool) {
+func (p *PoWPeer) getSecretKey(pk string) (secretKey string, isKnownKey bool) {
 	publicToSecret := <-p.publicToSecret
 	secretSigningKey, foundSecretKey := publicToSecret[pk]
 	p.publicToSecret <- publicToSecret
