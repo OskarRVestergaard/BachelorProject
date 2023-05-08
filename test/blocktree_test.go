@@ -91,7 +91,7 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
-	time.Sleep(10000 * time.Millisecond)
+	time.Sleep(30000 * time.Millisecond)
 	for i, _ := range listOfPeers {
 		if i != 0 {
 			tree1 := listOfPeers[i-1].GetBlockTree()

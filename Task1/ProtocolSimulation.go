@@ -36,7 +36,7 @@ func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
 	return resultGraph
 }
 
-func generateParameters() Models.Parameters {
+func GenerateParameters() Models.Parameters {
 	random, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt))
 	if err != nil {
 		print("ERROR HAPPENED:")
@@ -56,7 +56,7 @@ func generateParameters() Models.Parameters {
 func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
 	prover := Parties.Prover{}
 	verifier := Parties.Verifier{}
-	prm := generateParameters()
+	prm := GenerateParameters()
 
 	//Prover and verifier gets ready for the protocol, the prover generates the hash-values of the graph
 	//and computes a merkle tree commitment on it.

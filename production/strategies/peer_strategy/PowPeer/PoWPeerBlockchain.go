@@ -113,7 +113,7 @@ func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLottery
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
-	p.network.FloodMessageToAllKnown(msg) //todo Why go here? Should not be nessesary, but causes deadlock otherwise
+	p.network.FloodMessageToAllKnown(msg)
 }
 
 func (p *PoWPeer) blockHandlerLoop() {

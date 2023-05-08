@@ -2,6 +2,7 @@ package SpacemintPeer
 
 import (
 	"errors"
+	"github.com/OskarRVestergaard/BachelorProject/Task1"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
@@ -20,7 +21,7 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 
 type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
-	lotteryStrategy            lottery_strategy.LotteryInterface
+	lotteryStrategy            *PoSpace
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []blockchain.SignedTransaction
 	blockTreeChan              chan blockchain.Blocktree
@@ -37,7 +38,7 @@ type PoSpacePeer struct {
 func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
-	p.lotteryStrategy = &lottery_strategy.PoW{}
+	p.lotteryStrategy = &PoSpace{}
 	address, err := network.StringToAddress(IpPort)
 	if err != nil {
 		panic("Could not parse IpPort: " + err.Error())
@@ -164,8 +165,9 @@ func (p *PoSpacePeer) StartMining() error {
 	newHeadHashes := blocktree.SubScribeToGetHead()
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
-	winningDraws := make(chan lottery_strategy.WinningLotteryParams, 10)
-	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
+	winningDraws := make(chan PoSpaceLotteryDraw, 10)
+	poSpaceParameters := Task1.GenerateParameters()
+	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -183,7 +185,7 @@ func (p *PoSpacePeer) StopMining() error {
 	return nil
 }
 
-func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
+func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpaceLotteryDraw, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -210,7 +212,7 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery
 		IsGenesis: false,
 		Vk:        verificationKey,
 		Slot:      slot,
-		Draw:      draw,
+		Draw:      lottery_strategy.WinningLotteryParams{}, //TODO Change to actual draw
 		BlockData: blockchain.BlockData{
 			Transactions: transactionsToAdd,
 		},
@@ -225,7 +227,7 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery
 	}
 }
 
-func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.WinningLotteryParams) {
+func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpaceLotteryDraw) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
@@ -250,7 +252,7 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.WinningLot
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
-	p.network.FloodMessageToAllKnown(msg) //todo Why go here? Should not be nessesary, but causes deadlock otherwise
+	p.network.FloodMessageToAllKnown(msg)
 }
 
 func (p *PoSpacePeer) blockHandlerLoop() {
@@ -269,15 +271,16 @@ func (p *PoSpacePeer) verifyBlock(block blockchain.Block) bool {
 	if !p.verifyTransactions(block.BlockData.Transactions) {
 		return false
 	}
-	if block.Draw.Vk != block.Vk {
-		return false
-	}
-	if block.Draw.ParentHash != block.ParentHash {
-		return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
-	}
-	if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
-		return false
-	}
+	//TODO When draw is sent over network, then these checks makes sense
+	//if block.Draw.Vk != block.Vk {
+	//	return false
+	//}
+	//if block.Draw.ParentHash != block.ParentHash {
+	//	return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
+	//}
+	//if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
+	//	return false
+	//}
 	return true
 }
 
@@ -331,7 +334,7 @@ func (p *PoSpacePeer) addTransaction(t blockchain.SignedTransaction) {
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *PoSpacePeer) blockCreatingLoop(wins chan lottery_strategy.WinningLotteryParams) {
+func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpaceLotteryDraw) {
 	for {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)
