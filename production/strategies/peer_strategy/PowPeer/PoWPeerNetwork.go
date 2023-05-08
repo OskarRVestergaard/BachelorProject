@@ -1,7 +1,8 @@
 package PowPeer
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -19,7 +20,7 @@ func (p *PoWPeer) Connect(ip string, port int) {
 	}
 	ownIpPort := p.network.GetAddress().ToString()
 	print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
-	err := p.network.SendMessageTo(blockchain.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
+	err := p.network.SendMessageTo(PoWblockchain.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
 
 	if err != nil {
 		panic(err.Error())
@@ -31,22 +32,22 @@ func (p *PoWPeer) FloodSignedTransaction(from string, to string, amount int) {
 	if !foundSecretKey {
 		return
 	}
-	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	trans := models.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
-	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
+	msg := PoWblockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
 	p.addTransaction(trans)
 	p.network.FloodMessageToAllKnown(msg)
 }
 
-func (p *PoWPeer) messageHandlerLoop(incomingMessages chan blockchain.Message) {
+func (p *PoWPeer) messageHandlerLoop(incomingMessages chan PoWblockchain.Message) {
 	for {
 		msg := <-incomingMessages
 		p.handleMessage(msg)
 	}
 }
 
-func (p *PoWPeer) handleMessage(msg blockchain.Message) {
+func (p *PoWPeer) handleMessage(msg PoWblockchain.Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {

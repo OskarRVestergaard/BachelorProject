@@ -1,4 +1,4 @@
-package blockchain
+package models
 
 import (
 	"bytes"
@@ -43,8 +43,8 @@ func (signedTransaction *SignedTransaction) SignTransaction(signatureStrategy si
 	signedTransaction.Signature = signature
 }
 
-func getTransactionsInList1ButNotList2(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
-	//Currently, since the lists are unsorted the algortihm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+func GetTransactionsInList1ButNotList2(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
+	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
 	var difference []SignedTransaction
 	found := false
 	for _, val1 := range list1 {

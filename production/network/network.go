@@ -2,7 +2,7 @@ package network
 
 import (
 	"encoding/gob"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"io"
 	"net"
@@ -15,7 +15,7 @@ Public
 type Network struct {
 	ownAddress       Address
 	encoders         chan map[Address]*gob.Encoder
-	incomingMessages chan blockchain.Message
+	incomingMessages chan PoWblockchain.Message
 	outgoingMessages chan outgoingMessage
 }
 
@@ -38,10 +38,10 @@ func (network *Network) EstablishConnectionTo(address Address) error {
 	return nil
 }
 
-func (network *Network) StartNetwork(address Address) (receivedMessages chan blockchain.Message) {
+func (network *Network) StartNetwork(address Address) (receivedMessages chan PoWblockchain.Message) {
 	network.ownAddress = address
 	connectionChannel := make(chan net.Conn, 4)
-	network.incomingMessages = make(chan blockchain.Message, 50)
+	network.incomingMessages = make(chan PoWblockchain.Message, 50)
 	network.outgoingMessages = make(chan outgoingMessage, 100)
 	network.encoders = make(chan map[Address]*gob.Encoder, 1)
 	encodersMap := make(map[Address]*gob.Encoder)
@@ -57,7 +57,7 @@ SendMessageTo
 
 might be blocking if the network is busy sending messages
 */
-func (network *Network) SendMessageTo(message blockchain.Message, address Address) error {
+func (network *Network) SendMessageTo(message PoWblockchain.Message, address Address) error {
 	encoders := <-network.encoders
 	if !network.isKnownAddress(address, encoders) {
 		var conn, err = net.Dial("tcp", address.ToString())
@@ -77,7 +77,7 @@ func (network *Network) SendMessageTo(message blockchain.Message, address Addres
 	return nil
 }
 
-func (network *Network) FloodMessageToAllKnown(message blockchain.Message) {
+func (network *Network) FloodMessageToAllKnown(message PoWblockchain.Message) {
 	encoders := <-network.encoders
 	for address, _ := range encoders {
 		msg := outgoingMessage{
@@ -94,7 +94,7 @@ Private
 */
 
 type outgoingMessage struct {
-	message     blockchain.Message
+	message     PoWblockchain.Message
 	destination Address
 }
 
@@ -149,7 +149,7 @@ func (network *Network) connectionReceiverLoop(conn net.Conn) {
 	dec := gob.NewDecoder(conn)
 
 	for {
-		newMsg := &blockchain.Message{}
+		newMsg := &PoWblockchain.Message{}
 		err := dec.Decode(newMsg)
 		if err == io.EOF {
 			closingError := conn.Close()

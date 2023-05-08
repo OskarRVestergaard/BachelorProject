@@ -1,7 +1,8 @@
 package test
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/google/uuid"
@@ -10,12 +11,12 @@ import (
 )
 
 func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
-	var Unhandled []blockchain.SignedTransaction
+	var Unhandled []models.SignedTransaction
 
-	var blockTree, blockTreeCreationWentWell = blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	var blockTree, blockTreeCreationWentWell = PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock())
 	assert.True(t, blockTreeCreationWentWell)
 	for i := 0; i < 100; i++ {
-		var b = blockchain.SignedTransaction{
+		var b = models.SignedTransaction{
 			Id:        uuid.New(),
 			From:      "",  //not relevant for test
 			To:        "",  //not relevant for test
@@ -25,9 +26,9 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 		Unhandled = append(Unhandled, b)
 		parent := blockTree.GetHead()
 		if i%3 == 0 {
-			var trans []blockchain.SignedTransaction
+			var trans []models.SignedTransaction
 			trans = append(trans, b)
-			blockTree.AddBlock(blockchain.Block{
+			blockTree.AddBlock(PoWblockchain.Block{
 				IsGenesis: false,
 				Vk:        "",
 				Slot:      0,
@@ -36,7 +37,7 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 					ParentHash: sha256.HashValue{},
 					Counter:    0,
 				},
-				BlockData: blockchain.BlockData{
+				BlockData: PoWblockchain.BlockData{
 					Hardness:     0,
 					Transactions: trans,
 				},

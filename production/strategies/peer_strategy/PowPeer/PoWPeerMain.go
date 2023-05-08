@@ -1,7 +1,8 @@
 package PowPeer
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
@@ -19,10 +20,10 @@ type PoWPeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            lottery_strategy.LotteryInterface
 	publicToSecret             chan map[string]string
-	unfinalizedTransactions    chan []blockchain.SignedTransaction
-	blockTreeChan              chan blockchain.Blocktree
-	unhandledBlocks            chan blockchain.Block
-	unhandledMessages          chan blockchain.Message
+	unfinalizedTransactions    chan []models.SignedTransaction
+	blockTreeChan              chan PoWblockchain.Blocktree
+	unhandledBlocks            chan PoWblockchain.Block
+	unhandledMessages          chan PoWblockchain.Message
 	hardness                   int
 	maximumTransactionsInBlock int
 	network                    network.Network
@@ -44,19 +45,19 @@ func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 
 	p.stopMiningSignal = make(chan struct{})
 
-	p.unfinalizedTransactions = make(chan []blockchain.SignedTransaction, 1)
-	p.unfinalizedTransactions <- make([]blockchain.SignedTransaction, 0, 100)
+	p.unfinalizedTransactions = make(chan []models.SignedTransaction, 1)
+	p.unfinalizedTransactions <- make([]models.SignedTransaction, 0, 100)
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
-	p.blockTreeChan = make(chan blockchain.Blocktree, 1)
-	newBlockTree, blockTreeCreationWentWell := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	p.blockTreeChan = make(chan PoWblockchain.Blocktree, 1)
+	newBlockTree, blockTreeCreationWentWell := PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock())
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
-	p.unhandledBlocks = make(chan blockchain.Block, 20)
+	p.unhandledBlocks = make(chan PoWblockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = constants.BlockSize
-	p.unhandledMessages = make(chan blockchain.Message, 50)
+	p.unhandledMessages = make(chan PoWblockchain.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
 	go p.blockHandlerLoop()

@@ -2,14 +2,15 @@ package PowPeer
 
 import (
 	"errors"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"time"
 )
 
-func (p *PoWPeer) GetBlockTree() blockchain.Blocktree {
+func (p *PoWPeer) GetBlockTree() PoWblockchain.Blocktree {
 	blocktree := <-p.blockTreeChan
 	p.blockTreeChan <- blocktree
 	return blocktree
@@ -46,7 +47,7 @@ func (p *PoWPeer) StopMining() error {
 	return nil
 }
 
-func (p *PoWPeer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
+func (p *PoWPeer) createBlock(verificationKey string, slot int, draw lottery_strategy.WinningLotteryParams, blocktree PoWblockchain.Blocktree) (newBlock PoWblockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -57,24 +58,24 @@ func (p *PoWPeer) createBlock(verificationKey string, slot int, draw lottery_str
 	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 
-	var transactionsToAdd []blockchain.SignedTransaction
+	var transactionsToAdd []models.SignedTransaction
 	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
 		transactionsToAdd = allTransactionsToAdd
 	}
 	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
-		transactionsToAdd = make([]blockchain.SignedTransaction, p.maximumTransactionsInBlock)
+		transactionsToAdd = make([]models.SignedTransaction, p.maximumTransactionsInBlock)
 		for i := 0; i < p.maximumTransactionsInBlock; i++ {
 			transactionsToAdd[i] = allTransactionsToAdd[i]
 			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
 		}
 	}
 	//
-	resultBlock := blockchain.Block{
+	resultBlock := PoWblockchain.Block{
 		IsGenesis: false,
 		Vk:        verificationKey,
 		Slot:      slot,
 		Draw:      draw,
-		BlockData: blockchain.BlockData{
+		BlockData: PoWblockchain.BlockData{
 			Transactions: transactionsToAdd,
 		},
 		ParentHash: parentHash,
@@ -104,10 +105,10 @@ func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLottery
 		p.blockTreeChan <- blocktree
 		return
 	}
-	msg := blockchain.Message{
+	msg := PoWblockchain.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.network.GetAddress().ToString(),
-		MessageBlocks: []blockchain.Block{blockWithTransactions},
+		MessageBlocks: []PoWblockchain.Block{blockWithTransactions},
 	}
 	for _, block := range msg.MessageBlocks {
 		p.unhandledBlocks <- block
@@ -123,7 +124,7 @@ func (p *PoWPeer) blockHandlerLoop() {
 	}
 }
 
-func (p *PoWPeer) verifyBlock(block blockchain.Block) bool {
+func (p *PoWPeer) verifyBlock(block PoWblockchain.Block) bool {
 	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	//TODO This is potentially very slow, but could be faster using dynamic programming in the case the chain best chain does not switch often
 	if !block.HasCorrectSignature(p.signatureStrategy) {
@@ -144,7 +145,7 @@ func (p *PoWPeer) verifyBlock(block blockchain.Block) bool {
 	return true
 }
 
-func (p *PoWPeer) verifyTransactions(transactions []blockchain.SignedTransaction) bool {
+func (p *PoWPeer) verifyTransactions(transactions []models.SignedTransaction) bool {
 	for _, transaction := range transactions {
 		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !transactionSignatureIsCorrect {
@@ -154,7 +155,7 @@ func (p *PoWPeer) verifyTransactions(transactions []blockchain.SignedTransaction
 	return true
 }
 
-func (p *PoWPeer) handleBlock(block blockchain.Block) {
+func (p *PoWPeer) handleBlock(block PoWblockchain.Block) {
 	if !p.verifyBlock(block) {
 		return
 	}
@@ -188,7 +189,7 @@ func (p *PoWPeer) handleBlock(block blockchain.Block) {
 	}
 }
 
-func (p *PoWPeer) addTransaction(t blockchain.SignedTransaction) {
+func (p *PoWPeer) addTransaction(t models.SignedTransaction) {
 	unfinalizedTransactions := <-p.unfinalizedTransactions
 	unfinalizedTransactions = append(unfinalizedTransactions, t)
 	p.unfinalizedTransactions <- unfinalizedTransactions

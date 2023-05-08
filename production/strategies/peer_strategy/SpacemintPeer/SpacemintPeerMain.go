@@ -3,7 +3,8 @@ package SpacemintPeer
 import (
 	"errors"
 	"github.com/OskarRVestergaard/BachelorProject/Task1"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
@@ -23,10 +24,10 @@ type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            *PoSpace
 	publicToSecret             chan map[string]string
-	unfinalizedTransactions    chan []blockchain.SignedTransaction
-	blockTreeChan              chan blockchain.Blocktree
-	unhandledBlocks            chan blockchain.Block
-	unhandledMessages          chan blockchain.Message
+	unfinalizedTransactions    chan []models.SignedTransaction
+	blockTreeChan              chan PoWblockchain.Blocktree
+	unhandledBlocks            chan PoWblockchain.Block
+	unhandledMessages          chan PoWblockchain.Message
 	hardness                   int
 	maximumTransactionsInBlock int
 	network                    network.Network
@@ -48,19 +49,19 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 
 	p.stopMiningSignal = make(chan struct{})
 
-	p.unfinalizedTransactions = make(chan []blockchain.SignedTransaction, 1)
-	p.unfinalizedTransactions <- make([]blockchain.SignedTransaction, 0, 100)
+	p.unfinalizedTransactions = make(chan []models.SignedTransaction, 1)
+	p.unfinalizedTransactions <- make([]models.SignedTransaction, 0, 100)
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
-	p.blockTreeChan = make(chan blockchain.Blocktree, 1)
-	newBlockTree, blockTreeCreationWentWell := blockchain.NewBlocktree(blockchain.CreateGenesisBlock())
+	p.blockTreeChan = make(chan PoWblockchain.Blocktree, 1)
+	newBlockTree, blockTreeCreationWentWell := PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock())
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
-	p.unhandledBlocks = make(chan blockchain.Block, 20)
+	p.unhandledBlocks = make(chan PoWblockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = constants.BlockSize
-	p.unhandledMessages = make(chan blockchain.Message, 50)
+	p.unhandledMessages = make(chan PoWblockchain.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
 	go p.blockHandlerLoop()
@@ -86,7 +87,7 @@ func (p *PoSpacePeer) Connect(ip string, port int) {
 	}
 	ownIpPort := p.network.GetAddress().ToString()
 	print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
-	err := p.network.SendMessageTo(blockchain.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
+	err := p.network.SendMessageTo(PoWblockchain.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
 
 	if err != nil {
 		panic(err.Error())
@@ -98,22 +99,22 @@ func (p *PoSpacePeer) FloodSignedTransaction(from string, to string, amount int)
 	if !foundSecretKey {
 		return
 	}
-	trans := blockchain.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	trans := models.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
-	msg := blockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
+	msg := PoWblockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
 	p.addTransaction(trans)
 	p.network.FloodMessageToAllKnown(msg)
 }
 
-func (p *PoSpacePeer) messageHandlerLoop(incomingMessages chan blockchain.Message) {
+func (p *PoSpacePeer) messageHandlerLoop(incomingMessages chan PoWblockchain.Message) {
 	for {
 		msg := <-incomingMessages
 		p.handleMessage(msg)
 	}
 }
 
-func (p *PoSpacePeer) handleMessage(msg blockchain.Message) {
+func (p *PoSpacePeer) handleMessage(msg PoWblockchain.Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {
@@ -147,7 +148,7 @@ func (p *PoSpacePeer) getSecretKey(pk string) (secretKey string, isKnownKey bool
 	return secretSigningKey, true
 }
 
-func (p *PoSpacePeer) GetBlockTree() blockchain.Blocktree {
+func (p *PoSpacePeer) GetBlockTree() PoWblockchain.Blocktree {
 	blocktree := <-p.blockTreeChan
 	p.blockTreeChan <- blocktree
 	return blocktree
@@ -185,7 +186,7 @@ func (p *PoSpacePeer) StopMining() error {
 	return nil
 }
 
-func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpaceLotteryDraw, blocktree blockchain.Blocktree) (newBlock blockchain.Block, isEmpty bool) {
+func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock PoWblockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -196,24 +197,24 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 
-	var transactionsToAdd []blockchain.SignedTransaction
+	var transactionsToAdd []models.SignedTransaction
 	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
 		transactionsToAdd = allTransactionsToAdd
 	}
 	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
-		transactionsToAdd = make([]blockchain.SignedTransaction, p.maximumTransactionsInBlock)
+		transactionsToAdd = make([]models.SignedTransaction, p.maximumTransactionsInBlock)
 		for i := 0; i < p.maximumTransactionsInBlock; i++ {
 			transactionsToAdd[i] = allTransactionsToAdd[i]
 			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
 		}
 	}
 	//
-	resultBlock := blockchain.Block{
+	resultBlock := PoWblockchain.Block{
 		IsGenesis: false,
 		Vk:        verificationKey,
 		Slot:      slot,
 		Draw:      lottery_strategy.WinningLotteryParams{}, //TODO Change to actual draw
-		BlockData: blockchain.BlockData{
+		BlockData: PoWblockchain.BlockData{
 			Transactions: transactionsToAdd,
 		},
 		ParentHash: parentHash,
@@ -243,10 +244,10 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpaceLotteryDraw) {
 		p.blockTreeChan <- blocktree
 		return
 	}
-	msg := blockchain.Message{
+	msg := PoWblockchain.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.network.GetAddress().ToString(),
-		MessageBlocks: []blockchain.Block{blockWithTransactions},
+		MessageBlocks: []PoWblockchain.Block{blockWithTransactions},
 	}
 	for _, block := range msg.MessageBlocks {
 		p.unhandledBlocks <- block
@@ -262,7 +263,7 @@ func (p *PoSpacePeer) blockHandlerLoop() {
 	}
 }
 
-func (p *PoSpacePeer) verifyBlock(block blockchain.Block) bool {
+func (p *PoSpacePeer) verifyBlock(block PoWblockchain.Block) bool {
 	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	//TODO This is potentially very slow, but could be faster using dynamic programming in the case the chain best chain does not switch often
 	if !block.HasCorrectSignature(p.signatureStrategy) {
@@ -284,7 +285,7 @@ func (p *PoSpacePeer) verifyBlock(block blockchain.Block) bool {
 	return true
 }
 
-func (p *PoSpacePeer) verifyTransactions(transactions []blockchain.SignedTransaction) bool {
+func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedTransaction) bool {
 	for _, transaction := range transactions {
 		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !transactionSignatureIsCorrect {
@@ -294,7 +295,7 @@ func (p *PoSpacePeer) verifyTransactions(transactions []blockchain.SignedTransac
 	return true
 }
 
-func (p *PoSpacePeer) handleBlock(block blockchain.Block) {
+func (p *PoSpacePeer) handleBlock(block PoWblockchain.Block) {
 	if !p.verifyBlock(block) {
 		return
 	}
@@ -328,7 +329,7 @@ func (p *PoSpacePeer) handleBlock(block blockchain.Block) {
 	}
 }
 
-func (p *PoSpacePeer) addTransaction(t blockchain.SignedTransaction) {
+func (p *PoSpacePeer) addTransaction(t models.SignedTransaction) {
 	unfinalizedTransactions := <-p.unfinalizedTransactions
 	unfinalizedTransactions = append(unfinalizedTransactions, t)
 	p.unfinalizedTransactions <- unfinalizedTransactions

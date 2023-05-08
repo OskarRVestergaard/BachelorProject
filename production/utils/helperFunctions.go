@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
@@ -17,7 +17,7 @@ func GetSomeKey[t comparable](m map[t]t) t {
 	panic("Cant get key from an empty map!")
 }
 
-func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans blockchain.SignedTransaction) bool {
+func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans models.SignedTransaction) bool {
 	transByteArray := signedTrans.ToByteArrayWithoutSign()
 	hashedMessage := sha256.HashByteArray(transByteArray).ToSlice()
 	publicKey := signedTrans.From
@@ -26,11 +26,11 @@ func TransactionHasCorrectSignature(signatureStrategy signature_strategy.Signatu
 	return result
 }
 
-func MakeDeepCopyOfTransaction(transaction blockchain.SignedTransaction) (copyOfTransaction blockchain.SignedTransaction) {
+func MakeDeepCopyOfTransaction(transaction models.SignedTransaction) (copyOfTransaction models.SignedTransaction) {
 	oldSign := transaction.Signature
 	signatureCopy := make([]byte, len(oldSign))
 	copy(signatureCopy, oldSign)
-	deepCopyTransaction := blockchain.SignedTransaction{
+	deepCopyTransaction := models.SignedTransaction{
 		Id:        transaction.Id,
 		From:      transaction.From,
 		To:        transaction.To,
@@ -40,7 +40,7 @@ func MakeDeepCopyOfTransaction(transaction blockchain.SignedTransaction) (copyOf
 	return deepCopyTransaction
 }
 
-func MakeDeepCopyOfBlock(block blockchain.Block) (copyOfBlock blockchain.Block) {
+func MakeDeepCopyOfBlock(block PoWblockchain.Block) (copyOfBlock PoWblockchain.Block) {
 
 	oldSign := block.Signature
 	signatureCopy := make([]byte, len(oldSign))
@@ -49,17 +49,17 @@ func MakeDeepCopyOfBlock(block blockchain.Block) (copyOfBlock blockchain.Block) 
 	hashCopy := block.ParentHash //Array is by default copied by value
 
 	oldTransactions := block.BlockData.Transactions
-	transactionsCopy := make([]blockchain.SignedTransaction, len(oldTransactions))
+	transactionsCopy := make([]models.SignedTransaction, len(oldTransactions))
 	for i, transaction := range oldTransactions {
 		transactionsCopy[i] = MakeDeepCopyOfTransaction(transaction)
 	}
 
-	deepCopyBlock := blockchain.Block{
+	deepCopyBlock := PoWblockchain.Block{
 		IsGenesis: block.IsGenesis,
 		Vk:        block.Vk,
 		Slot:      block.Slot,
 		Draw:      MakeDeepCopyOfWinningParams(block.Draw),
-		BlockData: blockchain.BlockData{
+		BlockData: PoWblockchain.BlockData{
 			Hardness:     block.BlockData.Hardness,
 			Transactions: transactionsCopy,
 		},
@@ -81,10 +81,10 @@ func MakeDeepCopyOfWinningParams(params lottery_strategy.WinningLotteryParams) (
 	return deepCopyParams
 }
 
-func MakeDeepCopyOfMessage(msg blockchain.Message) (copyOfMessage blockchain.Message) {
+func MakeDeepCopyOfMessage(msg PoWblockchain.Message) (copyOfMessage PoWblockchain.Message) {
 
 	oldBlocks := msg.MessageBlocks
-	blocksCopy := make([]blockchain.Block, len(oldBlocks))
+	blocksCopy := make([]PoWblockchain.Block, len(oldBlocks))
 	for i, block := range oldBlocks {
 		blocksCopy[i] = MakeDeepCopyOfBlock(block)
 	}
@@ -95,7 +95,7 @@ func MakeDeepCopyOfMessage(msg blockchain.Message) (copyOfMessage blockchain.Mes
 		peersCopy[k] = v
 	}
 
-	deepCopyMessage := blockchain.Message{
+	deepCopyMessage := PoWblockchain.Message{
 		MessageType:       msg.MessageType,
 		MessageSender:     msg.MessageSender,
 		SignedTransaction: MakeDeepCopyOfTransaction(msg.SignedTransaction),

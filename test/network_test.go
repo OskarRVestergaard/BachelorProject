@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/blockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
@@ -26,10 +26,10 @@ func TestBasicNetwork(t *testing.T) {
 		Port: 65066,
 	}
 
-	dummyMessage := blockchain.Message{
+	dummyMessage := PoWblockchain.Message{
 		MessageType:       "1",
 		MessageSender:     "2",
-		SignedTransaction: blockchain.SignedTransaction{},
+		SignedTransaction: models.SignedTransaction{},
 		MessageBlocks:     nil,
 		PeerMap:           nil,
 	}
@@ -69,18 +69,18 @@ func TestNetworkWithNilElements(t *testing.T) {
 		Port: 65066,
 	}
 
-	dummyMessage1 := blockchain.Message{
+	dummyMessage1 := PoWblockchain.Message{
 		MessageType:       "1",
 		MessageSender:     "2",
-		SignedTransaction: blockchain.SignedTransaction{},
+		SignedTransaction: models.SignedTransaction{},
 		MessageBlocks:     nil,
 		PeerMap:           nil,
 	}
 
-	dummyMessage2 := blockchain.Message{
+	dummyMessage2 := PoWblockchain.Message{
 		MessageType:       "",
 		MessageSender:     "",
-		SignedTransaction: blockchain.SignedTransaction{},
+		SignedTransaction: models.SignedTransaction{},
 		MessageBlocks:     nil,
 		PeerMap:           nil,
 	}
@@ -147,7 +147,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	}
 
 	randomId := uuid.New()
-	msgBlocks := []blockchain.Block{{
+	msgBlocks := []PoWblockchain.Block{{
 		IsGenesis: false,
 		Vk:        "123134",
 		Slot:      4,
@@ -156,7 +156,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 			ParentHash: sha256.HashByteArray([]byte{byte(32), byte(66)}),
 			Counter:    43,
 		},
-		BlockData:  blockchain.BlockData{},
+		BlockData:  PoWblockchain.BlockData{},
 		ParentHash: sha256.HashValue{},
 		Signature:  []byte{byte(32), byte(2)}},
 	}
@@ -164,18 +164,18 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	peerMap["1"] = struct{}{}
 	peerMap["5"] = struct{}{}
 
-	dummyMessage1 := blockchain.Message{
+	dummyMessage1 := PoWblockchain.Message{
 		MessageType:       "1",
 		MessageSender:     "2",
-		SignedTransaction: blockchain.SignedTransaction{},
+		SignedTransaction: models.SignedTransaction{},
 		MessageBlocks:     nil,
 		PeerMap:           nil,
 	}
 
-	dummyMessage2 := blockchain.Message{
+	dummyMessage2 := PoWblockchain.Message{
 		MessageType:   "3",
 		MessageSender: "4",
-		SignedTransaction: blockchain.SignedTransaction{
+		SignedTransaction: models.SignedTransaction{
 			Id:        randomId,
 			From:      "431",
 			To:        "21",
@@ -186,10 +186,10 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 		PeerMap:       peerMap,
 	}
 
-	dummyMessage3 := blockchain.Message{
+	dummyMessage3 := PoWblockchain.Message{
 		MessageType:       "5",
 		MessageSender:     "6",
-		SignedTransaction: blockchain.SignedTransaction{},
+		SignedTransaction: models.SignedTransaction{},
 		MessageBlocks:     nil,
 		PeerMap:           nil,
 	}

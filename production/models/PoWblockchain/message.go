@@ -1,4 +1,4 @@
-package blockchain
+package PoWblockchain
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
@@ -7,7 +7,7 @@ import (
 type Message struct {
 	MessageType       string
 	MessageSender     string
-	SignedTransaction SignedTransaction
+	SignedTransaction models.SignedTransaction
 	MessageBlocks     []Block
 	PeerMap           map[string]models.Void
 }
