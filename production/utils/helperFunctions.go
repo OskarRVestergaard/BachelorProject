@@ -59,7 +59,7 @@ func MakeDeepCopyOfBlock(block PoWblockchain.Block) (copyOfBlock PoWblockchain.B
 		Vk:        block.Vk,
 		Slot:      block.Slot,
 		Draw:      MakeDeepCopyOfWinningParams(block.Draw),
-		BlockData: models.BlockData{
+		BlockData: PoWblockchain.BlockData{
 			Hardness:     block.BlockData.Hardness,
 			Transactions: transactionsCopy,
 		},

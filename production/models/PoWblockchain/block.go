@@ -2,7 +2,6 @@ package PoWblockchain
 
 import (
 	"bytes"
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
@@ -15,7 +14,7 @@ type Block struct {
 	Vk         string                                //verification key
 	Slot       int                                   //slot number
 	Draw       lottery_strategy.WinningLotteryParams //winner ticket
-	BlockData  models.BlockData                      //Block data
+	BlockData  BlockData                             //Block data
 	ParentHash sha256.HashValue                      //block hash of some previous hash
 	Signature  []byte                                //signature
 }
@@ -91,7 +90,7 @@ func CreateGenesisBlock() Block {
 			ParentHash: [32]byte{},
 			Counter:    0,
 		},
-		BlockData: models.BlockData{
+		BlockData: BlockData{
 			Hardness: constants.Hardness,
 		},
 		ParentHash: [32]byte{},

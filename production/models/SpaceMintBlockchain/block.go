@@ -2,7 +2,6 @@ package PoWblockchain
 
 import (
 	"bytes"
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/SpacemintPeer"
 	"strconv"
@@ -33,15 +32,15 @@ func (subBlock *HashSubBlock) ToByteArray() []byte {
 }
 
 type TransactionSubBlock struct {
-	Slot      int              //index or slot number
-	BlockData models.BlockData //List of transactions TODO Change to the "spacemint" transactions
+	Slot         int                   //index or slot number
+	Transactions SpacemintTransactions //List of transactions
 }
 
 func (subBlock *TransactionSubBlock) ToByteArray() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(strconv.Itoa(subBlock.Slot))
 	buffer.WriteString(";_;")
-	buffer.WriteString(subBlock.BlockData.ToString())
+	buffer.Write(subBlock.Transactions.ToByteArray())
 	return buffer.Bytes()
 }
 

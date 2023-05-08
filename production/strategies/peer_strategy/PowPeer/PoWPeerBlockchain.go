@@ -75,7 +75,7 @@ func (p *PoWPeer) createBlock(verificationKey string, slot int, draw lottery_str
 		Vk:        verificationKey,
 		Slot:      slot,
 		Draw:      draw,
-		BlockData: models.BlockData{
+		BlockData: PoWblockchain.BlockData{
 			Transactions: transactionsToAdd,
 		},
 		ParentHash: parentHash,
