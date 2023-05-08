@@ -2,6 +2,7 @@ package PowPeer
 
 import (
 	"errors"
+	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
@@ -105,7 +106,7 @@ func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLottery
 		p.blockTreeChan <- blocktree
 		return
 	}
-	msg := PoWblockchain.Message{
+	msg := Message.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.network.GetAddress().ToString(),
 		MessageBlocks: []PoWblockchain.Block{blockWithTransactions},
@@ -160,7 +161,7 @@ func (p *PoWPeer) handleBlock(block PoWblockchain.Block) {
 		return
 	}
 	blocktree := <-p.blockTreeChan
-	block = utils.MakeDeepCopyOfBlock(block)
+	block = Message.MakeDeepCopyOfBlock(block)
 	var t = blocktree.AddBlock(block)
 	switch t {
 	case -3:

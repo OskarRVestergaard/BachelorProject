@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
@@ -26,7 +27,7 @@ func TestBasicNetwork(t *testing.T) {
 		Port: 65066,
 	}
 
-	dummyMessage := PoWblockchain.Message{
+	dummyMessage := Message.Message{
 		MessageType:       "1",
 		MessageSender:     "2",
 		SignedTransaction: models.SignedTransaction{},
@@ -69,7 +70,7 @@ func TestNetworkWithNilElements(t *testing.T) {
 		Port: 65066,
 	}
 
-	dummyMessage1 := PoWblockchain.Message{
+	dummyMessage1 := Message.Message{
 		MessageType:       "1",
 		MessageSender:     "2",
 		SignedTransaction: models.SignedTransaction{},
@@ -77,7 +78,7 @@ func TestNetworkWithNilElements(t *testing.T) {
 		PeerMap:           nil,
 	}
 
-	dummyMessage2 := PoWblockchain.Message{
+	dummyMessage2 := Message.Message{
 		MessageType:       "",
 		MessageSender:     "",
 		SignedTransaction: models.SignedTransaction{},
@@ -164,7 +165,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 	peerMap["1"] = struct{}{}
 	peerMap["5"] = struct{}{}
 
-	dummyMessage1 := PoWblockchain.Message{
+	dummyMessage1 := Message.Message{
 		MessageType:       "1",
 		MessageSender:     "2",
 		SignedTransaction: models.SignedTransaction{},
@@ -172,7 +173,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 		PeerMap:           nil,
 	}
 
-	dummyMessage2 := PoWblockchain.Message{
+	dummyMessage2 := Message.Message{
 		MessageType:   "3",
 		MessageSender: "4",
 		SignedTransaction: models.SignedTransaction{
@@ -186,7 +187,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 		PeerMap:       peerMap,
 	}
 
-	dummyMessage3 := PoWblockchain.Message{
+	dummyMessage3 := Message.Message{
 		MessageType:       "5",
 		MessageSender:     "6",
 		SignedTransaction: models.SignedTransaction{},

@@ -1,6 +1,7 @@
 package PowPeer
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
@@ -23,7 +24,7 @@ type PoWPeer struct {
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
 	unhandledBlocks            chan PoWblockchain.Block
-	unhandledMessages          chan PoWblockchain.Message
+	unhandledMessages          chan Message.Message
 	hardness                   int
 	maximumTransactionsInBlock int
 	network                    network.Network
@@ -57,7 +58,7 @@ func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 	p.unhandledBlocks = make(chan PoWblockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = constants.BlockSize
-	p.unhandledMessages = make(chan PoWblockchain.Message, 50)
+	p.unhandledMessages = make(chan Message.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
 	go p.blockHandlerLoop()

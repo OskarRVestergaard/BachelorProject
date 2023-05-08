@@ -3,6 +3,7 @@ package SpacemintPeer
 import (
 	"errors"
 	"github.com/OskarRVestergaard/BachelorProject/Task1"
+	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
@@ -27,7 +28,7 @@ type PoSpacePeer struct {
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
 	unhandledBlocks            chan PoWblockchain.Block
-	unhandledMessages          chan PoWblockchain.Message
+	unhandledMessages          chan Message.Message
 	hardness                   int
 	maximumTransactionsInBlock int
 	network                    network.Network
@@ -61,7 +62,7 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	p.unhandledBlocks = make(chan PoWblockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = constants.BlockSize
-	p.unhandledMessages = make(chan PoWblockchain.Message, 50)
+	p.unhandledMessages = make(chan Message.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
 	go p.blockHandlerLoop()
@@ -87,7 +88,7 @@ func (p *PoSpacePeer) Connect(ip string, port int) {
 	}
 	ownIpPort := p.network.GetAddress().ToString()
 	print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
-	err := p.network.SendMessageTo(PoWblockchain.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
+	err := p.network.SendMessageTo(Message.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
 
 	if err != nil {
 		panic(err.Error())
@@ -102,25 +103,25 @@ func (p *PoSpacePeer) FloodSignedTransaction(from string, to string, amount int)
 	trans := models.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
-	msg := PoWblockchain.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
+	msg := Message.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
 	p.addTransaction(trans)
 	p.network.FloodMessageToAllKnown(msg)
 }
 
-func (p *PoSpacePeer) messageHandlerLoop(incomingMessages chan PoWblockchain.Message) {
+func (p *PoSpacePeer) messageHandlerLoop(incomingMessages chan Message.Message) {
 	for {
 		msg := <-incomingMessages
 		p.handleMessage(msg)
 	}
 }
 
-func (p *PoSpacePeer) handleMessage(msg PoWblockchain.Message) {
+func (p *PoSpacePeer) handleMessage(msg Message.Message) {
 	msgType := (msg).MessageType
 
 	switch msgType {
 	case constants.SignedTransaction:
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			p.addTransaction(utils.MakeDeepCopyOfTransaction(msg.SignedTransaction))
+			p.addTransaction(Message.MakeDeepCopyOfTransaction(msg.SignedTransaction))
 		}
 	case constants.JoinMessage:
 
@@ -244,7 +245,7 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpaceLotteryDraw) {
 		p.blockTreeChan <- blocktree
 		return
 	}
-	msg := PoWblockchain.Message{
+	msg := Message.Message{
 		MessageType:   constants.BlockDelivery,
 		MessageSender: p.network.GetAddress().ToString(),
 		MessageBlocks: []PoWblockchain.Block{blockWithTransactions},
@@ -300,7 +301,7 @@ func (p *PoSpacePeer) handleBlock(block PoWblockchain.Block) {
 		return
 	}
 	blocktree := <-p.blockTreeChan
-	block = utils.MakeDeepCopyOfBlock(block)
+	block = Message.MakeDeepCopyOfBlock(block)
 	var t = blocktree.AddBlock(block)
 	switch t {
 	case -3:
