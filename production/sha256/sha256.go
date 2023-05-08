@@ -1,6 +1,7 @@
 package sha256
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"log"
 )
@@ -37,4 +38,8 @@ func sliceToHash(bytes []byte) HashValue {
 	}()
 	s4 := (*HashValue)(bytes)
 	return *s4
+}
+
+func HashesEqual(hash1 HashValue, hash2 HashValue) bool {
+	return bytes.Equal(ToSlice(hash1), ToSlice(hash2))
 }

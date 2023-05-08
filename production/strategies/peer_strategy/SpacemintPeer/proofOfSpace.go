@@ -21,7 +21,7 @@ type PoSpaceLotteryDraw struct {
 	ProofOfCorrectCommitmentB []Models.OpeningTriple
 }
 
-func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, potentiallyWinningDraws chan PoSpaceLotteryDraw, stopMinerSignal chan struct{}) (commitment []byte) {
+func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, potentiallyWinningDraws chan PoSpaceLotteryDraw, stopMinerSignal chan struct{}) (commitment sha256.HashValue) {
 	newBlockHashesInternal := make(chan internalCombination)
 	prover := Parties.Prover{}
 	prover.InitializationPhase1(PoSpacePrm)
@@ -90,7 +90,7 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 	proverSingleton <- prover
 }
 
-func (lottery *PoSpace) Verify(draw PoSpaceLotteryDraw, hardness int, commitment []byte) bool {
+func (lottery *PoSpace) Verify(draw PoSpaceLotteryDraw, hardness int, commitment sha256.HashValue) bool {
 	//TODO Fake it challenges:
 	challengesSetP := []int{0, 1}
 	challengesSetV := []int{0, 1, 2}

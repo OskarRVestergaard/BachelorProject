@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math"
 	"math/big"
 )
@@ -31,7 +32,7 @@ func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
 	edges[5][6] = true
 	edges[5][7] = true
 
-	resultGraph := &Models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
+	resultGraph := &Models.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
 
 	return resultGraph
 }
