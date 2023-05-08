@@ -1,9 +1,11 @@
 package SpacemintPeer
 
 import (
+	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"strconv"
 )
 
 type PoSpace struct {
@@ -19,6 +21,35 @@ type PoSpaceLotteryDraw struct {
 	ParentHash                sha256.HashValue
 	ProofOfSpaceA             []Models.OpeningTriple
 	ProofOfCorrectCommitmentB []Models.OpeningTriple
+}
+
+func (draw PoSpaceLotteryDraw) ToByteArray() []byte {
+	var buffer bytes.Buffer
+	buffer.WriteString(draw.Vk)
+	buffer.WriteString(";_;")
+	buffer.Write(draw.ParentHash.ToSlice())
+	buffer.WriteString(";_;")
+	for _, triple := range draw.ProofOfSpaceA {
+		buffer.Write(triple.Value.ToSlice())
+		buffer.WriteString(";_;")
+		buffer.WriteString(strconv.Itoa(triple.Index))
+		buffer.WriteString(";_;")
+		for _, openValue := range triple.OpenValues {
+			buffer.Write(openValue.ToSlice())
+			buffer.WriteString(";_;")
+		}
+	}
+	for _, triple := range draw.ProofOfCorrectCommitmentB {
+		buffer.Write(triple.Value.ToSlice())
+		buffer.WriteString(";_;")
+		buffer.WriteString(strconv.Itoa(triple.Index))
+		buffer.WriteString(";_;")
+		for _, openValue := range triple.OpenValues {
+			buffer.Write(openValue.ToSlice())
+			buffer.WriteString(";_;")
+		}
+	}
+	return buffer.Bytes()
 }
 
 func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, potentiallyWinningDraws chan PoSpaceLotteryDraw, stopMinerSignal chan struct{}) (commitment sha256.HashValue) {

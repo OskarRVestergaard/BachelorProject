@@ -5,7 +5,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/SpacemintPeer"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"strconv"
 )
 
@@ -23,9 +22,27 @@ type HashSubBlock struct {
 	Draw                      SpacemintPeer.PoSpaceLotteryDraw //The Proof of space associated with the block
 }
 
+func (subBlock *HashSubBlock) ToByteArray() []byte {
+	var buffer bytes.Buffer
+	buffer.WriteString(strconv.Itoa(subBlock.Slot))
+	buffer.WriteString(";_;")
+	buffer.Write(subBlock.SignatureOnParentSubBlock)
+	buffer.WriteString(";_;")
+	buffer.Write(subBlock.Draw.ToByteArray())
+	return buffer.Bytes()
+}
+
 type TransactionSubBlock struct {
 	Slot      int              //index or slot number
 	BlockData models.BlockData //List of transactions TODO Change to the "spacemint" transactions
+}
+
+func (subBlock *TransactionSubBlock) ToByteArray() []byte {
+	var buffer bytes.Buffer
+	buffer.WriteString(strconv.Itoa(subBlock.Slot))
+	buffer.WriteString(";_;")
+	buffer.WriteString(subBlock.BlockData.ToString())
+	return buffer.Bytes()
 }
 
 type SignatureSubBlock struct {
@@ -34,12 +51,16 @@ type SignatureSubBlock struct {
 	SignatureOnParentSubBlock             []byte
 }
 
-/*
-GetVal
+func (subBlock *SignatureSubBlock) ToByteArray() []byte {
+	var buffer bytes.Buffer
+	buffer.WriteString(strconv.Itoa(subBlock.Slot))
+	buffer.WriteString(";_;")
+	buffer.Write(subBlock.SignatureOnCurrentTransactionSubBlock)
+	buffer.WriteString(";_;")
+	buffer.Write(subBlock.SignatureOnParentSubBlock)
+	return buffer.Bytes()
+}
 
-returns the val of the block to be used for PathWeight calculations,
-and also true if it is genesis (to be treated as infinite)
-*/
 func (block *Block) GetQuality() (value sha256.HashValue, isGenesis bool) {
 	if block.IsGenesis {
 		return sha256.HashValue{}, true
@@ -67,13 +88,11 @@ func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
 	buffer.Write(block.ParentHash.ToSlice())
 	buffer.WriteString(";_;")
-	buffer.WriteString(strconv.Itoa(block.Slot))
+	buffer.Write(block.HashSubBlock.ToByteArray())
 	buffer.WriteString(";_;")
-	buffer.WriteString(block.Draw.ToString())
+	buffer.Write(block.TransactionSubBlock.ToByteArray())
 	buffer.WriteString(";_;")
-	buffer.WriteString(block.BlockData.ToString())
-	buffer.WriteString(";_;")
-	buffer.Write(block.ParentHash.ToSlice())
+	buffer.Write(block.SignatureSubBlock.ToByteArray())
 	return buffer.Bytes()
 }
 
@@ -87,19 +106,4 @@ func CreateGenesisBlock() Block {
 		IsGenesis:  true,
 		ParentHash: sha256.HashValue{},
 	}
-}
-
-func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
-	data := block.toByteArrayWithoutSign()
-	hashedData := sha256.HashByteArray(data).ToSlice()
-	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
-	block.Signature = signature
-}
-
-func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
-	blockVerificationKey := block.Vk
-	blockHashWithoutSign := sha256.HashByteArray(block.toByteArrayWithoutSign()).ToSlice()
-	blockSignature := block.Signature
-	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, blockSignature)
-	return result
 }
