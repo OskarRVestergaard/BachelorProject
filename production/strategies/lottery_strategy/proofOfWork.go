@@ -48,13 +48,13 @@ func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash s
 	}
 	for internalStruct.minerShouldContinue {
 		done := make(chan struct{})
-		go lottery.mine(vk, internalStruct.parentHash, hardness, done, winningDraws)
+		go lottery.mineOnSingleBlock(vk, internalStruct.parentHash, hardness, done, winningDraws)
 		internalStruct = <-newBlockHashesInternal
 		done <- struct{}{}
 	}
 }
 
-func (lottery *PoW) mine(vk string, parentHash sha256.HashValue, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
+func (lottery *PoW) mineOnSingleBlock(vk string, parentHash sha256.HashValue, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
 	c := 0
 	for {
 		select {

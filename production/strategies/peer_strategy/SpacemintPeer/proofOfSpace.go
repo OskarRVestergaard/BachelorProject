@@ -1,11 +1,9 @@
 package SpacemintPeer
 
 import (
-	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-	"strconv"
 )
 
 type PoSpace struct {
@@ -16,26 +14,14 @@ type internalCombination struct {
 	parentHash          sha256.HashValue
 }
 
-type WinningLotteryParams struct {
-	Vk         string
-	ParentHash sha256.HashValue
-	Counter    int
+type PoSpaceLotteryDraw struct {
+	Vk                        string
+	ParentHash                sha256.HashValue
+	ProofOfSpaceA             []Models.OpeningTriple
+	ProofOfCorrectCommitmentB []Models.OpeningTriple
 }
 
-func (p WinningLotteryParams) ToByteSlice() []byte {
-	result := sha256.ToSlice(p.ParentHash)
-	result = append(result, p.Vk...)
-	counterBytes := strconv.Itoa(p.Counter)
-	result = append(result, counterBytes...)
-	return result
-}
-
-func (p WinningLotteryParams) ToString() string {
-	buf := bytes.NewBuffer(p.ToByteSlice())
-	return buf.String()
-}
-
-func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams, stopMinerSignal chan struct{}) (commitment []byte) {
+func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, potentiallyWinningDraws chan PoSpaceLotteryDraw, stopMinerSignal chan struct{}) (commitment []byte) {
 	newBlockHashesInternal := make(chan internalCombination)
 	prover := Parties.Prover{}
 	prover.InitializationPhase1(PoSpacePrm)
@@ -43,7 +29,7 @@ func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, h
 	proverSingleton := make(chan Parties.Prover, 1)
 	proverSingleton <- prover
 	lottery.combineChannels(newBlockHashes, stopMinerSignal, newBlockHashesInternal)
-	go lottery.startNewMinerInternal(proverSingleton, vk, hardness, initialHash, newBlockHashesInternal, winningDraws)
+	go lottery.startNewMinerInternal(proverSingleton, vk, hardness, initialHash, newBlockHashesInternal, potentiallyWinningDraws)
 	return result
 }
 
@@ -70,73 +56,49 @@ func (lottery *PoSpace) combineChannels(newHashes chan sha256.HashValue, stopMin
 	}()
 }
 
-func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan internalCombination, winningDraws chan WinningLotteryParams) {
+func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan internalCombination, winningDraws chan PoSpaceLotteryDraw) {
 	internalStruct := internalCombination{
 		minerShouldContinue: true,
 		parentHash:          initialHash,
 	}
 	for internalStruct.minerShouldContinue {
-		done := make(chan struct{})
-		go lottery.mine(proverSingleton, vk, internalStruct.parentHash, hardness, done, winningDraws)
+		go lottery.mineOnSingleBlock(proverSingleton, vk, internalStruct.parentHash, hardness, winningDraws)
 		internalStruct = <-newBlockHashesInternal
-		done <- struct{}{}
 	}
 }
 
-func (lottery *PoSpace) mine(proverSingleton chan Parties.Prover, vk string, parentHash sha256.HashValue, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
+func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, vk string, parentHash sha256.HashValue, hardness int, winningDraws chan PoSpaceLotteryDraw) {
 	//TODO Fake it challenges:
-	//challenges := []int{0, 1}
+	challengesSetP := []int{0, 1}
+	challengesSetV := []int{0, 1, 2}
 
-	//Use challenges for:
-	//Calculating execution and checking quality
-	//If Quality good, then do phase 2 of init (proof merkle tree and graph fit together)
-	//Send winning draw
-	for {
-		select {
-		case <-done:
-			return
-		default:
-			//c = c + 1
-			draw := WinningLotteryParams{
-				Vk:         vk,
-				ParentHash: parentHash,
-				Counter:    0, //c,
-			}
-			hashOfTicket := sha256.HashByteArray(draw.ToByteSlice())
-			if verifyPoSpace(hashOfTicket, hardness) {
-				winningDraws <- draw
-				_ = <-done
-				return
-			}
+	prover := <-proverSingleton
+	proofOfSpaceExecution := prover.AnswerChallenges(challengesSetP, false)
+
+	//TODO Add true quality function (currently implicily done by pathweight)
+	qualityIsGoodEnough := true
+	if qualityIsGoodEnough {
+		proofOfCorrectCommitment := prover.AnswerChallenges(challengesSetV, true)
+		draw := PoSpaceLotteryDraw{
+			Vk:                        vk,
+			ParentHash:                parentHash,
+			ProofOfSpaceA:             proofOfSpaceExecution,
+			ProofOfCorrectCommitmentB: proofOfCorrectCommitment,
 		}
+		winningDraws <- draw
 	}
-
+	proverSingleton <- prover
 }
 
-func verifyPoSpace(hashedTicket sha256.HashValue, hardness int) bool {
-	byteAmount := hardness / 8
-	restAmount := hardness - 8*byteAmount
-	for i := 0; i < byteAmount; i++ {
-		if hashedTicket[i] != 0 {
-			return false
-		}
-	}
-	byteToCheck := hashedTicket[byteAmount]
-	for i := 0; i < restAmount; i++ {
-		if (byteToCheck >> (7 - i)) != 0 {
-			return false
-		}
-	}
-	return true
-}
+func (lottery *PoSpace) Verify(draw PoSpaceLotteryDraw, hardness int, commitment []byte) bool {
+	//TODO Fake it challenges:
+	challengesSetP := []int{0, 1}
+	challengesSetV := []int{0, 1, 2}
 
-func (lottery *PoSpace) Verify(vk string, parentHash sha256.HashValue, hardness int, counter int) bool {
-	draw := WinningLotteryParams{
-		Vk:         vk,
-		ParentHash: parentHash,
-		Counter:    counter,
+	verifier := Parties.Verifier{}
+	verifier.SaveCommitment(commitment)
+	if verifier.VerifyChallenges(challengesSetP, draw.ProofOfSpaceA, false) {
+		return verifier.VerifyChallenges(challengesSetV, draw.ProofOfCorrectCommitmentB, true)
 	}
-	hashed := sha256.HashByteArray(draw.ToByteSlice())
-
-	return verifyPoSpace(hashed, hardness)
+	return false
 }
