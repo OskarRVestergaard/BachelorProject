@@ -214,7 +214,7 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 		Vk:        verificationKey,
 		Slot:      slot,
 		Draw:      lottery_strategy.WinningLotteryParams{}, //TODO Change to actual draw
-		BlockData: PoWblockchain.BlockData{
+		BlockData: models.BlockData{
 			Transactions: transactionsToAdd,
 		},
 		ParentHash: parentHash,

@@ -37,7 +37,7 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 					ParentHash: sha256.HashValue{},
 					Counter:    0,
 				},
-				BlockData: PoWblockchain.BlockData{
+				BlockData: models.BlockData{
 					Hardness:     0,
 					Transactions: trans,
 				},

@@ -4,20 +4,34 @@ import (
 	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/SpacemintPeer"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"strconv"
 )
 
 type Block struct {
-	IsGenesis  bool                                  //True only if the block is the genesis block
-	Vk         string                                //verification key
-	Slot       int                                   //slot number
-	Draw       lottery_strategy.WinningLotteryParams //winner ticket
-	BlockData  models.BlockData                      //Block data
-	ParentHash sha256.HashValue                      //block hash of some previous hash
-	Signature  []byte                                //signature
+	IsGenesis           bool //True only if the block is the genesis block
+	ParentHash          sha256.HashValue
+	HashSubBlock        HashSubBlock
+	TransactionSubBlock TransactionSubBlock
+	SignatureSubBlock   SignatureSubBlock
+}
+
+type HashSubBlock struct {
+	Slot                      int                              //index or slot number
+	SignatureOnParentSubBlock []byte                           //Signature linking this block to its parent
+	Draw                      SpacemintPeer.PoSpaceLotteryDraw //The Proof of space associated with the block
+}
+
+type TransactionSubBlock struct {
+	Slot      int              //index or slot number
+	BlockData models.BlockData //List of transactions TODO Change to the "spacemint" transactions
+}
+
+type SignatureSubBlock struct {
+	Slot                                  int //index or slot number
+	SignatureOnCurrentTransactionSubBlock []byte
+	SignatureOnParentSubBlock             []byte
 }
 
 /*
@@ -26,11 +40,11 @@ GetVal
 returns the val of the block to be used for PathWeight calculations,
 and also true if it is genesis (to be treated as infinite)
 */
-func (block *Block) GetVal() (val string, isGenesis bool) {
+func (block *Block) GetQuality() (value sha256.HashValue, isGenesis bool) {
 	if block.IsGenesis {
-		return "Genesis", true
+		return sha256.HashValue{}, true
 	}
-	return block.Vk + strconv.Itoa(block.Slot) + block.Draw.ToString(), false
+	return block.HashOfBlock(), false //TODO Return a proper quality, (which can actually only be done with information from parents)
 }
 
 /*
@@ -51,20 +65,7 @@ returns a byte array representation, if you want the hash use HashOfBlock instea
 */
 func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
-	buffer.Write(block.toByteArrayWithoutSign())
-	buffer.WriteString(";_;")
-	buffer.Write(block.Signature)
-	return buffer.Bytes()
-}
-
-/*
-ToByteArrayWithoutSign
-
-returns a byte array representation, to be used for signature calculation
-*/
-func (block *Block) toByteArrayWithoutSign() []byte {
-	var buffer bytes.Buffer
-	buffer.WriteString(block.Vk)
+	buffer.Write(block.ParentHash.ToSlice())
 	buffer.WriteString(";_;")
 	buffer.WriteString(strconv.Itoa(block.Slot))
 	buffer.WriteString(";_;")
@@ -83,19 +84,8 @@ Creates the default Genesis-block to be used in a blocktree
 */
 func CreateGenesisBlock() Block {
 	return Block{
-		IsGenesis: true,
-		Vk:        "",
-		Slot:      0,
-		Draw: lottery_strategy.WinningLotteryParams{
-			Vk:         "",
-			ParentHash: [32]byte{},
-			Counter:    0,
-		},
-		BlockData: models.BlockData{
-			Hardness: constants.Hardness,
-		},
-		ParentHash: [32]byte{},
-		Signature:  nil,
+		IsGenesis:  true,
+		ParentHash: sha256.HashValue{},
 	}
 }
 

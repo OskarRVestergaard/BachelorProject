@@ -156,7 +156,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 			ParentHash: sha256.HashByteArray([]byte{byte(32), byte(66)}),
 			Counter:    43,
 		},
-		BlockData:  PoWblockchain.BlockData{},
+		BlockData:  models.BlockData{},
 		ParentHash: sha256.HashValue{},
 		Signature:  []byte{byte(32), byte(2)}},
 	}

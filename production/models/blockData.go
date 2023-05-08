@@ -1,13 +1,12 @@
-package PoWblockchain
+package models
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"strconv"
 )
 
 type BlockData struct {
 	Hardness     int
-	Transactions []models.SignedTransaction
+	Transactions []SignedTransaction
 }
 
 func (blockData *BlockData) ToString() string {
