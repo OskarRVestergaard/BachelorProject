@@ -38,7 +38,7 @@ func (signedTransaction *SignedTransaction) ToByteArrayWithoutSign() []byte {
 
 func (signedTransaction *SignedTransaction) SignTransaction(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
 	byteArrayTransaction := signedTransaction.ToByteArrayWithoutSign()
-	hashedTransaction := sha256.HashByteArrayToByteArray(byteArrayTransaction)
+	hashedTransaction := sha256.HashByteArray(byteArrayTransaction).ToSlice()
 	signature := signatureStrategy.Sign(hashedTransaction, secretSigningKey)
 	signedTransaction.Signature = signature
 }

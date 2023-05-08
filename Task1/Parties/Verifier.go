@@ -19,13 +19,13 @@ func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 	for _, value := range triple.OpenValues {
 		isOdd := position%2 == 1
 		if isOdd {
-			currentHash = sha256.HashByteArray(append(sha256.ToSlice(value), sha256.ToSlice(currentHash)...))
+			currentHash = sha256.HashByteArray(append(value.ToSlice(), currentHash.ToSlice()...))
 		} else {
-			currentHash = sha256.HashByteArray(append(sha256.ToSlice(currentHash), sha256.ToSlice(value)...))
+			currentHash = sha256.HashByteArray(append(currentHash.ToSlice(), value.ToSlice()...))
 		}
 		position = position / 2
 	}
-	return sha256.HashesEqual(currentHash, V.proverCommitment)
+	return currentHash.Equals(V.proverCommitment)
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
@@ -40,7 +40,7 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 		if !V.verifyOpening(p) {
 			return false
 		}
-		parentHashes = append(parentHashes, sha256.ToSlice(p.Value)...)
+		parentHashes = append(parentHashes, p.Value.ToSlice()...)
 	}
 
 	//Compare to check that the node matches both the original graph and the merkle tree
@@ -50,7 +50,7 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
 	hash := sha256.HashByteArray(toBeHashed)
-	return sha256.HashesEqual(hash, shouldBe)
+	return hash.Equals(shouldBe)
 }
 
 func (V *Verifier) InitializationPhase1(params Models.Parameters) {

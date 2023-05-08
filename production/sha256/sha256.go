@@ -8,12 +8,6 @@ import (
 
 type HashValue [32]byte
 
-func HashByteArrayToByteArray(toBeHashed []byte) []byte {
-	h := sha256.New()
-	h.Write(toBeHashed)
-	return h.Sum(nil)
-}
-
 func HashByteArray(toBeHashed []byte) HashValue {
 	h := sha256.New()
 	h.Write(toBeHashed)
@@ -21,11 +15,11 @@ func HashByteArray(toBeHashed []byte) HashValue {
 	return sliceToHash(h.Sum(nil))
 }
 
-func ToString(hash HashValue) string {
+func (hash HashValue) ToString() string {
 	return string(hash[:])
 }
 
-func ToSlice(hash HashValue) []byte {
+func (hash HashValue) ToSlice() []byte {
 	slice := hash[:]
 	return slice
 }
@@ -40,6 +34,6 @@ func sliceToHash(bytes []byte) HashValue {
 	return *s4
 }
 
-func HashesEqual(hash1 HashValue, hash2 HashValue) bool {
-	return bytes.Equal(ToSlice(hash1), ToSlice(hash2))
+func (hash HashValue) Equals(comparisonHash HashValue) bool {
+	return bytes.Equal(hash.ToSlice(), comparisonHash.ToSlice())
 }

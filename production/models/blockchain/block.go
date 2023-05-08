@@ -71,7 +71,7 @@ func (block *Block) toByteArrayWithoutSign() []byte {
 	buffer.WriteString(";_;")
 	buffer.WriteString(block.BlockData.ToString())
 	buffer.WriteString(";_;")
-	buffer.Write(sha256.ToSlice(block.ParentHash))
+	buffer.Write(block.ParentHash.ToSlice())
 	return buffer.Bytes()
 }
 
@@ -100,14 +100,14 @@ func CreateGenesisBlock() Block {
 
 func (block *Block) SignBlock(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
 	data := block.toByteArrayWithoutSign()
-	hashedData := sha256.HashByteArrayToByteArray(data)
+	hashedData := sha256.HashByteArray(data).ToSlice()
 	signature := signatureStrategy.Sign(hashedData, secretSigningKey)
 	block.Signature = signature
 }
 
 func (block *Block) HasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface) bool {
 	blockVerificationKey := block.Vk
-	blockHashWithoutSign := sha256.HashByteArrayToByteArray(block.toByteArrayWithoutSign())
+	blockHashWithoutSign := sha256.HashByteArray(block.toByteArrayWithoutSign()).ToSlice()
 	blockSignature := block.Signature
 	result := signatureStrategy.Verify(blockVerificationKey, blockHashWithoutSign, blockSignature)
 	return result

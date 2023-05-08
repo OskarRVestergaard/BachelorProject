@@ -25,7 +25,7 @@ func (P *Prover) pebbleGraph() {
 		for j := 0; j < size; j++ {
 			jIsParent := P.pebbledGraph.Edges[j][i]
 			if jIsParent {
-				parentHashValue := sha256.ToSlice(P.pebbledGraph.Value[j])
+				parentHashValue := P.pebbledGraph.Value[j].ToSlice()
 				toBeHashed = append(toBeHashed, parentHashValue...)
 			}
 		}
@@ -52,8 +52,8 @@ func (P *Prover) createMerkleTreeFromGraph() {
 	}
 	//Computing parents
 	for i := firstLeaf - 1; i >= 0; i-- {
-		leftChild := sha256.ToSlice(tree.Nodes[(i+1)*2-1])
-		rightChild := sha256.ToSlice(tree.Nodes[(i+1)*2])
+		leftChild := tree.Nodes[(i+1)*2-1].ToSlice()
+		rightChild := tree.Nodes[(i+1)*2].ToSlice()
 		toBeHashed := append(leftChild, rightChild...)
 		tree.Nodes[i] = sha256.HashByteArray(toBeHashed)
 	}

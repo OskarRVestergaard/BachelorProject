@@ -18,7 +18,7 @@ type WinningLotteryParams struct {
 }
 
 func (p WinningLotteryParams) ToByteSlice() []byte {
-	result := sha256.ToSlice(p.ParentHash)
+	result := p.ParentHash.ToSlice()
 	result = append(result, p.Vk...)
 	counterBytes := strconv.Itoa(p.Counter)
 	result = append(result, counterBytes...)
