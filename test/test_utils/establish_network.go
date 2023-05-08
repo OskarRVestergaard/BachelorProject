@@ -3,6 +3,7 @@ package test_utils
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/PowPeer"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/SpacemintPeer"
 	"net"
 	"strconv"
 	"time"
@@ -18,7 +19,7 @@ func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool) ([]peer_stra
 	for i := 0; i < noOfPeers; i++ {
 		var p peer_strategy.PeerInterface
 		if useProofOfSpace {
-			panic("ProofOfSpaceBlockchainNotImplemented")
+			p = &SpacemintPeer.PoSpacePeer{}
 		} else {
 			p = &PowPeer.PoWPeer{}
 		}

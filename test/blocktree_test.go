@@ -68,3 +68,37 @@ func TestPOWNetwork16Peers(t *testing.T) {
 	}
 	assert.True(t, true)
 }
+
+func TestPoSpaceNetwork16Peers(t *testing.T) {
+	noOfPeers := 16
+	noOfMsgs := 2
+	noOfNames := 16
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)            //send msg
+	for _, peer := range listOfPeers {
+		err := peer.StartMining()
+		if err != nil {
+			print(err.Error())
+		}
+	}
+	for i := 0; i < 4; i++ {
+		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+		time.Sleep(6000 * time.Millisecond)
+	}
+	for _, peer := range listOfPeers {
+		err := peer.StopMining()
+		if err != nil {
+			print(err.Error())
+		}
+	}
+	time.Sleep(10000 * time.Millisecond)
+	for i, _ := range listOfPeers {
+		if i != 0 {
+			tree1 := listOfPeers[i-1].GetBlockTree()
+			tree2 := listOfPeers[i].GetBlockTree()
+			test := tree1.Equals(tree2)
+			assert.True(t, test)
+		}
+	}
+	assert.True(t, true)
+}
