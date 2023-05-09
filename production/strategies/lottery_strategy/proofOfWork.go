@@ -87,12 +87,7 @@ func verifyPoW(hashedTicket sha256.HashValue, hardness int) bool {
 		}
 	}
 	byteToCheck := hashedTicket[byteAmount]
-	for i := 0; i < restAmount; i++ {
-		if (byteToCheck >> (7 - i)) != 0 {
-			return false
-		}
-	}
-	return true
+	return (byteToCheck >> (8 - restAmount)) == 0
 }
 
 func (lottery *PoW) Verify(vk string, parentHash sha256.HashValue, hardness int, counter int) bool {
