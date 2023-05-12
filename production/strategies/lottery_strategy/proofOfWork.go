@@ -7,22 +7,17 @@ import (
 type PoW struct {
 }
 
-type internalCombination struct {
-	minerShouldContinue bool
-	parentHash          sha256.HashValue
-}
-
 func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams, stopMinerSignal chan struct{}) {
-	newBlockHashesInternal := make(chan internalCombination)
+	newBlockHashesInternal := make(chan ChannelCombinationStruct)
 	lottery.combineChannels(newBlockHashes, stopMinerSignal, newBlockHashesInternal)
 	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashesInternal, winningDraws)
 }
 
-func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan internalCombination) {
+func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan ChannelCombinationStruct) {
 	go func() {
 		for {
 			newParentHash := <-newHashes
-			combination := internalCombination{
+			combination := ChannelCombinationStruct{
 				minerShouldContinue: true,
 				parentHash:          newParentHash,
 			}
@@ -32,7 +27,7 @@ func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner c
 	go func() {
 		for {
 			_ = <-stopMiner
-			combination := internalCombination{
+			combination := ChannelCombinationStruct{
 				minerShouldContinue: false,
 				parentHash:          sha256.HashValue{},
 			}
@@ -41,8 +36,8 @@ func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner c
 	}()
 }
 
-func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan internalCombination, winningDraws chan WinningLotteryParams) {
-	internalStruct := internalCombination{
+func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan ChannelCombinationStruct, winningDraws chan WinningLotteryParams) {
+	internalStruct := ChannelCombinationStruct{
 		minerShouldContinue: true,
 		parentHash:          initialHash,
 	}

@@ -1,9 +1,9 @@
-package PoWblockchain
+package SpaceMintblockchain
 
 import (
 	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/SpacemintPeer"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"strconv"
 )
 
@@ -16,9 +16,9 @@ type Block struct {
 }
 
 type HashSubBlock struct {
-	Slot                      int                              //index or slot number
-	SignatureOnParentSubBlock []byte                           //Signature linking this block to its parent
-	Draw                      SpacemintPeer.PoSpaceLotteryDraw //The Proof of space associated with the block
+	Slot                      int                                 //index or slot number
+	SignatureOnParentSubBlock []byte                              //Signature linking this block to its parent
+	Draw                      lottery_strategy.PoSpaceLotteryDraw //The Proof of space associated with the block
 }
 
 func (subBlock *HashSubBlock) ToByteArray() []byte {

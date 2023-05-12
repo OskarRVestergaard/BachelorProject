@@ -1,4 +1,4 @@
-package PoWblockchain
+package SpaceMintblockchain
 
 import (
 	"bytes"
@@ -8,14 +8,14 @@ import (
 )
 
 type SpacemintTransactions struct {
-	payments         []models.SignedTransaction
+	Payments         []models.SignedTransaction
 	SpaceCommitments []SpaceCommitment
 	Penalties        []Penalty
 }
 
 func (transactions *SpacemintTransactions) ToByteArray() []byte {
 	var buffer bytes.Buffer
-	for _, payment := range transactions.payments {
+	for _, payment := range transactions.Payments {
 		buffer.Write(payment.ToByteArray())
 		buffer.WriteString(";_;")
 	}
@@ -39,9 +39,10 @@ func (transactions *SpacemintTransactions) ToByteArray() []byte {
 }
 
 type SpaceCommitment struct {
-	Id         uuid.UUID
-	PublicKey  string
-	Commitment sha256.HashValue
+	Id         uuid.UUID        //Unique ID
+	N          int              //Proof size
+	PublicKey  string           //Verification key
+	Commitment sha256.HashValue //MerkleTreeCommitment
 }
 
 type Penalty struct {

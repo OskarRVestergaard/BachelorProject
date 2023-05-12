@@ -107,11 +107,11 @@ func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLottery
 		return
 	}
 	msg := Message.Message{
-		MessageType:   constants.BlockDelivery,
-		MessageSender: p.network.GetAddress().ToString(),
-		MessageBlocks: []PoWblockchain.Block{blockWithTransactions},
+		MessageType:      constants.BlockDelivery,
+		MessageSender:    p.network.GetAddress().ToString(),
+		PoWMessageBlocks: []PoWblockchain.Block{blockWithTransactions},
 	}
-	for _, block := range msg.MessageBlocks {
+	for _, block := range msg.PoWMessageBlocks {
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
@@ -161,7 +161,7 @@ func (p *PoWPeer) handleBlock(block PoWblockchain.Block) {
 		return
 	}
 	blocktree := <-p.blockTreeChan
-	block = Message.MakeDeepCopyOfBlock(block)
+	block = Message.MakeDeepCopyOfPoWBlock(block)
 	var t = blocktree.AddBlock(block)
 	switch t {
 	case -3:

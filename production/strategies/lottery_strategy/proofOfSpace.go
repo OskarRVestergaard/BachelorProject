@@ -1,4 +1,4 @@
-package SpacemintPeer
+package lottery_strategy
 
 import (
 	"bytes"
@@ -9,11 +9,6 @@ import (
 )
 
 type PoSpace struct {
-}
-
-type internalCombination struct {
-	minerShouldContinue bool
-	parentHash          sha256.HashValue
 }
 
 type PoSpaceLotteryDraw struct {
@@ -53,7 +48,7 @@ func (draw PoSpaceLotteryDraw) ToByteArray() []byte {
 }
 
 func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, potentiallyWinningDraws chan PoSpaceLotteryDraw, stopMinerSignal chan struct{}) (commitment sha256.HashValue) {
-	newBlockHashesInternal := make(chan internalCombination)
+	newBlockHashesInternal := make(chan ChannelCombinationStruct)
 	prover := Parties.Prover{}
 	prover.InitializationPhase1(PoSpacePrm)
 	result := prover.GetCommitment()
@@ -64,11 +59,11 @@ func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, h
 	return result
 }
 
-func (lottery *PoSpace) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan internalCombination) {
+func (lottery *PoSpace) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan ChannelCombinationStruct) {
 	go func() {
 		for {
 			newParentHash := <-newHashes
-			combination := internalCombination{
+			combination := ChannelCombinationStruct{
 				minerShouldContinue: true,
 				parentHash:          newParentHash,
 			}
@@ -78,7 +73,7 @@ func (lottery *PoSpace) combineChannels(newHashes chan sha256.HashValue, stopMin
 	go func() {
 		for {
 			_ = <-stopMiner
-			combination := internalCombination{
+			combination := ChannelCombinationStruct{
 				minerShouldContinue: false,
 				parentHash:          sha256.HashValue{},
 			}
@@ -87,8 +82,8 @@ func (lottery *PoSpace) combineChannels(newHashes chan sha256.HashValue, stopMin
 	}()
 }
 
-func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan internalCombination, winningDraws chan PoSpaceLotteryDraw) {
-	internalStruct := internalCombination{
+func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan ChannelCombinationStruct, winningDraws chan PoSpaceLotteryDraw) {
+	internalStruct := ChannelCombinationStruct{
 		minerShouldContinue: true,
 		parentHash:          initialHash,
 	}

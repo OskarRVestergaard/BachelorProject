@@ -31,7 +31,7 @@ func TestBasicNetwork(t *testing.T) {
 		MessageType:       "1",
 		MessageSender:     "2",
 		SignedTransaction: models.SignedTransaction{},
-		MessageBlocks:     nil,
+		PoWMessageBlocks:  nil,
 		PeerMap:           nil,
 	}
 
@@ -74,7 +74,7 @@ func TestNetworkWithNilElements(t *testing.T) {
 		MessageType:       "1",
 		MessageSender:     "2",
 		SignedTransaction: models.SignedTransaction{},
-		MessageBlocks:     nil,
+		PoWMessageBlocks:  nil,
 		PeerMap:           nil,
 	}
 
@@ -82,7 +82,7 @@ func TestNetworkWithNilElements(t *testing.T) {
 		MessageType:       "",
 		MessageSender:     "",
 		SignedTransaction: models.SignedTransaction{},
-		MessageBlocks:     nil,
+		PoWMessageBlocks:  nil,
 		PeerMap:           nil,
 	}
 
@@ -169,7 +169,7 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 		MessageType:       "1",
 		MessageSender:     "2",
 		SignedTransaction: models.SignedTransaction{},
-		MessageBlocks:     nil,
+		PoWMessageBlocks:  nil,
 		PeerMap:           nil,
 	}
 
@@ -183,15 +183,15 @@ func TestBiggerNetworkWithFlooding(t *testing.T) {
 			Amount:    43,
 			Signature: []byte{byte(4), byte(6)},
 		},
-		MessageBlocks: msgBlocks,
-		PeerMap:       peerMap,
+		PoWMessageBlocks: msgBlocks,
+		PeerMap:          peerMap,
 	}
 
 	dummyMessage3 := Message.Message{
 		MessageType:       "5",
 		MessageSender:     "6",
 		SignedTransaction: models.SignedTransaction{},
-		MessageBlocks:     nil,
+		PoWMessageBlocks:  nil,
 		PeerMap:           nil,
 	}
 

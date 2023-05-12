@@ -58,7 +58,7 @@ func (p *PoWPeer) handleMessage(msg Message.Message) {
 	case constants.JoinMessage:
 
 	case constants.BlockDelivery:
-		for _, block := range msg.MessageBlocks {
+		for _, block := range msg.PoWMessageBlocks {
 			p.unhandledBlocks <- block
 		}
 	default:

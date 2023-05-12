@@ -23,7 +23,7 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 
 type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
-	lotteryStrategy            *PoSpace
+	lotteryStrategy            *lottery_strategy.PoSpace
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
@@ -40,7 +40,7 @@ type PoSpacePeer struct {
 func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
-	p.lotteryStrategy = &PoSpace{}
+	p.lotteryStrategy = &lottery_strategy.PoSpace{}
 	address, err := network.StringToAddress(IpPort)
 	if err != nil {
 		panic("Could not parse IpPort: " + err.Error())
@@ -126,7 +126,7 @@ func (p *PoSpacePeer) handleMessage(msg Message.Message) {
 	case constants.JoinMessage:
 
 	case constants.BlockDelivery:
-		for _, block := range msg.MessageBlocks {
+		for _, block := range msg.PoWMessageBlocks {
 			p.unhandledBlocks <- block
 		}
 	default:
@@ -167,7 +167,7 @@ func (p *PoSpacePeer) StartMining() error {
 	newHeadHashes := blocktree.SubScribeToGetHead()
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
-	winningDraws := make(chan PoSpaceLotteryDraw, 10)
+	winningDraws := make(chan lottery_strategy.PoSpaceLotteryDraw, 10)
 	poSpaceParameters := Task1.GenerateParameters()
 	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
 	go p.blockCreatingLoop(winningDraws)
@@ -187,7 +187,7 @@ func (p *PoSpacePeer) StopMining() error {
 	return nil
 }
 
-func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock PoWblockchain.Block, isEmpty bool) {
+func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock PoWblockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -229,7 +229,7 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 	}
 }
 
-func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpaceLotteryDraw) {
+func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.PoSpaceLotteryDraw) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
@@ -246,11 +246,11 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpaceLotteryDraw) {
 		return
 	}
 	msg := Message.Message{
-		MessageType:   constants.BlockDelivery,
-		MessageSender: p.network.GetAddress().ToString(),
-		MessageBlocks: []PoWblockchain.Block{blockWithTransactions},
+		MessageType:      constants.BlockDelivery,
+		MessageSender:    p.network.GetAddress().ToString(),
+		PoWMessageBlocks: []PoWblockchain.Block{blockWithTransactions},
 	}
-	for _, block := range msg.MessageBlocks {
+	for _, block := range msg.PoWMessageBlocks {
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
@@ -301,7 +301,7 @@ func (p *PoSpacePeer) handleBlock(block PoWblockchain.Block) {
 		return
 	}
 	blocktree := <-p.blockTreeChan
-	block = Message.MakeDeepCopyOfBlock(block)
+	block = Message.MakeDeepCopyOfPoWBlock(block)
 	var t = blocktree.AddBlock(block)
 	switch t {
 	case -3:
@@ -336,7 +336,7 @@ func (p *PoSpacePeer) addTransaction(t models.SignedTransaction) {
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpaceLotteryDraw) {
+func (p *PoSpacePeer) blockCreatingLoop(wins chan lottery_strategy.PoSpaceLotteryDraw) {
 	for {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)
