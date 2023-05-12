@@ -1,7 +1,6 @@
 package peer_strategy
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"time"
 )
@@ -9,7 +8,7 @@ import (
 type PeerInterface interface {
 	RunPeer(IpPort string, startTime time.Time)
 	CreateAccount() string
-	GetBlockTree() PoWblockchain.Blocktree //Change to interface
+	GetBlockTree() interface{}
 	StartMining() error
 	StopMining() error
 	GetAddress() network.Address

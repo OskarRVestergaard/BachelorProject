@@ -1,6 +1,8 @@
 package test
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -30,8 +32,8 @@ func TestPOWNetwork2Peers(t *testing.T) {
 		}
 	}
 	time.Sleep(3000 * time.Millisecond)
-	tree1 := listOfPeers[0].GetBlockTree()
-	tree2 := listOfPeers[1].GetBlockTree()
+	tree1 := (listOfPeers[0].GetBlockTree()).(PoWblockchain.Blocktree)
+	tree2 := listOfPeers[1].GetBlockTree().(PoWblockchain.Blocktree)
 	assert.True(t, tree1.Equals(tree2))
 }
 
@@ -60,8 +62,8 @@ func TestPOWNetwork16Peers(t *testing.T) {
 	time.Sleep(10000 * time.Millisecond)
 	for i, _ := range listOfPeers {
 		if i != 0 {
-			tree1 := listOfPeers[i-1].GetBlockTree()
-			tree2 := listOfPeers[i].GetBlockTree()
+			tree1 := listOfPeers[i-1].GetBlockTree().(PoWblockchain.Blocktree)
+			tree2 := listOfPeers[i].GetBlockTree().(PoWblockchain.Blocktree)
 			test := tree1.Equals(tree2)
 			assert.True(t, test)
 		}
@@ -94,8 +96,8 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 	time.Sleep(30000 * time.Millisecond)
 	for i, _ := range listOfPeers {
 		if i != 0 {
-			tree1 := listOfPeers[i-1].GetBlockTree()
-			tree2 := listOfPeers[i].GetBlockTree()
+			tree1 := listOfPeers[i-1].GetBlockTree().(SpaceMintBlockchain.Blocktree)
+			tree2 := listOfPeers[i].GetBlockTree().(SpaceMintBlockchain.Blocktree)
 			test := tree1.Equals(tree2)
 			assert.True(t, test)
 		}

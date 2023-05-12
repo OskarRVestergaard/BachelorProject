@@ -11,7 +11,8 @@ import (
 	"time"
 )
 
-func (p *PoWPeer) GetBlockTree() PoWblockchain.Blocktree {
+func (p *PoWPeer) GetBlockTree() interface{} {
+	//TODO Not at all thread safe to use it this way, fine if used for reading during testing
 	blocktree := <-p.blockTreeChan
 	p.blockTreeChan <- blocktree
 	return blocktree

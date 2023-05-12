@@ -148,7 +148,7 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	tree.treeMap[newBlockHash] = newNode
 
 	//Check if the longest chain has changed
-	var newNodeGreater = newNode.hasGreaterPathWeightThan(tree.head)
+	var newNodeGreater = newNode.hasGreaterPathWeightThan(tree.head) //TODO needs to not only use quality of single blocks, but compare the whole chain quality
 	if newNodeGreater == 1 {
 		tree.head = newNode
 		tree.newHeadBlocks <- newNode.block
