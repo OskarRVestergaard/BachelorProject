@@ -55,7 +55,7 @@ func (lottery *PoSpace) StartNewMiner(PoSpacePrm Models.Parameters, vk string, h
 	proverSingleton := make(chan Parties.Prover, 1)
 	proverSingleton <- prover
 	lottery.combineChannels(newBlockHashes, stopMinerSignal, newBlockHashesInternal)
-	go lottery.startNewMinerInternal(proverSingleton, vk, hardness, initialHash, newBlockHashesInternal, potentiallyWinningDraws)
+	go lottery.startNewMinerInternal(proverSingleton, vk, initialHash, newBlockHashesInternal, potentiallyWinningDraws)
 	return result
 }
 
@@ -82,18 +82,18 @@ func (lottery *PoSpace) combineChannels(newHashes chan sha256.HashValue, stopMin
 	}()
 }
 
-func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan ChannelCombinationStruct, winningDraws chan PoSpaceLotteryDraw) {
+func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, initialHash sha256.HashValue, newBlockHashesInternal chan ChannelCombinationStruct, winningDraws chan PoSpaceLotteryDraw) {
 	internalStruct := ChannelCombinationStruct{
 		minerShouldContinue: true,
 		parentHash:          initialHash,
 	}
 	for internalStruct.minerShouldContinue {
-		go lottery.mineOnSingleBlock(proverSingleton, vk, internalStruct.parentHash, hardness, winningDraws)
+		go lottery.mineOnSingleBlock(proverSingleton, vk, internalStruct.parentHash, winningDraws)
 		internalStruct = <-newBlockHashesInternal
 	}
 }
 
-func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, vk string, parentHash sha256.HashValue, hardness int, winningDraws chan PoSpaceLotteryDraw) {
+func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, vk string, parentHash sha256.HashValue, winningDraws chan PoSpaceLotteryDraw) {
 	//TODO Fake it challenges:
 	challengesSetP := []int{0, 1}
 	challengesSetV := []int{0, 1, 2}
@@ -116,7 +116,7 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 	proverSingleton <- prover
 }
 
-func (lottery *PoSpace) Verify(draw PoSpaceLotteryDraw, hardness int, commitment sha256.HashValue) bool {
+func (lottery *PoSpace) Verify(draw PoSpaceLotteryDraw, commitment sha256.HashValue) bool {
 	//TODO Fake it challenges:
 	challengesSetP := []int{0, 1}
 	challengesSetV := []int{0, 1, 2}
