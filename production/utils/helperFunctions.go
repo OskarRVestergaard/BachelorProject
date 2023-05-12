@@ -29,3 +29,21 @@ func CalculateSlot(startTime time.Time) int {
 	slot := timeDifference.Milliseconds() / constants.SlotLength.Milliseconds()
 	return int(slot)
 }
+
+/*
+startTimeSlotUpdater returns a channel that reports when a new time slot has started and what the time slot is
+*/
+func StartTimeSlotUpdater(startTime time.Time) chan int {
+	updater := make(chan int)
+	prevSlot := 0
+	go func() {
+		for {
+			currentSlot := CalculateSlot(startTime)
+			if currentSlot > prevSlot {
+				updater <- currentSlot
+			}
+			time.Sleep(constants.SlotLength / 10)
+		}
+	}()
+	return updater
+}

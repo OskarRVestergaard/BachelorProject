@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"math/rand"
 	"strconv"
 )
 
@@ -102,7 +103,7 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 	proofOfSpaceExecution := prover.AnswerChallenges(challengesSetP, false)
 
 	//TODO Add true quality function (currently implicily done by pathweight)
-	qualityIsGoodEnough := true
+	qualityIsGoodEnough := 0.95 < rand.Float64() //TODO, THIS IS FAKE CODE TO TEST ONLY SENDING "GOOD QUALITY"
 	if qualityIsGoodEnough {
 		proofOfCorrectCommitment := prover.AnswerChallenges(challengesSetV, true)
 		draw := PoSpaceLotteryDraw{

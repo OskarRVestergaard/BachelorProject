@@ -8,6 +8,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -155,6 +156,29 @@ func (p *PoSpacePeer) GetBlockTree() interface{} {
 	return blocktree
 }
 
+func (p *PoSpacePeer) startBlocksToMinePasser(initialHash sha256.HashValue, newHeadHashes chan sha256.HashValue) chan sha256.HashValue {
+	mostRecentHash := make(chan sha256.HashValue, 1)
+	mostRecentHash <- initialHash
+	go func() {
+		for {
+			newHash := <-newHeadHashes
+			_ = <-mostRecentHash
+			mostRecentHash <- newHash
+		}
+	}()
+	slotNotifier := utils.StartTimeSlotUpdater(p.startTime)
+	hashesSendToMiner := make(chan sha256.HashValue, 10)
+	go func() {
+		for {
+			_ = <-slotNotifier //TODO, Send slot along with hashes, instead of letting the miner calculate the slot itself
+			hashToMineOn := <-mostRecentHash
+			hashesSendToMiner <- hashToMineOn
+			mostRecentHash <- hashToMineOn
+		}
+	}()
+	return hashesSendToMiner
+}
+
 func (p *PoSpacePeer) StartMining() error {
 	noActiveMiner := p.isMiningMutex.TryLock()
 	if !noActiveMiner {
@@ -169,7 +193,8 @@ func (p *PoSpacePeer) StartMining() error {
 	initialHash := head.HashOfBlock()
 	winningDraws := make(chan lottery_strategy.PoSpaceLotteryDraw, 10)
 	poSpaceParameters := Task1.GenerateParameters()
-	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
+	blocksToMiner := p.startBlocksToMinePasser(initialHash, newHeadHashes)
+	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialHash, blocksToMiner, winningDraws, p.stopMiningSignal)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
