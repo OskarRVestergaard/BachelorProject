@@ -6,6 +6,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
+	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
@@ -27,7 +28,7 @@ type PoSpacePeer struct {
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
-	unhandledBlocks            chan PoWblockchain.Block
+	unhandledBlocks            chan SpaceMintblockchain.Block
 	unhandledMessages          chan Message.Message
 	hardness                   int
 	maximumTransactionsInBlock int
@@ -59,7 +60,7 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
-	p.unhandledBlocks = make(chan PoWblockchain.Block, 20)
+	p.unhandledBlocks = make(chan SpaceMintblockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = constants.BlockSize
 	p.unhandledMessages = make(chan Message.Message, 50)
@@ -126,7 +127,7 @@ func (p *PoSpacePeer) handleMessage(msg Message.Message) {
 	case constants.JoinMessage:
 
 	case constants.BlockDelivery:
-		for _, block := range msg.PoWMessageBlocks {
+		for _, block := range msg.SpaceMintBlocks {
 			p.unhandledBlocks <- block
 		}
 	default:
@@ -187,7 +188,7 @@ func (p *PoSpacePeer) StopMining() error {
 	return nil
 }
 
-func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock PoWblockchain.Block, isEmpty bool) {
+func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock SpaceMintblockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -210,23 +211,26 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery
 		}
 	}
 	//
-	resultBlock := PoWblockchain.Block{
-		IsGenesis: false,
-		Vk:        verificationKey,
-		Slot:      slot,
-		Draw:      lottery_strategy.WinningLotteryParams{}, //TODO Change to actual draw
-		BlockData: PoWblockchain.BlockData{
-			Transactions: transactionsToAdd,
-		},
+	resultBlock := SpaceMintblockchain.Block{
+		IsGenesis:  false,
 		ParentHash: parentHash,
-		Signature:  nil,
+		HashSubBlock: SpaceMintblockchain.HashSubBlock{
+			Slot:                      slot,
+			SignatureOnParentSubBlock: nil,
+			Draw:                      draw,
+		},
+		TransactionSubBlock: SpaceMintblockchain.TransactionSubBlock{
+			Slot: slot,
+			Transactions: SpaceMintblockchain.SpacemintTransactions{
+				Payments:         transactionsToAdd,
+				SpaceCommitments: nil,
+				Penalties:        nil,
+			},
+		},
+		SignatureSubBlock: SpaceMintblockchain.SignatureSubBlock{},
 	}
-	resultBlock.SignBlock(p.signatureStrategy, secretKey)
-	if resultBlock.HasCorrectSignature(p.signatureStrategy) {
-		return resultBlock, false
-	} else {
-		panic("Something went wrong, created block but gave it a wrong signature")
-	}
+	resultBlock.SignBlock(nil, p.signatureStrategy, secretKey) //TODO Fix
+	return resultBlock, false
 }
 
 func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.PoSpaceLotteryDraw) {
@@ -246,11 +250,11 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.PoSpaceLot
 		return
 	}
 	msg := Message.Message{
-		MessageType:      constants.BlockDelivery,
-		MessageSender:    p.network.GetAddress().ToString(),
-		PoWMessageBlocks: []PoWblockchain.Block{blockWithTransactions},
+		MessageType:     constants.BlockDelivery,
+		MessageSender:   p.network.GetAddress().ToString(),
+		SpaceMintBlocks: []SpaceMintblockchain.Block{blockWithTransactions},
 	}
-	for _, block := range msg.PoWMessageBlocks {
+	for _, block := range msg.SpaceMintBlocks {
 		p.unhandledBlocks <- block
 	}
 	p.blockTreeChan <- blocktree
@@ -296,38 +300,41 @@ func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedTransaction
 	return true
 }
 
-func (p *PoSpacePeer) handleBlock(block PoWblockchain.Block) {
-	if !p.verifyBlock(block) {
-		return
-	}
-	blocktree := <-p.blockTreeChan
-	block = Message.MakeDeepCopyOfPoWBlock(block)
-	var t = blocktree.AddBlock(block)
-	switch t {
-	case -3:
-		//Slot number is not greater than parent
-		p.blockTreeChan <- blocktree
-	case -2:
-		//Block with isGenesis true, not a real block and should be ignored
-		p.blockTreeChan <- blocktree
-	case -1:
-		//Block is in tree already and can be ignored
-		p.blockTreeChan <- blocktree
-	case 0:
-		//Parent is not in the tree, try to add later
-		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
-		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
+func (p *PoSpacePeer) handleBlock(block SpaceMintblockchain.Block) {
+	//	if !p.verifyBlock(block) {
+	//		return
+	//	}
+	print("Handling block")
+	/*
+		blocktree := <-p.blockTreeChan
+		block = Message.MakeDeepCopyOfPoSBlock(block)
+		var t = blocktree.AddBlock(block)
+		switch t {
+		case -3:
+			//Slot number is not greater than parent
+			p.blockTreeChan <- blocktree
+		case -2:
+			//Block with isGenesis true, not a real block and should be ignored
+			p.blockTreeChan <- blocktree
+		case -1:
+			//Block is in tree already and can be ignored
+			p.blockTreeChan <- blocktree
+		case 0:
+			//Parent is not in the tree, try to add later
+			//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
+			//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
 
-		p.blockTreeChan <- blocktree
-		time.Sleep(1000 * time.Millisecond) //Needs to be enough time for the other block to arrive
-		p.unhandledBlocks <- block
-	case 1:
-		//Block successfully added to the tree
-		p.blockTreeChan <- blocktree
-	default:
-		p.blockTreeChan <- blocktree
-		panic("addBlockReturnValueNotUnderstood")
-	}
+			p.blockTreeChan <- blocktree
+			time.Sleep(1000 * time.Millisecond) //Needs to be enough time for the other block to arrive
+			p.unhandledBlocks <- block
+		case 1:
+			//Block successfully added to the tree
+			p.blockTreeChan <- blocktree
+		default:
+			p.blockTreeChan <- blocktree
+			panic("addBlockReturnValueNotUnderstood")
+		}
+	*/
 }
 
 func (p *PoSpacePeer) addTransaction(t models.SignedTransaction) {

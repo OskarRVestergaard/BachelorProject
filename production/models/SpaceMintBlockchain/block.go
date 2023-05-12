@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"strconv"
 )
 
@@ -19,6 +20,10 @@ type HashSubBlock struct {
 	Slot                      int                                 //index or slot number
 	SignatureOnParentSubBlock []byte                              //Signature linking this block to its parent
 	Draw                      lottery_strategy.PoSpaceLotteryDraw //The Proof of space associated with the block
+}
+
+func (block *Block) SignBlock(parentBlock *Block, signatureStrategy signature_strategy.SignatureInterface, secretKey string) {
+	//TODO Implement
 }
 
 func (subBlock *HashSubBlock) ToByteArray() []byte {
