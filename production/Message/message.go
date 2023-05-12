@@ -11,6 +11,6 @@ type Message struct {
 	MessageSender     string
 	SignedTransaction models.SignedTransaction
 	PoWMessageBlocks  []PoWblockchain.Block
-	SpaceMintBlocks   []SpaceMintblockchain.Block
+	SpaceMintBlocks   []SpaceMintBlockchain.Block
 	PeerMap           map[string]models.Void
 }

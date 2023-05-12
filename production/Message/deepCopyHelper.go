@@ -51,8 +51,8 @@ func MakeDeepCopyOfPoWBlock(block PoWblockchain.Block) (copyOfBlock PoWblockchai
 	return deepCopyBlock
 }
 
-func MakeDeepCopyOfPoSBlock(block SpaceMintblockchain.Block) (copyOfBlock SpaceMintblockchain.Block) {
-	deepCopyBlock := SpaceMintblockchain.Block{
+func MakeDeepCopyOfPoSBlock(block SpaceMintBlockchain.Block) (copyOfBlock SpaceMintBlockchain.Block) {
+	deepCopyBlock := SpaceMintBlockchain.Block{
 		IsGenesis:           block.IsGenesis,
 		ParentHash:          block.ParentHash,
 		HashSubBlock:        deepCopyHashSubBlock(block.HashSubBlock),
@@ -93,8 +93,8 @@ func deepCopyPoSpaceLotteryDraw(draw lottery_strategy.PoSpaceLotteryDraw) lotter
 	return copyOfDraw
 }
 
-func deepCopyHashSubBlock(subBlock SpaceMintblockchain.HashSubBlock) SpaceMintblockchain.HashSubBlock {
-	deepCopyOfHashSubBlock := SpaceMintblockchain.HashSubBlock{
+func deepCopyHashSubBlock(subBlock SpaceMintBlockchain.HashSubBlock) SpaceMintBlockchain.HashSubBlock {
+	deepCopyOfHashSubBlock := SpaceMintBlockchain.HashSubBlock{
 		Slot:                      subBlock.Slot,
 		SignatureOnParentSubBlock: deepCopyByteSlice(subBlock.SignatureOnParentSubBlock),
 		Draw:                      deepCopyPoSpaceLotteryDraw(subBlock.Draw),
@@ -103,8 +103,8 @@ func deepCopyHashSubBlock(subBlock SpaceMintblockchain.HashSubBlock) SpaceMintbl
 	return deepCopyOfHashSubBlock
 }
 
-func deepCopySpaceCommit(spaceCommitment SpaceMintblockchain.SpaceCommitment) SpaceMintblockchain.SpaceCommitment {
-	copyOfSpaceCommitment := SpaceMintblockchain.SpaceCommitment{
+func deepCopySpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) SpaceMintBlockchain.SpaceCommitment {
+	copyOfSpaceCommitment := SpaceMintBlockchain.SpaceCommitment{
 		Id:         spaceCommitment.Id,
 		N:          spaceCommitment.N,
 		PublicKey:  spaceCommitment.PublicKey,
@@ -113,32 +113,32 @@ func deepCopySpaceCommit(spaceCommitment SpaceMintblockchain.SpaceCommitment) Sp
 	return copyOfSpaceCommitment
 }
 
-func deepCopySpaceCommitments(spaceCommitments []SpaceMintblockchain.SpaceCommitment) []SpaceMintblockchain.SpaceCommitment {
-	spaceCommitmentsCopy := make([]SpaceMintblockchain.SpaceCommitment, len(spaceCommitments))
+func deepCopySpaceCommitments(spaceCommitments []SpaceMintBlockchain.SpaceCommitment) []SpaceMintBlockchain.SpaceCommitment {
+	spaceCommitmentsCopy := make([]SpaceMintBlockchain.SpaceCommitment, len(spaceCommitments))
 	for i, spaceCommit := range spaceCommitments {
 		spaceCommitmentsCopy[i] = deepCopySpaceCommit(spaceCommit)
 	}
 	return spaceCommitmentsCopy
 }
 
-func deepCopyTransactionSubBlock(subBlock SpaceMintblockchain.TransactionSubBlock) (copyOfSubBlock SpaceMintblockchain.TransactionSubBlock) {
+func deepCopyTransactionSubBlock(subBlock SpaceMintBlockchain.TransactionSubBlock) (copyOfSubBlock SpaceMintBlockchain.TransactionSubBlock) {
 
-	spaceMintTransactionCopy := SpaceMintblockchain.SpacemintTransactions{
+	spaceMintTransactionCopy := SpaceMintBlockchain.SpacemintTransactions{
 		Payments:         deepCopyTransactions(subBlock.Transactions.Payments),
 		SpaceCommitments: deepCopySpaceCommitments(subBlock.Transactions.SpaceCommitments),
 		Penalties:        nil, //TODO Implement
 	}
 
-	deepCopyOfTransactionSubBlock := SpaceMintblockchain.TransactionSubBlock{
+	deepCopyOfTransactionSubBlock := SpaceMintBlockchain.TransactionSubBlock{
 		Slot:         subBlock.Slot,
 		Transactions: spaceMintTransactionCopy,
 	}
 	return deepCopyOfTransactionSubBlock
 }
 
-func deepCopySignatureSubBlock(subBlock SpaceMintblockchain.SignatureSubBlock) SpaceMintblockchain.SignatureSubBlock {
+func deepCopySignatureSubBlock(subBlock SpaceMintBlockchain.SignatureSubBlock) SpaceMintBlockchain.SignatureSubBlock {
 
-	deepCopyOfSignatureSubBlock := SpaceMintblockchain.SignatureSubBlock{
+	deepCopyOfSignatureSubBlock := SpaceMintBlockchain.SignatureSubBlock{
 		Slot:                                  subBlock.Slot,
 		SignatureOnCurrentTransactionSubBlock: deepCopyByteSlice(subBlock.SignatureOnCurrentTransactionSubBlock),
 		SignatureOnParentSubBlock:             deepCopyByteSlice(subBlock.SignatureOnParentSubBlock),
@@ -167,7 +167,7 @@ func MakeDeepCopyOfMessage(msg Message) (copyOfMessage Message) {
 	}
 
 	oldPoSBlocks := msg.SpaceMintBlocks
-	PoSBlocksCopy := make([]SpaceMintblockchain.Block, len(oldPoSBlocks))
+	PoSBlocksCopy := make([]SpaceMintBlockchain.Block, len(oldPoSBlocks))
 	for i, block := range oldPoSBlocks {
 		PoSBlocksCopy[i] = MakeDeepCopyOfPoSBlock(block)
 	}

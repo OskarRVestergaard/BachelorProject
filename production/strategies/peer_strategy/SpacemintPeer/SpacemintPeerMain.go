@@ -28,7 +28,7 @@ type PoSpacePeer struct {
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
-	unhandledBlocks            chan SpaceMintblockchain.Block
+	unhandledBlocks            chan SpaceMintBlockchain.Block
 	unhandledMessages          chan Message.Message
 	hardness                   int
 	maximumTransactionsInBlock int
@@ -60,7 +60,7 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
-	p.unhandledBlocks = make(chan SpaceMintblockchain.Block, 20)
+	p.unhandledBlocks = make(chan SpaceMintBlockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
 	p.maximumTransactionsInBlock = constants.BlockSize
 	p.unhandledMessages = make(chan Message.Message, 50)
@@ -188,7 +188,7 @@ func (p *PoSpacePeer) StopMining() error {
 	return nil
 }
 
-func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock SpaceMintblockchain.Block, isEmpty bool) {
+func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.PoSpaceLotteryDraw, blocktree PoWblockchain.Blocktree) (newBlock SpaceMintBlockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -211,23 +211,23 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery
 		}
 	}
 	//
-	resultBlock := SpaceMintblockchain.Block{
+	resultBlock := SpaceMintBlockchain.Block{
 		IsGenesis:  false,
 		ParentHash: parentHash,
-		HashSubBlock: SpaceMintblockchain.HashSubBlock{
+		HashSubBlock: SpaceMintBlockchain.HashSubBlock{
 			Slot:                      slot,
 			SignatureOnParentSubBlock: nil,
 			Draw:                      draw,
 		},
-		TransactionSubBlock: SpaceMintblockchain.TransactionSubBlock{
+		TransactionSubBlock: SpaceMintBlockchain.TransactionSubBlock{
 			Slot: slot,
-			Transactions: SpaceMintblockchain.SpacemintTransactions{
+			Transactions: SpaceMintBlockchain.SpacemintTransactions{
 				Payments:         transactionsToAdd,
 				SpaceCommitments: nil,
 				Penalties:        nil,
 			},
 		},
-		SignatureSubBlock: SpaceMintblockchain.SignatureSubBlock{},
+		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{},
 	}
 	resultBlock.SignBlock(nil, p.signatureStrategy, secretKey) //TODO Fix
 	return resultBlock, false
@@ -252,7 +252,7 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.PoSpaceLot
 	msg := Message.Message{
 		MessageType:     constants.BlockDelivery,
 		MessageSender:   p.network.GetAddress().ToString(),
-		SpaceMintBlocks: []SpaceMintblockchain.Block{blockWithTransactions},
+		SpaceMintBlocks: []SpaceMintBlockchain.Block{blockWithTransactions},
 	}
 	for _, block := range msg.SpaceMintBlocks {
 		p.unhandledBlocks <- block
@@ -300,7 +300,7 @@ func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedTransaction
 	return true
 }
 
-func (p *PoSpacePeer) handleBlock(block SpaceMintblockchain.Block) {
+func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
 	//	if !p.verifyBlock(block) {
 	//		return
 	//	}

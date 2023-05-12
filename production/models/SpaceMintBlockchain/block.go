@@ -1,4 +1,4 @@
-package SpaceMintblockchain
+package SpaceMintBlockchain
 
 import (
 	"bytes"
@@ -66,10 +66,12 @@ func (subBlock *SignatureSubBlock) ToByteArray() []byte {
 }
 
 func (block *Block) GetQuality() (value sha256.HashValue, isGenesis bool) {
+	//TODO Return a proper single block quality
+	//TODO Should return a value between 0 and 1, which datatype to use is undecided
 	if block.IsGenesis {
 		return sha256.HashValue{}, true
 	}
-	return block.HashOfBlock(), false //TODO Return a proper quality, (which can actually only be done with information from parents)
+	return block.HashOfBlock(), false
 }
 
 /*

@@ -1,4 +1,4 @@
-package SpaceMintblockchain
+package SpaceMintBlockchain
 
 import (
 	"bytes"
