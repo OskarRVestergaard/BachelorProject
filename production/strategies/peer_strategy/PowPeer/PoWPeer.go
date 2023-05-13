@@ -7,6 +7,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoW"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -22,7 +23,7 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 
 type PoWPeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
-	lotteryStrategy            lottery_strategy.LotteryInterface
+	lotteryStrategy            lottery_strategy.LotteryInterface //TODO Change to just use proof of work, and remove strategy, also proof of work should also send slot number along
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
@@ -39,7 +40,7 @@ type PoWPeer struct {
 func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
-	p.lotteryStrategy = &lottery_strategy.PoW{}
+	p.lotteryStrategy = &PoW.PoW{}
 	address, err := network.StringToAddress(IpPort)
 	if err != nil {
 		panic("Could not parse IpPort: " + err.Error())

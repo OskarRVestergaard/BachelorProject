@@ -3,12 +3,13 @@ package temp2
 import (
 	"encoding/binary"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoW"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestMine(t *testing.T) {
-	miner := lottery_strategy.PoW{}
+	miner := PoW.PoW{}
 	blockToExtend := make([]byte, 4)
 	binary.LittleEndian.PutUint32(blockToExtend, 31415926)
 	blocksChannel := make(chan []byte, 0)

@@ -1,23 +1,29 @@
-package lottery_strategy
+package PoW
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 )
 
 type PoW struct {
 }
 
-func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan WinningLotteryParams, stopMinerSignal chan struct{}) {
-	newBlockHashesInternal := make(chan ChannelCombinationStruct)
+func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan lottery_strategy.WinningLotteryParams, stopMinerSignal chan struct{}) {
+	newBlockHashesInternal := make(chan channelCombinationStruct)
 	lottery.combineChannels(newBlockHashes, stopMinerSignal, newBlockHashesInternal)
 	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashesInternal, winningDraws)
 }
 
-func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan ChannelCombinationStruct) {
+type channelCombinationStruct struct {
+	minerShouldContinue bool
+	parentHash          sha256.HashValue
+}
+
+func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner chan struct{}, internalStruct chan channelCombinationStruct) {
 	go func() {
 		for {
 			newParentHash := <-newHashes
-			combination := ChannelCombinationStruct{
+			combination := channelCombinationStruct{
 				minerShouldContinue: true,
 				parentHash:          newParentHash,
 			}
@@ -27,7 +33,7 @@ func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner c
 	go func() {
 		for {
 			_ = <-stopMiner
-			combination := ChannelCombinationStruct{
+			combination := channelCombinationStruct{
 				minerShouldContinue: false,
 				parentHash:          sha256.HashValue{},
 			}
@@ -36,8 +42,8 @@ func (lottery *PoW) combineChannels(newHashes chan sha256.HashValue, stopMiner c
 	}()
 }
 
-func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan ChannelCombinationStruct, winningDraws chan WinningLotteryParams) {
-	internalStruct := ChannelCombinationStruct{
+func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash sha256.HashValue, newBlockHashesInternal chan channelCombinationStruct, winningDraws chan lottery_strategy.WinningLotteryParams) {
+	internalStruct := channelCombinationStruct{
 		minerShouldContinue: true,
 		parentHash:          initialHash,
 	}
@@ -49,7 +55,7 @@ func (lottery *PoW) startNewMinerInternal(vk string, hardness int, initialHash s
 	}
 }
 
-func (lottery *PoW) mineOnSingleBlock(vk string, parentHash sha256.HashValue, hardness int, done chan struct{}, winningDraws chan WinningLotteryParams) {
+func (lottery *PoW) mineOnSingleBlock(vk string, parentHash sha256.HashValue, hardness int, done chan struct{}, winningDraws chan lottery_strategy.WinningLotteryParams) {
 	c := 0
 	for {
 		select {
@@ -57,7 +63,7 @@ func (lottery *PoW) mineOnSingleBlock(vk string, parentHash sha256.HashValue, ha
 			return
 		default:
 			c = c + 1
-			draw := WinningLotteryParams{
+			draw := lottery_strategy.WinningLotteryParams{
 				Vk:         vk,
 				ParentHash: parentHash,
 				Counter:    c,
@@ -86,7 +92,7 @@ func verifyPoW(hashedTicket sha256.HashValue, hardness int) bool {
 }
 
 func (lottery *PoW) Verify(vk string, parentHash sha256.HashValue, hardness int, counter int) bool {
-	draw := WinningLotteryParams{
+	draw := lottery_strategy.WinningLotteryParams{
 		Vk:         vk,
 		ParentHash: parentHash,
 		Counter:    counter,

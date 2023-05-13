@@ -9,7 +9,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -25,7 +25,7 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 
 type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
-	lotteryStrategy            *lottery_strategy.PoSpace
+	lotteryStrategy            *PoSpace.PoSpace
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []models.SignedTransaction
 	blockTreeChan              chan SpaceMintBlockchain.Blocktree
@@ -41,7 +41,7 @@ type PoSpacePeer struct {
 func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
-	p.lotteryStrategy = &lottery_strategy.PoSpace{}
+	p.lotteryStrategy = &PoSpace.PoSpace{}
 	address, err := network.StringToAddress(IpPort)
 	if err != nil {
 		panic("Could not parse IpPort: " + err.Error())
@@ -191,7 +191,7 @@ func (p *PoSpacePeer) StartMining() error {
 	newHeadHashes := blocktree.SubScribeToGetHead()
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
-	winningDraws := make(chan lottery_strategy.PoSpaceLotteryDraw, 10)
+	winningDraws := make(chan PoSpace.LotteryDraw, 10)
 	poSpaceParameters := Task1.GenerateParameters()
 	blocksToMiner := p.startBlocksToMinePasser(initialHash, newHeadHashes)
 	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialHash, blocksToMiner, winningDraws, p.stopMiningSignal)
@@ -212,7 +212,7 @@ func (p *PoSpacePeer) StopMining() error {
 	return nil
 }
 
-func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery_strategy.PoSpaceLotteryDraw, blocktree SpaceMintBlockchain.Blocktree) (newBlock SpaceMintBlockchain.Block, isEmpty bool) {
+func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace.LotteryDraw, blocktree SpaceMintBlockchain.Blocktree) (newBlock SpaceMintBlockchain.Block, isEmpty bool) {
 	//TODO Need to check that the draw is correct
 	secretKey, foundSk := p.getSecretKey(verificationKey)
 	if !foundSk {
@@ -257,7 +257,7 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw lottery
 	return resultBlock, false
 }
 
-func (p *PoSpacePeer) sendBlockWithTransactions(draw lottery_strategy.PoSpaceLotteryDraw) {
+func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpace.LotteryDraw) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
@@ -364,7 +364,7 @@ func (p *PoSpacePeer) addTransaction(t models.SignedTransaction) {
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *PoSpacePeer) blockCreatingLoop(wins chan lottery_strategy.PoSpaceLotteryDraw) {
+func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.LotteryDraw) {
 	for {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)

@@ -3,6 +3,7 @@ package SpaceMintBlockchain
 import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
 	"reflect"
 	"time"
 )
@@ -16,10 +17,15 @@ Use the NewBlockTree method for creating a block tree!
 The struct methods are NOT thread safe
 */
 type Blocktree struct {
-	treeMap               map[sha256.HashValue]node
-	head                  node //TODO Hide behind mutex or channel
-	subscriberChannelList chan []chan sha256.HashValue
-	newHeadBlocks         chan Block
+	treeMap       map[sha256.HashValue]node
+	head          node
+	subscribers   chan []subscriber
+	newHeadBlocks chan Block
+}
+
+type subscriber struct {
+	n               int
+	miningLocations chan PoSpace.MiningLocation
 }
 
 /*
@@ -157,33 +163,52 @@ func (tree *Blocktree) AddBlock(block Block) int {
 }
 
 func (tree *Blocktree) startSubscriptionHandler() {
-	tree.subscriberChannelList = make(chan []chan sha256.HashValue, 1)
-	subscriberChannelList := make([]chan sha256.HashValue, 0)
-	tree.subscriberChannelList <- subscriberChannelList
+	tree.subscribers = make(chan []subscriber, 1)
+	subscribers := make([]subscriber, 0)
+	tree.subscribers <- subscribers
 	go tree.subscriptionSubroutine()
+}
+
+func (tree *Blocktree) getMiningLocation(hashOfBlockToMineOn sha256.HashValue, n int) PoSpace.MiningLocation {
+	newBlock := tree.HashToBlock(hashOfBlockToMineOn)
+	challengeSetP, challengesSetV := tree.getChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
+	newLocation := PoSpace.MiningLocation{
+		Slot:          newBlock.TransactionSubBlock.Slot + 1,
+		ParentHash:    hashOfBlockToMineOn,
+		ChallengeSetP: challengeSetP,
+		ChallengeSetV: challengesSetV,
+	}
+	return newLocation
 }
 
 func (tree *Blocktree) subscriptionSubroutine() {
 	for {
 		newBlock := <-tree.newHeadBlocks
-		subscriberChannelList := <-tree.subscriberChannelList
-		for _, channel := range subscriberChannelList {
-			go func(c chan sha256.HashValue) {
-				c <- newBlock.HashOfBlock()
-			}(channel)
+		hashOfBlockToExtendOn := newBlock.HashOfBlock()
+		subscribers := <-tree.subscribers
+		for _, singleSubscriber := range subscribers {
+			go func(sub subscriber) {
+				newLocation := tree.getMiningLocation(hashOfBlockToExtendOn, sub.n)
+				sub.miningLocations <- newLocation
+			}(singleSubscriber)
 		}
-		tree.subscriberChannelList <- subscriberChannelList
+		tree.subscribers <- subscribers
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
-func (tree *Blocktree) SubScribeToGetHead() (headHashes chan sha256.HashValue) {
-	newChannel := make(chan sha256.HashValue, 10)
-	subscriberChannelList := <-tree.subscriberChannelList
-	subscriberChannelList = append(subscriberChannelList, newChannel)
-	tree.subscriberChannelList <- subscriberChannelList
-	newChannel <- tree.head.block.HashOfBlock()
-	return newChannel
+func (tree *Blocktree) SubScribeToGetHead(n int) (newHeadMiningLocations chan PoSpace.MiningLocation) {
+	newMiningLocations := make(chan PoSpace.MiningLocation, 10)
+	newSubscriber := subscriber{
+		n:               n,
+		miningLocations: newMiningLocations,
+	}
+	subscribers := <-tree.subscribers
+	subscribers = append(subscribers, newSubscriber)
+	tree.subscribers <- subscribers
+
+	newMiningLocations <- tree.getMiningLocation(tree.head.block.HashOfBlock(), n)
+	return newMiningLocations
 }
 
 func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
@@ -192,4 +217,21 @@ func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
 		return false
 	}
 	return reflect.DeepEqual(tree.head.block, comparisonTree.head.block)
+}
+
+func (tree *Blocktree) GetChallengesForExtendingOnHead(n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
+	//Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6
+	head := tree.GetHead()
+	return tree.getChallengesForExtendingOnBlockWithHash(head.HashOfBlock(), n)
+}
+
+func (tree *Blocktree) getChallengesForExtendingOnBlockWithHash(parentHash sha256.HashValue, n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
+	//Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6
+	//Todo change from fake challenges
+	//Also for effeciency, it would be better to split the finding random strings and getting the actual challenges
+	//depending on n, into two parts, but this is only really important if multiple miners are active in the same tree,
+	//which the code does not allow for anyways
+	challengesSetP := []int{0, 1}
+	challengesSetV := []int{0, 1, 2}
+	return challengesSetP, challengesSetV
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
 )
 
 func deepCopyByteSlice(slice []byte) []byte {
@@ -83,8 +84,8 @@ func deepCopyOpeningTriples(triples []Models.OpeningTriple) []Models.OpeningTrip
 	return triplesCopy
 }
 
-func deepCopyPoSpaceLotteryDraw(draw lottery_strategy.PoSpaceLotteryDraw) lottery_strategy.PoSpaceLotteryDraw {
-	copyOfDraw := lottery_strategy.PoSpaceLotteryDraw{
+func deepCopyPoSpaceLotteryDraw(draw PoSpace.LotteryDraw) PoSpace.LotteryDraw {
+	copyOfDraw := PoSpace.LotteryDraw{
 		Vk:                        draw.Vk,
 		ParentHash:                draw.ParentHash,
 		ProofOfSpaceA:             deepCopyOpeningTriples(draw.ProofOfSpaceA),
