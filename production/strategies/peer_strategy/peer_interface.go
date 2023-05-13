@@ -9,7 +9,7 @@ type PeerInterface interface {
 	RunPeer(IpPort string, startTime time.Time)
 	CreateAccount() string
 	GetBlockTree() interface{}
-	StartMining() error
+	StartMining(n int) error
 	StopMining() error
 	GetAddress() network.Address
 	Connect(ip string, port int)

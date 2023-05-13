@@ -169,7 +169,7 @@ func (tree *Blocktree) startSubscriptionHandler() {
 	go tree.subscriptionSubroutine()
 }
 
-func (tree *Blocktree) getMiningLocation(hashOfBlockToMineOn sha256.HashValue, n int) PoSpace.MiningLocation {
+func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n int) PoSpace.MiningLocation {
 	newBlock := tree.HashToBlock(hashOfBlockToMineOn)
 	challengeSetP, challengesSetV := tree.getChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
 	newLocation := PoSpace.MiningLocation{
@@ -188,7 +188,7 @@ func (tree *Blocktree) subscriptionSubroutine() {
 		subscribers := <-tree.subscribers
 		for _, singleSubscriber := range subscribers {
 			go func(sub subscriber) {
-				newLocation := tree.getMiningLocation(hashOfBlockToExtendOn, sub.n)
+				newLocation := tree.GetMiningLocation(hashOfBlockToExtendOn, sub.n)
 				sub.miningLocations <- newLocation
 			}(singleSubscriber)
 		}
@@ -207,7 +207,7 @@ func (tree *Blocktree) SubScribeToGetHead(n int) (newHeadMiningLocations chan Po
 	subscribers = append(subscribers, newSubscriber)
 	tree.subscribers <- subscribers
 
-	newMiningLocations <- tree.getMiningLocation(tree.head.block.HashOfBlock(), n)
+	newMiningLocations <- tree.GetMiningLocation(tree.head.block.HashOfBlock(), n)
 	return newMiningLocations
 }
 

@@ -156,7 +156,7 @@ func (p *PoWPeer) GetBlockTree() interface{} {
 	return blocktree
 }
 
-func (p *PoWPeer) StartMining() error {
+func (p *PoWPeer) StartMining(_ int) error {
 	noActiveMiner := p.isMiningMutex.TryLock()
 	if !noActiveMiner {
 		return errors.New("peer is already mining")

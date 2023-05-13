@@ -8,7 +8,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
-	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -156,30 +155,30 @@ func (p *PoSpacePeer) GetBlockTree() interface{} {
 	return blocktree
 }
 
-func (p *PoSpacePeer) startBlocksToMinePasser(initialHash sha256.HashValue, newHeadHashes chan sha256.HashValue) chan sha256.HashValue {
-	mostRecentHash := make(chan sha256.HashValue, 1)
-	mostRecentHash <- initialHash
+func (p *PoSpacePeer) startBlocksToMinePasser(initialMiningLocation PoSpace.MiningLocation, newMiningLocations chan PoSpace.MiningLocation) chan PoSpace.MiningLocation {
+	mostRecentMiningLocation := make(chan PoSpace.MiningLocation, 1)
+	mostRecentMiningLocation <- initialMiningLocation
 	go func() {
 		for {
-			newHash := <-newHeadHashes
-			_ = <-mostRecentHash
-			mostRecentHash <- newHash
+			newLocation := <-newMiningLocations
+			_ = <-mostRecentMiningLocation
+			mostRecentMiningLocation <- newLocation
 		}
 	}()
 	slotNotifier := utils.StartTimeSlotUpdater(p.startTime)
-	hashesSendToMiner := make(chan sha256.HashValue, 10)
+	hashesSendToMiner := make(chan PoSpace.MiningLocation, 10)
 	go func() {
 		for {
 			_ = <-slotNotifier //TODO, Send slot along with hashes, instead of letting the miner calculate the slot itself
-			hashToMineOn := <-mostRecentHash
+			hashToMineOn := <-mostRecentMiningLocation
 			hashesSendToMiner <- hashToMineOn
-			mostRecentHash <- hashToMineOn
+			mostRecentMiningLocation <- hashToMineOn
 		}
 	}()
 	return hashesSendToMiner
 }
 
-func (p *PoSpacePeer) StartMining() error {
+func (p *PoSpacePeer) StartMining(n int) error {
 	noActiveMiner := p.isMiningMutex.TryLock()
 	if !noActiveMiner {
 		return errors.New("peer is already mining")
@@ -188,13 +187,13 @@ func (p *PoSpacePeer) StartMining() error {
 	verificationKey := utils.GetSomeKey(secretKeys)
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
-	newHeadHashes := blocktree.SubScribeToGetHead()
+	newMiningLocations := blocktree.SubScribeToGetHead(n)
 	head := blocktree.GetHead()
-	initialHash := head.HashOfBlock()
+	initialMiningLocation := blocktree.GetMiningLocation(head.HashOfBlock(), n)
 	winningDraws := make(chan PoSpace.LotteryDraw, 10)
 	poSpaceParameters := Task1.GenerateParameters()
-	blocksToMiner := p.startBlocksToMinePasser(initialHash, newHeadHashes)
-	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialHash, blocksToMiner, winningDraws, p.stopMiningSignal)
+	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
+	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
