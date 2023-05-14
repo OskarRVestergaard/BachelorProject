@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"math"
 	"math/big"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 )
 
 // Definition 16.1
@@ -41,7 +42,7 @@ func validSlot(start time.Time, current time.Time, CurrentSlot int64, slotLength
 func calculateSlotLength() int {
 	noOfPeers := 2
 	noOfNames := 2
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames) //setup peer
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
 	pk0 := pkList[0]
 	pk1 := pkList[1]
 

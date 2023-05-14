@@ -2,10 +2,11 @@ package temp2
 
 import (
 	"encoding/binary"
+	"testing"
+
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoW"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMine(t *testing.T) {
@@ -17,7 +18,7 @@ func TestMine(t *testing.T) {
 	vk := "4"
 	hardness := 20
 
-	miner.StartNewMiner(vk, hardness, blockToExtend, blocksChannel, resultChannel)
+	// miner.StartNewMiner(vk, hardness, blockToExtend, blocksChannel, resultChannel)
 
 	blocksChannel <- blockToExtend
 	result := <-resultChannel
