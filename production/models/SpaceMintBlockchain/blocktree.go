@@ -39,8 +39,9 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	}
 	var treeMap = map[sha256.HashValue]node{}
 	var genesisNode = node{
-		block:  genesisBlock,
-		length: 0,
+		block:              genesisBlock,
+		length:             0,
+		singleBlockQuality: CalculateQuality(genesisBlock),
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
 	treeMap[genesisHash] = genesisNode

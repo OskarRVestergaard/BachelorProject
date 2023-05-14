@@ -17,7 +17,7 @@ The struct methods are NOT thread safe
 */
 type Blocktree struct {
 	treeMap               map[sha256.HashValue]node
-	head                  node //TODO Hide behind mutex or channel
+	head                  node
 	subscriberChannelList chan []chan sha256.HashValue
 	newHeadBlocks         chan Block
 }

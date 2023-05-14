@@ -65,15 +65,6 @@ func (subBlock *SignatureSubBlock) ToByteArray() []byte {
 	return buffer.Bytes()
 }
 
-func (block *Block) GetQuality() (value sha256.HashValue, isGenesis bool) {
-	//TODO Return a proper single block quality
-	//TODO Should return a value between 0 and 1, which datatype to use is undecided
-	if block.IsGenesis {
-		return sha256.HashValue{}, true
-	}
-	return block.HashOfBlock(), false
-}
-
 /*
 HashOfBlock
 
