@@ -1,10 +1,12 @@
 package Models
 
+import "github.com/OskarRVestergaard/BachelorProject/production/sha256"
+
 type Graph struct {
 	// Assumed to be topologically sorted DAG according to index
 	Size  int
 	Edges [][]bool
-	Value [][]byte
+	Value []sha256.HashValue
 }
 
 // GetParents returns the parents of a node, sorted low to high

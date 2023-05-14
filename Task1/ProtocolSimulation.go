@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math"
 	"math/big"
 )
@@ -31,12 +32,12 @@ func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
 	edges[5][6] = true
 	edges[5][7] = true
 
-	resultGraph := &Models.Graph{Size: size, Edges: edges, Value: make([][]byte, size, size)}
+	resultGraph := &Models.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
 
 	return resultGraph
 }
 
-func generateParameters() Models.Parameters {
+func GenerateParameters() Models.Parameters {
 	random, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt))
 	if err != nil {
 		print("ERROR HAPPENED:")
@@ -56,7 +57,7 @@ func generateParameters() Models.Parameters {
 func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
 	prover := Parties.Prover{}
 	verifier := Parties.Verifier{}
-	prm := generateParameters()
+	prm := GenerateParameters()
 
 	//Prover and verifier gets ready for the protocol, the prover generates the hash-values of the graph
 	//and computes a merkle tree commitment on it.

@@ -2,7 +2,7 @@ package Parties
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"strconv"
 )
 
@@ -10,7 +10,7 @@ type Prover struct {
 	parameters   Models.Parameters
 	pebbledGraph *Models.Graph
 	merkleTree   *Models.MerkleTree
-	commitment   []byte
+	commitment   sha256.HashValue
 }
 
 func (P *Prover) pebbleGraph() {
@@ -25,12 +25,12 @@ func (P *Prover) pebbleGraph() {
 		for j := 0; j < size; j++ {
 			jIsParent := P.pebbledGraph.Edges[j][i]
 			if jIsParent {
-				parentHashValue := P.pebbledGraph.Value[j]
+				parentHashValue := P.pebbledGraph.Value[j].ToSlice()
 				toBeHashed = append(toBeHashed, parentHashValue...)
 			}
 		}
 
-		P.pebbledGraph.Value[i] = sha256.HashByteArrayToByteArray(toBeHashed)
+		P.pebbledGraph.Value[i] = sha256.HashByteArray(toBeHashed)
 	}
 }
 
@@ -44,7 +44,7 @@ func (P *Prover) createMerkleTreeFromGraph() {
 	if i != size {
 		panic("Graph must have 2^n number of nodes")
 	}
-	tree := Models.MerkleTree{Nodes: make([][]byte, size*2-1, size*2-1)}
+	tree := Models.MerkleTree{Nodes: make([]sha256.HashValue, size*2-1, size*2-1)}
 	firstLeaf := size - 1
 	//Inserting value for leaves
 	for i := 0; i < size; i++ {
@@ -52,10 +52,10 @@ func (P *Prover) createMerkleTreeFromGraph() {
 	}
 	//Computing parents
 	for i := firstLeaf - 1; i >= 0; i-- {
-		leftChild := tree.Nodes[(i+1)*2-1]
-		rightChild := tree.Nodes[(i+1)*2]
+		leftChild := tree.Nodes[(i+1)*2-1].ToSlice()
+		rightChild := tree.Nodes[(i+1)*2].ToSlice()
 		toBeHashed := append(leftChild, rightChild...)
-		tree.Nodes[i] = sha256.HashByteArrayToByteArray(toBeHashed)
+		tree.Nodes[i] = sha256.HashByteArray(toBeHashed)
 	}
 	P.merkleTree = &tree
 	P.commitment = P.merkleTree.GetRootCommitment()
@@ -67,7 +67,7 @@ func (P *Prover) InitializationPhase1(params Models.Parameters) {
 	P.createMerkleTreeFromGraph()
 }
 
-func (P *Prover) GetCommitment() []byte {
+func (P *Prover) GetCommitment() sha256.HashValue {
 	return P.commitment
 }
 

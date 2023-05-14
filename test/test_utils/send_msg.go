@@ -1,12 +1,13 @@
 package test_utils
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/Peer"
 	models2 "github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy/PowPeer"
 	"math/rand"
 )
 
-func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*Peer.Peer, pkList []string) *models2.Ledger {
+func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []peer_strategy.PeerInterface, pkList []string) *models2.Ledger {
 	noOfNames := len(pkList)
 	controlLedger := new(models2.Ledger)
 	controlLedger.TA = 0
@@ -26,6 +27,6 @@ func SendMsgs(noOfMsgs int, noOfPeers int, listOfPeers []*Peer.Peer, pkList []st
 
 }
 
-func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*Peer.Peer, pkList []string) {
+func FloodTransactionOnNetwork(noOfMsgs int, noOfPeers int, listOfPeers []*PowPeer.PoWPeer, pkList []string) {
 
 }

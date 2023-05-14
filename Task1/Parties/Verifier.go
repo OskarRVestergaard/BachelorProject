@@ -1,17 +1,16 @@
 package Parties
 
 import (
-	"bytes"
 	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math/big"
 	"strconv"
 )
 
 type Verifier struct {
 	parameters       Models.Parameters
-	proverCommitment []byte
+	proverCommitment sha256.HashValue
 }
 
 func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
@@ -20,13 +19,13 @@ func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 	for _, value := range triple.OpenValues {
 		isOdd := position%2 == 1
 		if isOdd {
-			currentHash = sha256.HashByteArrayToByteArray(append(value, currentHash...))
+			currentHash = sha256.HashByteArray(append(value.ToSlice(), currentHash.ToSlice()...))
 		} else {
-			currentHash = sha256.HashByteArrayToByteArray(append(currentHash, value...))
+			currentHash = sha256.HashByteArray(append(currentHash.ToSlice(), value.ToSlice()...))
 		}
 		position = position / 2
 	}
-	return bytes.Equal(currentHash, V.proverCommitment)
+	return currentHash.Equals(V.proverCommitment)
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
@@ -41,7 +40,7 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 		if !V.verifyOpening(p) {
 			return false
 		}
-		parentHashes = append(parentHashes, p.Value...)
+		parentHashes = append(parentHashes, p.Value.ToSlice()...)
 	}
 
 	//Compare to check that the node matches both the original graph and the merkle tree
@@ -50,15 +49,15 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 	toBeHashed := []byte(V.parameters.Id)
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
-	hash := sha256.HashByteArrayToByteArray(toBeHashed)
-	return bytes.Equal(hash, shouldBe)
+	hash := sha256.HashByteArray(toBeHashed)
+	return hash.Equals(shouldBe)
 }
 
 func (V *Verifier) InitializationPhase1(params Models.Parameters) {
 	V.parameters = params
 }
 
-func (V *Verifier) SaveCommitment(commitment []byte) {
+func (V *Verifier) SaveCommitment(commitment sha256.HashValue) {
 	V.proverCommitment = commitment
 }
 

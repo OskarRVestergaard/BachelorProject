@@ -1,7 +1,8 @@
-package blockchain
+package PoWblockchain
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/production/strategies/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/models"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"reflect"
 	"time"
 )
@@ -16,7 +17,7 @@ The struct methods are NOT thread safe
 */
 type Blocktree struct {
 	treeMap               map[sha256.HashValue]node
-	head                  node //TODO Hide behind mutex or channel
+	head                  node
 	subscriberChannelList chan []chan sha256.HashValue
 	newHeadBlocks         chan Block
 }
@@ -61,17 +62,17 @@ GetTransactionsNotInTree
 
 returns the difference between transactions on block and list given
 */
-func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []SignedTransaction) []SignedTransaction {
+func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []models.SignedTransaction) []models.SignedTransaction {
 
 	head := tree.GetHead()
 	transactionsInChain := tree.getTransactionsInChain(head)
-	difference := getTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
+	difference := models.GetTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
 
 	return difference
 }
 
-func (tree *Blocktree) getTransactionsInChain(block Block) []SignedTransaction {
-	transactionsAccumulator := make([]SignedTransaction, 0)
+func (tree *Blocktree) getTransactionsInChain(block Block) []models.SignedTransaction {
+	transactionsAccumulator := make([]models.SignedTransaction, 0)
 	i := 0
 	for !block.IsGenesis {
 		transactionsAccumulator = append(transactionsAccumulator, block.BlockData.Transactions...)

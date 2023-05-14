@@ -1,17 +1,12 @@
 package sha256
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"log"
 )
 
 type HashValue [32]byte
-
-func HashByteArrayToByteArray(toBeHashed []byte) []byte {
-	h := sha256.New()
-	h.Write(toBeHashed)
-	return h.Sum(nil)
-}
 
 func HashByteArray(toBeHashed []byte) HashValue {
 	h := sha256.New()
@@ -20,11 +15,11 @@ func HashByteArray(toBeHashed []byte) HashValue {
 	return sliceToHash(h.Sum(nil))
 }
 
-func ToString(hash HashValue) string {
+func (hash HashValue) ToString() string {
 	return string(hash[:])
 }
 
-func ToSlice(hash HashValue) []byte {
+func (hash HashValue) ToSlice() []byte {
 	slice := hash[:]
 	return slice
 }
@@ -37,4 +32,8 @@ func sliceToHash(bytes []byte) HashValue {
 	}()
 	s4 := (*HashValue)(bytes)
 	return *s4
+}
+
+func (hash HashValue) Equals(comparisonHash HashValue) bool {
+	return bytes.Equal(hash.ToSlice(), comparisonHash.ToSlice())
 }
