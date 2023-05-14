@@ -4,6 +4,7 @@ type node struct {
 	block              Block
 	length             int
 	singleBlockQuality float64
+	chainQuality       float64
 }
 
 /*

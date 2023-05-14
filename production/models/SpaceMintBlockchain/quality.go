@@ -51,6 +51,10 @@ func CalculateQuality(block Block) (quality float64) {
 	if qualityResult < 0 || qualityResult > 1 {
 		panic("Problem during quality calculation")
 	}
-	print(qualityResult)
 	return qualityResult
+}
+
+func CalculateChainQuality(singleBlockQualitiesFromHeadToGenesis []float64) (chainQuality float64) {
+	//TODO Implement, current just fake it code
+	return singleBlockQualitiesFromHeadToGenesis[0]
 }

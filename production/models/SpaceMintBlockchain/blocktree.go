@@ -38,10 +38,12 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 		return Blocktree{}, false
 	}
 	var treeMap = map[sha256.HashValue]node{}
+	var blockQuality = CalculateQuality(genesisBlock)
 	var genesisNode = node{
 		block:              genesisBlock,
 		length:             0,
-		singleBlockQuality: CalculateQuality(genesisBlock),
+		singleBlockQuality: blockQuality,
+		chainQuality:       CalculateChainQuality([]float64{blockQuality}),
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
 	treeMap[genesisHash] = genesisNode
@@ -99,11 +101,15 @@ HashToBlock
 returns the Block that hashes to the parameter
 */
 func (tree *Blocktree) HashToBlock(hash sha256.HashValue) Block {
+	return tree.hashToNode(hash).block
+}
+
+func (tree *Blocktree) hashToNode(hash sha256.HashValue) node {
 	result, foundKey := tree.treeMap[hash]
 	if !foundKey {
 		panic("Hash given to tree is not in tree!")
 	}
-	return result.block
+	return result
 }
 
 /*
@@ -148,9 +154,13 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Create and add the new block
+	var blockQuality = CalculateQuality(block)
+	var chainQualities = append([]float64{blockQuality}, tree.collectBlockQualitiesForHead()...)
 	var newNode = node{
-		block:  block,
-		length: parentNode.length + 1,
+		block:              block,
+		length:             parentNode.length + 1,
+		singleBlockQuality: CalculateQuality(block),
+		chainQuality:       CalculateChainQuality(chainQualities),
 	}
 	tree.treeMap[newBlockHash] = newNode
 
@@ -235,4 +245,22 @@ func (tree *Blocktree) getChallengesForExtendingOnBlockWithHash(parentHash sha25
 	challengesSetP := []int{0, 1}
 	challengesSetV := []int{0, 1, 2}
 	return challengesSetP, challengesSetV
+}
+
+func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToGenesis []float64) {
+	headNode := tree.head
+	qualityAccumulator := make([]float64, headNode.length)
+	currentNode := headNode
+
+	i := 0
+	for !currentNode.block.IsGenesis {
+		qualityAccumulator = append(qualityAccumulator, currentNode.singleBlockQuality)
+		nextHash := currentNode.block.ParentHash
+		currentNode = tree.hashToNode(nextHash)
+		i++
+		if i > 10000000 {
+			panic("There is probably a cycle in what was supposed to be a tree")
+		}
+	}
+	return qualityAccumulator
 }
