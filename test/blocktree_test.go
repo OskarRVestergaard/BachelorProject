@@ -1,6 +1,7 @@
 package test
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 
@@ -139,5 +140,17 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 			assert.True(t, test)
 		}
 	}
+	assert.True(t, true)
+}
+
+func TestRandom(t *testing.T) {
+	rnd := rand.New(rand.NewSource(3))
+	rnd2 := rand.New(rand.NewSource(3))
+	println(rnd.Int())
+	println(rnd2.Int())
+	println(rnd.Int())
+	println(rnd2.Int())
+	println(rnd.Int())
+	println(rnd2.Int())
 	assert.True(t, true)
 }

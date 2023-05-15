@@ -103,5 +103,6 @@ func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTripl
 	for i, _ := range indicesSet {
 		result = append(result, P.GetOpeningTriple(i))
 	}
+	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
 	return result
 }

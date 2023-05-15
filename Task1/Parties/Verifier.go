@@ -84,6 +84,7 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTr
 		tripleMap[triple.Index] = triple
 	}
 	//Verify for each challenge that enough data was provided and that the data is correct.
+	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
 	for _, challenge := range challenges {
 		challengeTriple, exists := tripleMap[challenge]
 		if !exists {

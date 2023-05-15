@@ -1,9 +1,11 @@
 package SpaceMintBlockchain
 
 import (
+	"encoding/binary"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
+	"math/rand"
 	"reflect"
 	"time"
 )
@@ -280,13 +282,26 @@ func (tree *Blocktree) GetChallengesForExtendingOnHead(n int) (ProofChallengeSet
 }
 
 func (tree *Blocktree) getChallengesForExtendingOnBlockWithHash(parentHash sha256.HashValue, n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
-	//Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6
-	//Todo change from fake challenges
-	//Also for efficiency, it would be better to split the finding random strings and getting the actual challenges
-	//depending on n, into two parts, but this is only really important if multiple miners are active in the same tree,
-	//which the code does not allow for anyways
-	challengesSetP := []int{0, 1}
-	challengesSetV := []int{0, 1, 2}
+	//TODO Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6 Here we just use the parent block
+	challengesSamplingBlock := tree.HashToBlock(parentHash)
+	//We only sample from the proof chain to avoid some cases of challenge grinding
+	hashSubBlockHash := sha256.HashByteArray(challengesSamplingBlock.HashSubBlock.ToByteArray())
+	HashAsInt := int64(binary.LittleEndian.Uint64(hashSubBlockHash.ToSlice()))
+	rnd := rand.New(rand.NewSource(HashAsInt)) // Math.rand is good for our case, since we want something deterministic given the seed and n
+
+	challengeAmountA := n / 8 //TODO Discuss what this should be
+	challengeAmountB := n / 4 //TODO Same as above
+
+	challengesSetP := make([]int, challengeAmountA)
+	challengesSetV := make([]int, challengeAmountB)
+	for i := 0; i < challengeAmountA; i++ {
+		challengeNumber := rnd.Int() % n
+		challengesSetP[i] = challengeNumber
+	}
+	for i := 0; i < challengeAmountB; i++ {
+		challengeNumber := rnd.Int() % n
+		challengesSetV[i] = challengeNumber
+	}
 	return challengesSetP, challengesSetV
 }
 
