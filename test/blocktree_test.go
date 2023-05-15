@@ -72,9 +72,9 @@ func TestPOWNetwork16Peers(t *testing.T) {
 }
 
 func TestPoSpaceNetwork2Peers(t *testing.T) {
-	noOfPeers := 2
-	noOfMsgs := 2
-	noOfNames := 2
+	noOfPeers := 4
+	noOfMsgs := 4
+	noOfNames := 4
 	sizeOfProofsN := 8
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
 	for _, peer := range listOfPeers {

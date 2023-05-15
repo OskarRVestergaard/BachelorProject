@@ -17,7 +17,7 @@ Use the NewBlockTree method for creating a block tree!
 The struct methods are NOT thread safe (except for the handling of subscribers)
 */
 type Blocktree struct {
-	nodeContainer chan map[sha256.HashValue]node
+	nodeContainer map[sha256.HashValue]node
 	head          node
 	subscribers   chan []subscriber
 	newHeadBlocks chan Block
@@ -37,9 +37,6 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
 		return Blocktree{}, false
 	}
-	var treeMapContainer = make(chan map[sha256.HashValue]node, 1)
-	treeMapContainer <- map[sha256.HashValue]node{}
-	treeMap := <-treeMapContainer
 	var blockQuality = CalculateQuality(genesisBlock)
 	var genesisNode = node{
 		block:              genesisBlock,
@@ -48,14 +45,14 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 		chainQuality:       CalculateChainQuality([]float64{blockQuality}),
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
-	treeMap[genesisHash] = genesisNode
+	treeMapContainer := map[sha256.HashValue]node{}
+	treeMapContainer[genesisHash] = genesisNode
 	newHeadBlocks := make(chan Block, 20)
 	tree := Blocktree{
 		nodeContainer: treeMapContainer,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
 	}
-	treeMapContainer <- treeMap
 	tree.startSubscriptionHandler()
 	return tree, true
 }
@@ -127,7 +124,7 @@ func (tree *Blocktree) getTransactionsInChain(block Block) []SpacemintTransactio
 	for !block.IsGenesis {
 		transactionsAccumulator = append(transactionsAccumulator, block.TransactionSubBlock.Transactions)
 		nextHash := block.ParentHash
-		block = tree.HashToBlock(nextHash)
+		block = tree.hashToNode(nextHash, tree.nodeContainer).block
 		i++
 		if i > 10000000 {
 			panic("There is probably a cycle in what was supposed to be a tree")
@@ -142,16 +139,15 @@ HashToBlock
 returns the Block that hashes to the parameter
 */
 func (tree *Blocktree) HashToBlock(hash sha256.HashValue) Block {
-	return tree.hashToNode(hash).block
+	block := tree.hashToNode(hash, tree.nodeContainer).block
+	return block
 }
 
-func (tree *Blocktree) hashToNode(hash sha256.HashValue) node {
-	treeMap := <-tree.nodeContainer
+func (tree *Blocktree) hashToNode(hash sha256.HashValue, treeMap map[sha256.HashValue]node) node {
 	result, foundKey := treeMap[hash]
 	if !foundKey {
 		panic("Hash given to tree is not in tree!")
 	}
-	tree.nodeContainer <- treeMap
 	return result
 }
 
@@ -175,18 +171,16 @@ func (tree *Blocktree) AddBlock(block Block) int {
 		return -2
 	}
 
-	treeMap := <-tree.nodeContainer
-
 	//Check that this block is not already in the tree
 	var newBlockHash = block.HashOfBlock()
-	var _, isAlreadyInTree = treeMap[newBlockHash]
+	var _, isAlreadyInTree = tree.nodeContainer[newBlockHash]
 	if isAlreadyInTree {
 		return -1
 	}
 
 	//Find parent
 	var parentHash = block.ParentHash
-	var parentNode, parentIsInTree = treeMap[parentHash]
+	var parentNode, parentIsInTree = tree.nodeContainer[parentHash]
 	if !parentIsInTree {
 		return 0
 	}
@@ -198,7 +192,6 @@ func (tree *Blocktree) AddBlock(block Block) int {
 		return -3
 	}
 
-	tree.nodeContainer <- treeMap
 	//Create and add the new block
 	var blockQuality = CalculateQuality(block)
 	var chainQualities = append([]float64{blockQuality}, tree.collectBlockQualitiesForHead()...)
@@ -208,15 +201,16 @@ func (tree *Blocktree) AddBlock(block Block) int {
 		singleBlockQuality: CalculateQuality(block),
 		chainQuality:       CalculateChainQuality(chainQualities),
 	}
-	treeMap = <-tree.nodeContainer
-	treeMap[newBlockHash] = newNode
-	tree.nodeContainer <- treeMap
+	//Don't add node while subscribers are being notified
+	subscribers := <-tree.subscribers
+	tree.nodeContainer[newBlockHash] = newNode
 	//Check if the longest chain has changed
 	var newNodeGreater = newNode.hasGreaterPathWeightThan(tree.head) //TODO needs to not only use quality of single blocks, but compare the whole chain quality
 	if newNodeGreater == 1 {
 		tree.head = newNode
 		tree.newHeadBlocks <- newNode.block
 	}
+	tree.subscribers <- subscribers
 	return 1
 }
 
@@ -228,7 +222,7 @@ func (tree *Blocktree) startSubscriptionHandler() {
 }
 
 func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n int) PoSpace.MiningLocation {
-	newBlock := tree.HashToBlock(hashOfBlockToMineOn)
+	newBlock := tree.hashToNode(hashOfBlockToMineOn, tree.nodeContainer).block
 	challengeSetP, challengesSetV := tree.getChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
 	newLocation := PoSpace.MiningLocation{
 		Slot:          newBlock.TransactionSubBlock.Slot + 1,
@@ -271,15 +265,11 @@ func (tree *Blocktree) SubScribeToGetHead(n int) (newHeadMiningLocations chan Po
 
 func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
 	//Is not thread safe, since the tree could change during operation
-	treeMap1 := <-tree.nodeContainer
-	treeMap2 := <-comparisonTree.nodeContainer
+	treeMap1 := tree.nodeContainer
+	treeMap2 := comparisonTree.nodeContainer
 	if !reflect.DeepEqual(treeMap1, treeMap2) {
-		tree.nodeContainer <- treeMap1
-		comparisonTree.nodeContainer <- treeMap2
 		return false
 	}
-	tree.nodeContainer <- treeMap1
-	comparisonTree.nodeContainer <- treeMap2
 	return reflect.DeepEqual(tree.head.block, comparisonTree.head.block)
 }
 
@@ -309,7 +299,7 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 	for !currentNode.block.IsGenesis {
 		qualityAccumulator = append(qualityAccumulator, currentNode.singleBlockQuality)
 		nextHash := currentNode.block.ParentHash
-		currentNode = tree.hashToNode(nextHash)
+		currentNode = tree.hashToNode(nextHash, tree.nodeContainer)
 		i++
 		if i > 10000000 {
 			panic("There is probably a cycle in what was supposed to be a tree")
