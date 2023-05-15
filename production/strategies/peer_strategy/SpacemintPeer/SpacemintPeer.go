@@ -112,8 +112,8 @@ func (p *PoSpacePeer) floodSpaceCommit(commitment sha256.HashValue, n int, pk st
 	}
 	ipPort := p.network.GetAddress().ToString()
 	msg := Message.Message{MessageType: constants.SpaceCommitTransaction, MessageSender: ipPort, SpaceCommitment: spaceTransaction}
-	p.addSpaceCommit(spaceTransaction)
-	p.network.FloodMessageToAllKnown(msg)
+	p.addSpaceCommit(Message.MakeDeepCopyOfSpaceCommit(spaceTransaction))
+	p.network.FloodMessageToAllKnown(Message.MakeDeepCopyOfMessage(msg))
 }
 
 func (p *PoSpacePeer) FloodSignedTransaction(from string, to string, amount int) {

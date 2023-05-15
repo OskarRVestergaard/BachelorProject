@@ -104,7 +104,7 @@ func deepCopyHashSubBlock(subBlock SpaceMintBlockchain.HashSubBlock) SpaceMintBl
 	return deepCopyOfHashSubBlock
 }
 
-func deepCopySpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) SpaceMintBlockchain.SpaceCommitment {
+func MakeDeepCopyOfSpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) SpaceMintBlockchain.SpaceCommitment {
 	copyOfSpaceCommitment := SpaceMintBlockchain.SpaceCommitment{
 		Id:         spaceCommitment.Id,
 		N:          spaceCommitment.N,
@@ -117,7 +117,7 @@ func deepCopySpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) Sp
 func deepCopySpaceCommitments(spaceCommitments []SpaceMintBlockchain.SpaceCommitment) []SpaceMintBlockchain.SpaceCommitment {
 	spaceCommitmentsCopy := make([]SpaceMintBlockchain.SpaceCommitment, len(spaceCommitments))
 	for i, spaceCommit := range spaceCommitments {
-		spaceCommitmentsCopy[i] = deepCopySpaceCommit(spaceCommit)
+		spaceCommitmentsCopy[i] = MakeDeepCopyOfSpaceCommit(spaceCommit)
 	}
 	return spaceCommitmentsCopy
 }
@@ -187,6 +187,7 @@ func MakeDeepCopyOfMessage(msg Message) (copyOfMessage Message) {
 		MessageType:       msg.MessageType,
 		MessageSender:     msg.MessageSender,
 		SignedTransaction: MakeDeepCopyOfPayment(msg.SignedTransaction),
+		SpaceCommitment:   MakeDeepCopyOfSpaceCommit(msg.SpaceCommitment),
 		PoWMessageBlocks:  blocksCopy,
 		SpaceMintBlocks:   PoSBlocksCopy,
 		PeerMap:           peersCopy,
