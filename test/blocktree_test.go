@@ -1,12 +1,13 @@
 package test
 
 import (
+	"testing"
+	"time"
+
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestPOWNetwork2Peers(t *testing.T) {
