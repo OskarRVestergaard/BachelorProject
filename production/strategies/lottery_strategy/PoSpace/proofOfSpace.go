@@ -110,7 +110,7 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 	proofOfSpaceExecution := prover.AnswerChallenges(miningLocation.ChallengeSetP, false)
 
 	//TODO Add true quality function
-	qualityIsGoodEnough := 0.95 < rand.Float64() //TODO, THIS IS FAKE CODE TO TEST ONLY SENDING "GOOD QUALITY"
+	qualityIsGoodEnough := 0.99 < rand.Float64() //TODO, THIS IS FAKE CODE TO TEST ONLY SENDING "GOOD QUALITY"
 	if qualityIsGoodEnough {
 		proofOfCorrectCommitment := prover.AnswerChallenges(miningLocation.ChallengeSetV, true)
 		draw := LotteryDraw{
