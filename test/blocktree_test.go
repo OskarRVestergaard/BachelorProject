@@ -73,9 +73,9 @@ func TestPOWNetwork16Peers(t *testing.T) {
 }
 
 func TestPoSpaceNetwork16Peers(t *testing.T) {
-	noOfPeers := 2
+	noOfPeers := 16
 	noOfMsgs := 2
-	noOfNames := 2
+	noOfNames := 16
 	sizeOfProofsN := 8
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
 	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)            //send msg

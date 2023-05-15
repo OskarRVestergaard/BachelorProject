@@ -32,9 +32,11 @@ func CalculateQuality(block Block) (quality float64) {
 	normalizedHash := &big.Float{}
 	normalizedHash = normalizedHash.Quo(hashValueFloat, maxHashValueSizeFloat)
 
+	//TODO REMOVE
+	var n int64
+	n = 8
+
 	//Exponent fraction
-	//TODO Should have access to N, which can only be done after space commit transactions have been implemented fully, here we just assume n = 8 BUT should be changed!
-	n := int64(8)
 	numerator := &big.Float{}
 	numerator = numerator.SetInt(big.NewInt(1))
 	denominator := &big.Float{}
@@ -44,7 +46,6 @@ func CalculateQuality(block Block) (quality float64) {
 	exponent = exponent.Quo(numerator, denominator)
 
 	//Final quality
-	//TODO Figure out how to do power operation with big floats
 	finalQuality := pow(normalizedHash, exponent, big.NewFloat(.0000000000000000000000000000001))
 
 	//Conversion to float64
