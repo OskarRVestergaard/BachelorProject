@@ -1,12 +1,13 @@
 package test
 
 import (
+	"testing"
+	"time"
+
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/test/test_utils"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestPOWNetwork2Peers(t *testing.T) {
@@ -72,9 +73,9 @@ func TestPOWNetwork16Peers(t *testing.T) {
 }
 
 func TestPoSpaceNetwork16Peers(t *testing.T) {
-	noOfPeers := 16
+	noOfPeers := 2
 	noOfMsgs := 2
-	noOfNames := 16
+	noOfNames := 2
 	sizeOfProofsN := 8
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
 	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)            //send msg

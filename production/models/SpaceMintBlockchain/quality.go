@@ -44,10 +44,11 @@ func CalculateQuality(block Block) (quality float64) {
 	exponent = exponent.Quo(numerator, denominator)
 
 	//Final quality
-	//TODO Figure out how to do power opeartion with big floats
+	//TODO Figure out how to do power operation with big floats
+	finalQuality := pow(normalizedHash, exponent, big.NewFloat(.0000000000000000000000000000001))
 
 	//Conversion to float64
-	qualityResult, _ := normalizedHash.Float64() //Todo should be final quality instead ofc
+	qualityResult, _ := finalQuality.Float64()
 	if qualityResult < 0 || qualityResult > 1 {
 		panic("Problem during quality calculation")
 	}
@@ -57,4 +58,24 @@ func CalculateQuality(block Block) (quality float64) {
 func CalculateChainQuality(singleBlockQualitiesFromHeadToGenesis []float64) (chainQuality float64) {
 	//TODO Implement, current just fake it code
 	return singleBlockQualitiesFromHeadToGenesis[0]
+}
+
+func mySqr(a *big.Float) *big.Float {
+	return big.NewFloat(0).Mul(a, a)
+}
+
+func pow(a *big.Float, b *big.Float, precision *big.Float) *big.Float {
+	if b.Cmp(big.NewFloat(0)) == -1 {
+		return big.NewFloat(1).Quo(big.NewFloat(1), pow(a, big.NewFloat(0).Neg(b), precision))
+	}
+	if b.Cmp(big.NewFloat(10)) != -1 {
+		return mySqr(pow(a, big.NewFloat(0).Quo(b, big.NewFloat(2)), big.NewFloat(0).Quo(precision, big.NewFloat(2))))
+	}
+	if b.Cmp(big.NewFloat(1)) != -1 {
+		return big.NewFloat(0).Mul(a, pow(a, big.NewFloat(0).Sub(b, big.NewFloat(1)), precision))
+	}
+	if precision.Cmp(big.NewFloat(1)) != -1 {
+		return big.NewFloat(0).Sqrt(a)
+	}
+	return big.NewFloat(0).Sqrt(pow(a, big.NewFloat(0).Mul(b, big.NewFloat(2)), big.NewFloat(0).Mul(precision, big.NewFloat(2))))
 }
