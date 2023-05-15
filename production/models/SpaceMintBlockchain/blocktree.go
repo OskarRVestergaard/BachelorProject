@@ -71,20 +71,58 @@ GetTransactionsNotInTree
 
 returns the difference between transactions on block and list given
 */
-func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []models.SignedTransaction) []models.SignedTransaction {
+func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions SpacemintTransactions) SpacemintTransactions {
 
 	head := tree.GetHead()
 	transactionsInChain := tree.getTransactionsInChain(head)
-	difference := models.GetTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
+	transactionDifferences := getTransactionsNotInBlockChain(unhandledTransactions, transactionsInChain)
 
+	return transactionDifferences
+}
+
+func getSpaceCommitsInList1ButNotList2(list1 []SpaceCommitment, list2 []SpaceCommitment) []SpaceCommitment {
+	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+	var difference []SpaceCommitment
+	found := false
+	for _, val1 := range list1 {
+		found = false
+		for _, val2 := range list2 {
+			if val1.Id == val2.Id {
+				found = true
+			}
+		}
+		if !found {
+			difference = append(difference, val1)
+		}
+	}
 	return difference
 }
 
-func (tree *Blocktree) getTransactionsInChain(block Block) []models.SignedTransaction {
-	transactionsAccumulator := make([]models.SignedTransaction, 0)
+func getTransactionsNotInBlockChain(blockTransactions SpacemintTransactions, blockchainTransactions []SpacemintTransactions) SpacemintTransactions {
+	var paymentAccumulator []models.SignedPaymentTransaction
+	var spaceAccumulator []SpaceCommitment
+	//var penaltyAccumulator []Penalty
+	for _, currentBlockTransactions := range blockchainTransactions {
+		paymentAccumulator = append(paymentAccumulator, currentBlockTransactions.Payments...)
+		spaceAccumulator = append(spaceAccumulator, currentBlockTransactions.SpaceCommitments...)
+		//penaltyAccumulator = append(penaltyAccumulator, currentBlockTransactions.Penalties...)
+	}
+	finalPayments := models.GetTransactionsInList1ButNotList2(blockTransactions.Payments, paymentAccumulator)
+	finalSpaceCommits := getSpaceCommitsInList1ButNotList2(blockTransactions.SpaceCommitments, spaceAccumulator)
+	//FinalPenalties...
+	result := SpacemintTransactions{
+		Payments:         finalPayments,
+		SpaceCommitments: finalSpaceCommits,
+		Penalties:        []Penalty{},
+	}
+	return result
+}
+
+func (tree *Blocktree) getTransactionsInChain(block Block) []SpacemintTransactions {
+	transactionsAccumulator := make([]SpacemintTransactions, 0)
 	i := 0
 	for !block.IsGenesis {
-		transactionsAccumulator = append(transactionsAccumulator, block.TransactionSubBlock.Transactions.Payments...)
+		transactionsAccumulator = append(transactionsAccumulator, block.TransactionSubBlock.Transactions)
 		nextHash := block.ParentHash
 		block = tree.HashToBlock(nextHash)
 		i++

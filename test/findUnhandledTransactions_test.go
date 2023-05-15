@@ -11,12 +11,12 @@ import (
 )
 
 func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
-	var Unhandled []models.SignedTransaction
+	var Unhandled []models.SignedPaymentTransaction
 
 	var blockTree, blockTreeCreationWentWell = PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock())
 	assert.True(t, blockTreeCreationWentWell)
 	for i := 0; i < 100; i++ {
-		var b = models.SignedTransaction{
+		var b = models.SignedPaymentTransaction{
 			Id:        uuid.New(),
 			From:      "",  //not relevant for test
 			To:        "",  //not relevant for test
@@ -26,7 +26,7 @@ func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 		Unhandled = append(Unhandled, b)
 		parent := blockTree.GetHead()
 		if i%3 == 0 {
-			var trans []models.SignedTransaction
+			var trans []models.SignedPaymentTransaction
 			trans = append(trans, b)
 			blockTree.AddBlock(PoWblockchain.Block{
 				IsGenesis: false,

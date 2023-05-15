@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/gob"
 	"github.com/OskarRVestergaard/BachelorProject/production/Message"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"io"
 	"net"
 )
@@ -69,7 +70,7 @@ func (network *Network) SendMessageTo(message Message.Message, address Address) 
 		network.encoders <- encoders
 	}
 	msg := outgoingMessage{
-		message:     message,
+		message:     Message.MakeDeepCopyOfMessage(message),
 		destination: address,
 	}
 	network.outgoingMessages <- msg
@@ -77,10 +78,13 @@ func (network *Network) SendMessageTo(message Message.Message, address Address) 
 }
 
 func (network *Network) FloodMessageToAllKnown(message Message.Message) {
+	if message.MessageType == constants.BlockDelivery {
+		print("test")
+	}
 	encoders := <-network.encoders
 	for address, _ := range encoders {
 		msg := outgoingMessage{
-			message:     message,
+			message:     Message.MakeDeepCopyOfMessage(message),
 			destination: address,
 		}
 		network.outgoingMessages <- msg

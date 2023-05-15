@@ -8,7 +8,7 @@ import (
 )
 
 type SpacemintTransactions struct {
-	Payments         []models.SignedTransaction
+	Payments         []models.SignedPaymentTransaction
 	SpaceCommitments []SpaceCommitment
 	Penalties        []Penalty
 }

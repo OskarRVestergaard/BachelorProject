@@ -25,7 +25,7 @@ type PoWPeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            lottery_strategy.LotteryInterface //TODO Change to just use proof of work, and remove strategy, also proof of work should also send slot number along
 	publicToSecret             chan map[string]string
-	unfinalizedTransactions    chan []models.SignedTransaction
+	unfinalizedTransactions    chan []models.SignedPaymentTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
 	unhandledBlocks            chan PoWblockchain.Block
 	unhandledMessages          chan Message.Message
@@ -50,8 +50,8 @@ func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 
 	p.stopMiningSignal = make(chan struct{})
 
-	p.unfinalizedTransactions = make(chan []models.SignedTransaction, 1)
-	p.unfinalizedTransactions <- make([]models.SignedTransaction, 0, 100)
+	p.unfinalizedTransactions = make(chan []models.SignedPaymentTransaction, 1)
+	p.unfinalizedTransactions <- make([]models.SignedPaymentTransaction, 0, 100)
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan PoWblockchain.Blocktree, 1)
@@ -61,7 +61,7 @@ func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 	}
 	p.unhandledBlocks = make(chan PoWblockchain.Block, 20)
 	p.hardness = newBlockTree.GetHead().BlockData.Hardness
-	p.maximumTransactionsInBlock = constants.BlockSize
+	p.maximumTransactionsInBlock = constants.BlockPaymentAmountLimit
 	p.unhandledMessages = make(chan Message.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
@@ -100,7 +100,7 @@ func (p *PoWPeer) FloodSignedTransaction(from string, to string, amount int) {
 	if !foundSecretKey {
 		return
 	}
-	trans := models.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	trans := models.SignedPaymentTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
 	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
 	msg := Message.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
@@ -121,7 +121,7 @@ func (p *PoWPeer) handleMessage(msg Message.Message) {
 	switch msgType {
 	case constants.SignedTransaction:
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			p.addTransaction(Message.MakeDeepCopyOfTransaction(msg.SignedTransaction))
+			p.addTransaction(Message.MakeDeepCopyOfPayment(msg.SignedTransaction))
 		}
 	case constants.JoinMessage:
 
@@ -198,12 +198,12 @@ func (p *PoWPeer) createBlock(verificationKey string, slot int, draw lottery_str
 	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 
-	var transactionsToAdd []models.SignedTransaction
+	var transactionsToAdd []models.SignedPaymentTransaction
 	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
 		transactionsToAdd = allTransactionsToAdd
 	}
 	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
-		transactionsToAdd = make([]models.SignedTransaction, p.maximumTransactionsInBlock)
+		transactionsToAdd = make([]models.SignedPaymentTransaction, p.maximumTransactionsInBlock)
 		for i := 0; i < p.maximumTransactionsInBlock; i++ {
 			transactionsToAdd[i] = allTransactionsToAdd[i]
 			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
@@ -285,7 +285,7 @@ func (p *PoWPeer) verifyBlock(block PoWblockchain.Block) bool {
 	return true
 }
 
-func (p *PoWPeer) verifyTransactions(transactions []models.SignedTransaction) bool {
+func (p *PoWPeer) verifyTransactions(transactions []models.SignedPaymentTransaction) bool {
 	for _, transaction := range transactions {
 		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !transactionSignatureIsCorrect {
@@ -329,7 +329,7 @@ func (p *PoWPeer) handleBlock(block PoWblockchain.Block) {
 	}
 }
 
-func (p *PoWPeer) addTransaction(t models.SignedTransaction) {
+func (p *PoWPeer) addTransaction(t models.SignedPaymentTransaction) {
 	unfinalizedTransactions := <-p.unfinalizedTransactions
 	unfinalizedTransactions = append(unfinalizedTransactions, t)
 	p.unfinalizedTransactions <- unfinalizedTransactions

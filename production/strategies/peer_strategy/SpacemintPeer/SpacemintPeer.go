@@ -8,6 +8,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -26,11 +27,13 @@ type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            *PoSpace.PoSpace
 	publicToSecret             chan map[string]string
-	unfinalizedTransactions    chan []models.SignedTransaction
+	unfinalizedTransactions    chan SpaceMintBlockchain.SpacemintTransactions
 	blockTreeChan              chan SpaceMintBlockchain.Blocktree
 	unhandledBlocks            chan SpaceMintBlockchain.Block
 	unhandledMessages          chan Message.Message
-	maximumTransactionsInBlock int
+	maximumPaymentsInBlock     int
+	maximumSpaceCommitsInBlock int
+	maximumPenaltiesInBlock    int
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
@@ -50,8 +53,12 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 
 	p.stopMiningSignal = make(chan struct{})
 
-	p.unfinalizedTransactions = make(chan []models.SignedTransaction, 1)
-	p.unfinalizedTransactions <- make([]models.SignedTransaction, 0, 100)
+	p.unfinalizedTransactions = make(chan SpaceMintBlockchain.SpacemintTransactions, 1)
+	p.unfinalizedTransactions <- SpaceMintBlockchain.SpacemintTransactions{
+		Payments:         []models.SignedPaymentTransaction{},
+		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{},
+		Penalties:        []SpaceMintBlockchain.Penalty{},
+	}
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan SpaceMintBlockchain.Blocktree, 1)
@@ -60,7 +67,9 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 		panic("Could not generate new blocktree")
 	}
 	p.unhandledBlocks = make(chan SpaceMintBlockchain.Block, 20)
-	p.maximumTransactionsInBlock = constants.BlockSize
+	p.maximumPaymentsInBlock = constants.BlockPaymentAmountLimit
+	p.maximumSpaceCommitsInBlock = constants.BlockSpaceCommitAmountLimit
+	p.maximumPenaltiesInBlock = constants.BlockPenaltyAmountLimit
 	p.unhandledMessages = make(chan Message.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
@@ -94,34 +103,48 @@ func (p *PoSpacePeer) Connect(ip string, port int) {
 	}
 }
 
+func (p *PoSpacePeer) floodSpaceCommit(commitment sha256.HashValue, n int, pk string) {
+	spaceTransaction := SpaceMintBlockchain.SpaceCommitment{
+		Id:         uuid.New(),
+		N:          n,
+		PublicKey:  pk,
+		Commitment: commitment,
+	}
+	ipPort := p.network.GetAddress().ToString()
+	msg := Message.Message{MessageType: constants.SpaceCommitTransaction, MessageSender: ipPort, SpaceCommitment: spaceTransaction}
+	p.addSpaceCommit(spaceTransaction)
+	p.network.FloodMessageToAllKnown(msg)
+}
+
 func (p *PoSpacePeer) FloodSignedTransaction(from string, to string, amount int) {
 	secretSigningKey, foundSecretKey := p.getSecretKey(from)
 	if !foundSecretKey {
 		return
 	}
-	trans := models.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
-	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
+	payment := models.SignedPaymentTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	payment.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
-	msg := Message.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
-	p.addTransaction(trans)
+	msg := Message.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: payment}
+	p.addPayment(payment)
 	p.network.FloodMessageToAllKnown(msg)
 }
 
 func (p *PoSpacePeer) messageHandlerLoop(incomingMessages chan Message.Message) {
 	for {
 		msg := <-incomingMessages
-		p.handleMessage(msg)
+		p.handleMessage(Message.MakeDeepCopyOfMessage(msg))
 	}
 }
 
 func (p *PoSpacePeer) handleMessage(msg Message.Message) {
 	msgType := (msg).MessageType
-
 	switch msgType {
 	case constants.SignedTransaction:
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			p.addTransaction(Message.MakeDeepCopyOfTransaction(msg.SignedTransaction))
+			p.addPayment(msg.SignedTransaction)
 		}
+	case constants.SpaceCommitTransaction:
+		p.addSpaceCommit(msg.SpaceCommitment)
 	case constants.JoinMessage:
 
 	case constants.BlockDelivery:
@@ -148,8 +171,12 @@ func (p *PoSpacePeer) getSecretKey(pk string) (secretKey string, isKnownKey bool
 	return secretSigningKey, true
 }
 
+/*
+GetBlockTree
+
+For testing only, it is NOT thread safe, but is called after the blocktree does not change anymore, it can still be useful for testing
+*/
 func (p *PoSpacePeer) GetBlockTree() interface{} {
-	//TODO Not at all thread safe to use it this way, fine if used for reading during testing
 	blocktree := <-p.blockTreeChan
 	p.blockTreeChan <- blocktree
 	return blocktree
@@ -193,7 +220,8 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	winningDraws := make(chan PoSpace.LotteryDraw, 10)
 	poSpaceParameters := Task1.GenerateParameters()
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
-	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
+	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
+	p.floodSpaceCommit(commitment, n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -222,17 +250,16 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 
-	var transactionsToAdd []models.SignedTransaction
-	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
-		transactionsToAdd = allTransactionsToAdd
+	var paymentsToAdd = allTransactionsToAdd.Payments
+	if len(allTransactionsToAdd.Payments) > p.maximumPaymentsInBlock {
+		paymentsToAdd = allTransactionsToAdd.Payments[:p.maximumPaymentsInBlock]
 	}
-	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
-		transactionsToAdd = make([]models.SignedTransaction, p.maximumTransactionsInBlock)
-		for i := 0; i < p.maximumTransactionsInBlock; i++ {
-			transactionsToAdd[i] = allTransactionsToAdd[i]
-			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
-		}
+	var SpaceCommitsToAdd = allTransactionsToAdd.SpaceCommitments
+	if len(allTransactionsToAdd.SpaceCommitments) > p.maximumSpaceCommitsInBlock {
+		SpaceCommitsToAdd = allTransactionsToAdd.SpaceCommitments[:p.maximumSpaceCommitsInBlock]
 	}
+	//Same for penalty
+
 	//
 	resultBlock := SpaceMintBlockchain.Block{
 		IsGenesis:  false,
@@ -245,9 +272,9 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 		TransactionSubBlock: SpaceMintBlockchain.TransactionSubBlock{
 			Slot: slot,
 			Transactions: SpaceMintBlockchain.SpacemintTransactions{
-				Payments:         transactionsToAdd,
-				SpaceCommitments: nil,
-				Penalties:        nil,
+				Payments:         paymentsToAdd,
+				SpaceCommitments: SpaceCommitsToAdd,
+				Penalties:        []SpaceMintBlockchain.Penalty{},
 			},
 		},
 		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{},
@@ -313,7 +340,7 @@ func (p *PoSpacePeer) verifyBlock(block PoWblockchain.Block) bool {
 	return true
 }
 
-func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedTransaction) bool {
+func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedPaymentTransaction) bool {
 	for _, transaction := range transactions {
 		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !transactionSignatureIsCorrect {
@@ -357,9 +384,12 @@ func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
 	}
 }
 
-func (p *PoSpacePeer) addTransaction(t models.SignedTransaction) {
+func (p *PoSpacePeer) addTransaction(t SpaceMintBlockchain.SpacemintTransactions) {
 	unfinalizedTransactions := <-p.unfinalizedTransactions
-	unfinalizedTransactions = append(unfinalizedTransactions, t)
+	newTransaction := Message.MakeDeepCopyOfTransaction(t)
+	unfinalizedTransactions.Payments = append(unfinalizedTransactions.Payments, newTransaction.Payments...)
+	unfinalizedTransactions.SpaceCommitments = append(unfinalizedTransactions.SpaceCommitments, newTransaction.SpaceCommitments...)
+	unfinalizedTransactions.Penalties = append(unfinalizedTransactions.Penalties, newTransaction.Penalties...)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
@@ -368,4 +398,22 @@ func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.LotteryDraw) {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)
 	}
+}
+
+func (p *PoSpacePeer) addPayment(payment models.SignedPaymentTransaction) {
+	transactionToAdd := SpaceMintBlockchain.SpacemintTransactions{
+		Payments:         []models.SignedPaymentTransaction{payment},
+		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{},
+		Penalties:        []SpaceMintBlockchain.Penalty{},
+	}
+	p.addTransaction(transactionToAdd)
+}
+
+func (p *PoSpacePeer) addSpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) {
+	transactionToAdd := SpaceMintBlockchain.SpacemintTransactions{
+		Payments:         []models.SignedPaymentTransaction{},
+		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{spaceCommitment},
+		Penalties:        []SpaceMintBlockchain.Penalty{},
+	}
+	p.addTransaction(transactionToAdd)
 }
