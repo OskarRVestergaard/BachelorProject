@@ -77,13 +77,13 @@ func TestPoSpaceNetwork2Peers(t *testing.T) {
 	noOfNames := 2
 	sizeOfProofsN := 8
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)            //send msg
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(sizeOfProofsN)
 		if err != nil {
 			print(err.Error())
 		}
 	}
+	time.Sleep(7000 * time.Millisecond) //Wait such that the peers are aware of who is mining
 	for i := 0; i < 4; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(3000 * time.Millisecond)
@@ -112,13 +112,13 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 	noOfNames := 16
 	sizeOfProofsN := 8
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)            //send msg
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(sizeOfProofsN)
 		if err != nil {
 			print(err.Error())
 		}
 	}
+	time.Sleep(7000 * time.Millisecond) //Wait such that the peers are aware of who is mining
 	for i := 0; i < 4; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(6000 * time.Millisecond)

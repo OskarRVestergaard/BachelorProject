@@ -27,6 +27,7 @@ type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            *PoSpace.PoSpace
 	publicToSecret             chan map[string]string
+	knownCommitments           chan map[string]SpaceMintBlockchain.SpaceCommitment
 	unfinalizedTransactions    chan SpaceMintBlockchain.SpacemintTransactions
 	blockTreeChan              chan SpaceMintBlockchain.Blocktree
 	unhandledBlocks            chan SpaceMintBlockchain.Block
@@ -59,6 +60,8 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{},
 		Penalties:        []SpaceMintBlockchain.Penalty{},
 	}
+	p.knownCommitments = make(chan map[string]SpaceMintBlockchain.SpaceCommitment, 1)
+	p.knownCommitments <- make(map[string]SpaceMintBlockchain.SpaceCommitment)
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan SpaceMintBlockchain.Blocktree, 1)
@@ -410,6 +413,12 @@ func (p *PoSpacePeer) addPayment(payment models.SignedPaymentTransaction) {
 }
 
 func (p *PoSpacePeer) addSpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) {
+	//"unsafe" fix to avoid the miner startup problem, space commits are accepted immediate, instead of just being added to the chain
+	currentlyKnownCommitments := <-p.knownCommitments
+	currentlyKnownCommitments[spaceCommitment.PublicKey] = spaceCommitment
+	p.knownCommitments <- currentlyKnownCommitments
+	//The above should be safe to omit/delete if finalization is made
+
 	transactionToAdd := SpaceMintBlockchain.SpacemintTransactions{
 		Payments:         []models.SignedPaymentTransaction{},
 		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{spaceCommitment},
