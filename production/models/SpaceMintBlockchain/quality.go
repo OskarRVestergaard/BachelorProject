@@ -5,7 +5,7 @@ import (
 	"math/big"
 )
 
-func CalculateQuality(block Block) (quality float64) {
+func CalculateQuality(block Block, n int64) (quality float64) {
 	//Floating point quality might not be optimal, but should be good enough for our purposes
 
 	//All is done under the assumption that a hash has size 32 bytes and there is lots of unneeded allocation
@@ -31,10 +31,6 @@ func CalculateQuality(block Block) (quality float64) {
 	//Normalized hash
 	normalizedHash := &big.Float{}
 	normalizedHash = normalizedHash.Quo(hashValueFloat, maxHashValueSizeFloat)
-
-	//TODO REMOVE
-	var n int64
-	n = 8
 
 	//Exponent fraction
 	numerator := &big.Float{}

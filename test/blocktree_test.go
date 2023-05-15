@@ -72,7 +72,7 @@ func TestPOWNetwork16Peers(t *testing.T) {
 	assert.True(t, true)
 }
 
-func TestPoSpaceNetwork2Peers(t *testing.T) {
+func TestPoSpaceNetwork4Peers(t *testing.T) {
 	noOfPeers := 4
 	noOfMsgs := 4
 	noOfNames := 4

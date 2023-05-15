@@ -359,7 +359,11 @@ func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
 	//	}
 	blocktree := <-p.blockTreeChan
 	block = Message.MakeDeepCopyOfPoSBlock(block)
-	var t = blocktree.AddBlock(block)
+	knownCommitments := <-p.knownCommitments
+	commitmentOfProof := knownCommitments[block.HashSubBlock.Draw.Vk]
+	//TODO Make sure this is correct information that links to the block
+	var t = blocktree.AddBlock(block, int64(commitmentOfProof.N))
+	p.knownCommitments <- knownCommitments
 	switch t {
 	case -3:
 		//Slot number is not greater than parent

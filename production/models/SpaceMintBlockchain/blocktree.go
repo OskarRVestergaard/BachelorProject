@@ -37,7 +37,7 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
 		return Blocktree{}, false
 	}
-	var blockQuality = CalculateQuality(genesisBlock)
+	var blockQuality = CalculateQuality(genesisBlock, 1000)
 	var genesisNode = node{
 		block:              genesisBlock,
 		length:             0,
@@ -164,7 +164,7 @@ returns -2 if block is marked as genesis block
 
 returns -3 if slot number is not greater than parent
 */
-func (tree *Blocktree) AddBlock(block Block) int {
+func (tree *Blocktree) AddBlock(block Block, proofSizeN int64) int {
 
 	//Refuse to add a new genesisBlock
 	if block.IsGenesis {
@@ -193,12 +193,12 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Create and add the new block
-	var blockQuality = CalculateQuality(block)
+	var blockQuality = CalculateQuality(block, proofSizeN)
 	var chainQualities = append([]float64{blockQuality}, tree.collectBlockQualitiesForHead()...)
 	var newNode = node{
 		block:              block,
 		length:             parentNode.length + 1,
-		singleBlockQuality: CalculateQuality(block),
+		singleBlockQuality: blockQuality,
 		chainQuality:       CalculateChainQuality(chainQualities),
 	}
 	//Don't add node while subscribers are being notified
