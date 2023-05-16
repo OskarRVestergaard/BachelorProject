@@ -62,7 +62,7 @@ GetTransactionsNotInTree
 
 returns the difference between transactions on block and list given
 */
-func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []models.SignedTransaction) []models.SignedTransaction {
+func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []models.SignedPaymentTransaction) []models.SignedPaymentTransaction {
 
 	head := tree.GetHead()
 	transactionsInChain := tree.getTransactionsInChain(head)
@@ -71,8 +71,8 @@ func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []models.S
 	return difference
 }
 
-func (tree *Blocktree) getTransactionsInChain(block Block) []models.SignedTransaction {
-	transactionsAccumulator := make([]models.SignedTransaction, 0)
+func (tree *Blocktree) getTransactionsInChain(block Block) []models.SignedPaymentTransaction {
+	transactionsAccumulator := make([]models.SignedPaymentTransaction, 0)
 	i := 0
 	for !block.IsGenesis {
 		transactionsAccumulator = append(transactionsAccumulator, block.BlockData.Transactions...)

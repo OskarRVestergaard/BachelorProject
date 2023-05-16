@@ -15,7 +15,7 @@ func GetSomeKey[t comparable](m map[t]t) t {
 	panic("Cant get key from an empty map!")
 }
 
-func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans models.SignedTransaction) bool {
+func TransactionHasCorrectSignature(signatureStrategy signature_strategy.SignatureInterface, signedTrans models.SignedPaymentTransaction) bool {
 	transByteArray := signedTrans.ToByteArrayWithoutSign()
 	hashedMessage := sha256.HashByteArray(transByteArray).ToSlice()
 	publicKey := signedTrans.From

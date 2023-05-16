@@ -1,9 +1,12 @@
 package SpaceMintBlockchain
 
 import (
+	"encoding/binary"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
+	"math/rand"
 	"reflect"
 	"time"
 )
@@ -14,10 +17,10 @@ Blocktree
 # A struct representing a Blocktree without any signature or transaction verification
 
 Use the NewBlockTree method for creating a block tree!
-The struct methods are NOT thread safe
+The struct methods are NOT thread safe (except for the handling of subscribers)
 */
 type Blocktree struct {
-	treeMap       map[sha256.HashValue]node
+	nodeContainer map[sha256.HashValue]node
 	head          node
 	subscribers   chan []subscriber
 	newHeadBlocks chan Block
@@ -37,19 +40,19 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
 		return Blocktree{}, false
 	}
-	var treeMap = map[sha256.HashValue]node{}
-	var blockQuality = CalculateQuality(genesisBlock)
+	var blockQuality = models.CalculateQuality(genesisBlock.HashOfBlock(), 1000) //Does not really matter, but could be important if chain quality is fully implemented
 	var genesisNode = node{
 		block:              genesisBlock,
 		length:             0,
 		singleBlockQuality: blockQuality,
-		chainQuality:       CalculateChainQuality([]float64{blockQuality}),
+		chainQuality:       models.CalculateChainQuality([]float64{blockQuality}),
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
-	treeMap[genesisHash] = genesisNode
+	treeMapContainer := map[sha256.HashValue]node{}
+	treeMapContainer[genesisHash] = genesisNode
 	newHeadBlocks := make(chan Block, 20)
 	tree := Blocktree{
-		treeMap:       treeMap,
+		nodeContainer: treeMapContainer,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
 	}
@@ -71,22 +74,64 @@ GetTransactionsNotInTree
 
 returns the difference between transactions on block and list given
 */
-func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions []models.SignedTransaction) []models.SignedTransaction {
+func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions SpacemintTransactions) SpacemintTransactions {
 
 	head := tree.GetHead()
 	transactionsInChain := tree.getTransactionsInChain(head)
-	difference := models.GetTransactionsInList1ButNotList2(unhandledTransactions, transactionsInChain)
+	transactionDifferences := getTransactionsNotInBlockChain(unhandledTransactions, transactionsInChain)
 
+	return transactionDifferences
+}
+
+func getSpaceCommitsInList1ButNotList2(list1 []SpaceCommitment, list2 []SpaceCommitment) []SpaceCommitment {
+	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+	var difference []SpaceCommitment
+	found := false
+	for _, val1 := range list1 {
+		found = false
+		for _, val2 := range list2 {
+			if val1.Id == val2.Id {
+				found = true
+			}
+		}
+		if !found {
+			difference = append(difference, val1)
+		}
+	}
 	return difference
 }
 
-func (tree *Blocktree) getTransactionsInChain(block Block) []models.SignedTransaction {
-	transactionsAccumulator := make([]models.SignedTransaction, 0)
+func getTransactionsNotInBlockChain(blockTransactions SpacemintTransactions, blockchainTransactions []SpacemintTransactions) SpacemintTransactions {
+	var paymentAccumulator []models.SignedPaymentTransaction
+	var spaceAccumulator []SpaceCommitment
+	//var penaltyAccumulator []Penalty
+	for _, currentBlockTransactions := range blockchainTransactions {
+		paymentAccumulator = append(paymentAccumulator, currentBlockTransactions.Payments...)
+		spaceAccumulator = append(spaceAccumulator, currentBlockTransactions.SpaceCommitments...)
+		//penaltyAccumulator = append(penaltyAccumulator, currentBlockTransactions.Penalties...)
+	}
+	finalPayments := models.GetTransactionsInList1ButNotList2(blockTransactions.Payments, paymentAccumulator)
+	finalSpaceCommits := getSpaceCommitsInList1ButNotList2(blockTransactions.SpaceCommitments, spaceAccumulator)
+	//FinalPenalties...
+	result := SpacemintTransactions{
+		Payments:         finalPayments,
+		SpaceCommitments: finalSpaceCommits,
+		Penalties:        []Penalty{},
+	}
+	return result
+}
+
+func (tree *Blocktree) getTransactionsInChain(block Block) []SpacemintTransactions {
+	transactionsAccumulator := make([]SpacemintTransactions, 0)
 	i := 0
 	for !block.IsGenesis {
-		transactionsAccumulator = append(transactionsAccumulator, block.TransactionSubBlock.Transactions.Payments...)
+		transactionsAccumulator = append(transactionsAccumulator, block.TransactionSubBlock.Transactions)
 		nextHash := block.ParentHash
-		block = tree.HashToBlock(nextHash)
+		nod, isEmpty := tree.hashToNode(nextHash, tree.nodeContainer)
+		if isEmpty {
+			panic("Parent in tree does not exist, tree is inconsistent")
+		}
+		block = nod.block
 		i++
 		if i > 10000000 {
 			panic("There is probably a cycle in what was supposed to be a tree")
@@ -100,16 +145,22 @@ HashToBlock
 
 returns the Block that hashes to the parameter
 */
-func (tree *Blocktree) HashToBlock(hash sha256.HashValue) Block {
-	return tree.hashToNode(hash).block
+func (tree *Blocktree) HashToBlock(hash sha256.HashValue) (Block, bool) {
+	nod, isEmpty := tree.hashToNode(hash, tree.nodeContainer)
+	return nod.block, isEmpty
 }
 
-func (tree *Blocktree) hashToNode(hash sha256.HashValue) node {
-	result, foundKey := tree.treeMap[hash]
+func (tree *Blocktree) hashToNode(hash sha256.HashValue, treeMap map[sha256.HashValue]node) (nod node, isEmpty bool) {
+	result, foundKey := treeMap[hash]
 	if !foundKey {
-		panic("Hash given to tree is not in tree!")
+		return node{
+			block:              Block{},
+			length:             0,
+			singleBlockQuality: 0,
+			chainQuality:       0,
+		}, true
 	}
-	return result
+	return result, false
 }
 
 /*
@@ -125,7 +176,7 @@ returns -2 if block is marked as genesis block
 
 returns -3 if slot number is not greater than parent
 */
-func (tree *Blocktree) AddBlock(block Block) int {
+func (tree *Blocktree) AddBlock(block Block, proofSizeN int64) int {
 
 	//Refuse to add a new genesisBlock
 	if block.IsGenesis {
@@ -134,14 +185,14 @@ func (tree *Blocktree) AddBlock(block Block) int {
 
 	//Check that this block is not already in the tree
 	var newBlockHash = block.HashOfBlock()
-	var _, isAlreadyInTree = tree.treeMap[newBlockHash]
+	var _, isAlreadyInTree = tree.nodeContainer[newBlockHash]
 	if isAlreadyInTree {
 		return -1
 	}
 
 	//Find parent
 	var parentHash = block.ParentHash
-	var parentNode, parentIsInTree = tree.treeMap[parentHash]
+	var parentNode, parentIsInTree = tree.nodeContainer[parentHash]
 	if !parentIsInTree {
 		return 0
 	}
@@ -154,22 +205,25 @@ func (tree *Blocktree) AddBlock(block Block) int {
 	}
 
 	//Create and add the new block
-	var blockQuality = CalculateQuality(block)
+	var triplesHash = sha256.HashByteArray(PoSpaceModels.ListOfTripleToByteArray(block.HashSubBlock.Draw.ProofOfSpaceA))
+	var blockQuality = models.CalculateQuality(triplesHash, proofSizeN)
 	var chainQualities = append([]float64{blockQuality}, tree.collectBlockQualitiesForHead()...)
 	var newNode = node{
 		block:              block,
 		length:             parentNode.length + 1,
-		singleBlockQuality: CalculateQuality(block),
-		chainQuality:       CalculateChainQuality(chainQualities),
+		singleBlockQuality: blockQuality,
+		chainQuality:       models.CalculateChainQuality(chainQualities),
 	}
-	tree.treeMap[newBlockHash] = newNode
-
+	//Don't add node while subscribers are being notified
+	subscribers := <-tree.subscribers
+	tree.nodeContainer[newBlockHash] = newNode
 	//Check if the longest chain has changed
 	var newNodeGreater = newNode.hasGreaterPathWeightThan(tree.head) //TODO needs to not only use quality of single blocks, but compare the whole chain quality
 	if newNodeGreater == 1 {
 		tree.head = newNode
 		tree.newHeadBlocks <- newNode.block
 	}
+	tree.subscribers <- subscribers
 	return 1
 }
 
@@ -181,8 +235,12 @@ func (tree *Blocktree) startSubscriptionHandler() {
 }
 
 func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n int) PoSpace.MiningLocation {
-	newBlock := tree.HashToBlock(hashOfBlockToMineOn)
-	challengeSetP, challengesSetV := tree.getChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
+	nod, isEmpty := tree.hashToNode(hashOfBlockToMineOn, tree.nodeContainer)
+	if isEmpty {
+		panic("GetMiningLocation called on invalid hash")
+	}
+	newBlock := nod.block
+	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
 	newLocation := PoSpace.MiningLocation{
 		Slot:          newBlock.TransactionSubBlock.Slot + 1,
 		ParentHash:    hashOfBlockToMineOn,
@@ -198,7 +256,7 @@ func (tree *Blocktree) subscriptionSubroutine() {
 		hashOfBlockToExtendOn := newBlock.HashOfBlock()
 		subscribers := <-tree.subscribers
 		for _, singleSubscriber := range subscribers {
-			go func(sub subscriber) {
+			func(sub subscriber) {
 				newLocation := tree.GetMiningLocation(hashOfBlockToExtendOn, sub.n)
 				sub.miningLocations <- newLocation
 			}(singleSubscriber)
@@ -224,26 +282,44 @@ func (tree *Blocktree) SubScribeToGetHead(n int) (newHeadMiningLocations chan Po
 
 func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
 	//Is not thread safe, since the tree could change during operation
-	if !reflect.DeepEqual(tree.treeMap, comparisonTree.treeMap) {
+	treeMap1 := tree.nodeContainer
+	treeMap2 := comparisonTree.nodeContainer
+	if !reflect.DeepEqual(treeMap1, treeMap2) {
 		return false
 	}
-	return reflect.DeepEqual(tree.head.block, comparisonTree.head.block)
+	if !reflect.DeepEqual(tree.head.block, comparisonTree.head.block) {
+		return false //This conditional is not needed, but is here for debugging purposes
+	}
+	return true
 }
 
 func (tree *Blocktree) GetChallengesForExtendingOnHead(n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
 	//Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6
 	head := tree.GetHead()
-	return tree.getChallengesForExtendingOnBlockWithHash(head.HashOfBlock(), n)
+	return tree.GetChallengesForExtendingOnBlockWithHash(head.HashOfBlock(), n)
 }
 
-func (tree *Blocktree) getChallengesForExtendingOnBlockWithHash(parentHash sha256.HashValue, n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
-	//Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6
-	//Todo change from fake challenges
-	//Also for effeciency, it would be better to split the finding random strings and getting the actual challenges
-	//depending on n, into two parts, but this is only really important if multiple miners are active in the same tree,
-	//which the code does not allow for anyways
-	challengesSetP := []int{0, 1}
-	challengesSetV := []int{0, 1, 2}
+func (tree *Blocktree) GetChallengesForExtendingOnBlockWithHash(parentHash sha256.HashValue, n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
+	//TODO Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6 Here we just use the parent block
+	challengesSamplingBlock, _ := tree.HashToBlock(parentHash)
+	//We only sample from the proof chain to avoid some cases of challenge grinding
+	hashSubBlockHash := sha256.HashByteArray(challengesSamplingBlock.HashSubBlock.ToByteArray())
+	HashAsInt := int64(binary.LittleEndian.Uint64(hashSubBlockHash.ToSlice()))
+	rnd := rand.New(rand.NewSource(HashAsInt)) // Math.rand is good for our case, since we want something deterministic given the seed and n
+
+	challengeAmountA := n / 8 //TODO Discuss what this should be
+	challengeAmountB := n / 4 //TODO Same as above
+
+	challengesSetP := make([]int, challengeAmountA)
+	challengesSetV := make([]int, challengeAmountB)
+	for i := 0; i < challengeAmountA; i++ {
+		challengeNumber := rnd.Int() % n
+		challengesSetP[i] = challengeNumber
+	}
+	for i := 0; i < challengeAmountB; i++ {
+		challengeNumber := rnd.Int() % n
+		challengesSetV[i] = challengeNumber
+	}
 	return challengesSetP, challengesSetV
 }
 
@@ -256,7 +332,11 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 	for !currentNode.block.IsGenesis {
 		qualityAccumulator = append(qualityAccumulator, currentNode.singleBlockQuality)
 		nextHash := currentNode.block.ParentHash
-		currentNode = tree.hashToNode(nextHash)
+		nod, isEmpty := tree.hashToNode(nextHash, tree.nodeContainer)
+		if isEmpty {
+			panic("Parent in tree does not exist, tree is inconsistent")
+		}
+		currentNode = nod
 		i++
 		if i > 10000000 {
 			panic("There is probably a cycle in what was supposed to be a tree")

@@ -1,15 +1,15 @@
 package Parties
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"strconv"
 )
 
 type Prover struct {
-	parameters   Models.Parameters
-	pebbledGraph *Models.Graph
-	merkleTree   *Models.MerkleTree
+	parameters   PoSpaceModels.Parameters
+	pebbledGraph *PoSpaceModels.Graph
+	merkleTree   *PoSpaceModels.MerkleTree
 	commitment   sha256.HashValue
 }
 
@@ -20,7 +20,7 @@ func (P *Prover) pebbleGraph() {
 	size := P.pebbledGraph.Size
 	for i := 0; i < size; i++ {
 		vertexLabel := []byte(strconv.Itoa(i))
-		toBeHashed := []byte(id)
+		toBeHashed := []byte(id.String())
 		toBeHashed = append(toBeHashed, vertexLabel...)
 		for j := 0; j < size; j++ {
 			jIsParent := P.pebbledGraph.Edges[j][i]
@@ -44,7 +44,7 @@ func (P *Prover) createMerkleTreeFromGraph() {
 	if i != size {
 		panic("Graph must have 2^n number of nodes")
 	}
-	tree := Models.MerkleTree{Nodes: make([]sha256.HashValue, size*2-1, size*2-1)}
+	tree := PoSpaceModels.MerkleTree{Nodes: make([]sha256.HashValue, size*2-1, size*2-1)}
 	firstLeaf := size - 1
 	//Inserting value for leaves
 	for i := 0; i < size; i++ {
@@ -61,7 +61,7 @@ func (P *Prover) createMerkleTreeFromGraph() {
 	P.commitment = P.merkleTree.GetRootCommitment()
 }
 
-func (P *Prover) InitializationPhase1(params Models.Parameters) {
+func (P *Prover) InitializationPhase1(params PoSpaceModels.Parameters) {
 	P.parameters = params
 	P.pebbleGraph()
 	P.createMerkleTreeFromGraph()
@@ -71,10 +71,10 @@ func (P *Prover) GetCommitment() sha256.HashValue {
 	return P.commitment
 }
 
-func (P *Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
+func (P *Prover) GetOpeningTriple(index int) (triple PoSpaceModels.OpeningTriple) {
 	indexValue := P.merkleTree.GetLeaf(index)
 	openingValues := P.merkleTree.Open(index)
-	result := Models.OpeningTriple{
+	result := PoSpaceModels.OpeningTriple{
 		Index:      index,
 		Value:      indexValue,
 		OpenValues: openingValues,
@@ -82,7 +82,7 @@ func (P *Prover) GetOpeningTriple(index int) (triple Models.OpeningTriple) {
 	return result
 }
 
-func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []Models.OpeningTriple) {
+func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []PoSpaceModels.OpeningTriple) {
 	//Remove duplicates using a set
 	var member struct{}
 	indicesSet := make(map[int]struct{})
@@ -99,9 +99,10 @@ func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTripl
 		}
 	}
 	//Append triple for each and return the result
-	result := make([]Models.OpeningTriple, 0, 0)
+	result := make([]PoSpaceModels.OpeningTriple, 0, 0)
 	for i, _ := range indicesSet {
 		result = append(result, P.GetOpeningTriple(i))
 	}
+	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
 	return result
 }

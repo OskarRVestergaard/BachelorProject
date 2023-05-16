@@ -1,7 +1,7 @@
 package Message
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
@@ -17,8 +17,8 @@ func deepCopyByteSlice(slice []byte) []byte {
 	return sliceCopy
 }
 
-func MakeDeepCopyOfTransaction(transaction models.SignedTransaction) (copyOfTransaction models.SignedTransaction) {
-	deepCopyTransaction := models.SignedTransaction{
+func MakeDeepCopyOfPayment(transaction models.SignedPaymentTransaction) (copyOfTransaction models.SignedPaymentTransaction) {
+	deepCopyTransaction := models.SignedPaymentTransaction{
 		Id:        transaction.Id,
 		From:      transaction.From,
 		To:        transaction.To,
@@ -28,10 +28,10 @@ func MakeDeepCopyOfTransaction(transaction models.SignedTransaction) (copyOfTran
 	return deepCopyTransaction
 }
 
-func deepCopyTransactions(transactions []models.SignedTransaction) (copyOfTransactions []models.SignedTransaction) {
-	transactionsCopy := make([]models.SignedTransaction, len(transactions))
+func deepCopyPayments(transactions []models.SignedPaymentTransaction) (copyOfTransactions []models.SignedPaymentTransaction) {
+	transactionsCopy := make([]models.SignedPaymentTransaction, len(transactions))
 	for i, transaction := range transactions {
-		transactionsCopy[i] = MakeDeepCopyOfTransaction(transaction)
+		transactionsCopy[i] = MakeDeepCopyOfPayment(transaction)
 	}
 	return transactionsCopy
 }
@@ -44,7 +44,7 @@ func MakeDeepCopyOfPoWBlock(block PoWblockchain.Block) (copyOfBlock PoWblockchai
 		Draw:      MakeDeepCopyOfWinningParams(block.Draw),
 		BlockData: PoWblockchain.BlockData{
 			Hardness:     block.BlockData.Hardness,
-			Transactions: deepCopyTransactions(block.BlockData.Transactions),
+			Transactions: deepCopyPayments(block.BlockData.Transactions),
 		},
 		ParentHash: block.ParentHash,
 		Signature:  deepCopyByteSlice(block.Signature),
@@ -57,18 +57,18 @@ func MakeDeepCopyOfPoSBlock(block SpaceMintBlockchain.Block) (copyOfBlock SpaceM
 		IsGenesis:           block.IsGenesis,
 		ParentHash:          block.ParentHash,
 		HashSubBlock:        deepCopyHashSubBlock(block.HashSubBlock),
-		TransactionSubBlock: deepCopyTransactionSubBlock(block.TransactionSubBlock),
+		TransactionSubBlock: MakeDeepCopyOfTransactionSubBlock(block.TransactionSubBlock),
 		SignatureSubBlock:   deepCopySignatureSubBlock(block.SignatureSubBlock),
 	}
 	return deepCopyBlock
 }
 
-func deepCopyOpeningTriple(triple Models.OpeningTriple) Models.OpeningTriple {
+func deepCopyOpeningTriple(triple PoSpaceModels.OpeningTriple) PoSpaceModels.OpeningTriple {
 	copyOfOpeningValues := make([]sha256.HashValue, len(triple.OpenValues))
 	for i, value := range triple.OpenValues {
 		copyOfOpeningValues[i] = value
 	}
-	copyOfTriple := Models.OpeningTriple{
+	copyOfTriple := PoSpaceModels.OpeningTriple{
 		Index:      triple.Index,
 		Value:      triple.Value,
 		OpenValues: copyOfOpeningValues,
@@ -76,8 +76,8 @@ func deepCopyOpeningTriple(triple Models.OpeningTriple) Models.OpeningTriple {
 	return copyOfTriple
 }
 
-func deepCopyOpeningTriples(triples []Models.OpeningTriple) []Models.OpeningTriple {
-	triplesCopy := make([]Models.OpeningTriple, len(triples))
+func deepCopyOpeningTriples(triples []PoSpaceModels.OpeningTriple) []PoSpaceModels.OpeningTriple {
+	triplesCopy := make([]PoSpaceModels.OpeningTriple, len(triples))
 	for i, triple := range triples {
 		triplesCopy[i] = deepCopyOpeningTriple(triple)
 	}
@@ -96,15 +96,15 @@ func deepCopyPoSpaceLotteryDraw(draw PoSpace.LotteryDraw) PoSpace.LotteryDraw {
 
 func deepCopyHashSubBlock(subBlock SpaceMintBlockchain.HashSubBlock) SpaceMintBlockchain.HashSubBlock {
 	deepCopyOfHashSubBlock := SpaceMintBlockchain.HashSubBlock{
-		Slot:                      subBlock.Slot,
-		SignatureOnParentSubBlock: deepCopyByteSlice(subBlock.SignatureOnParentSubBlock),
-		Draw:                      deepCopyPoSpaceLotteryDraw(subBlock.Draw),
+		Slot:                          subBlock.Slot,
+		SignatureOnParentHashSubBlock: deepCopyByteSlice(subBlock.SignatureOnParentHashSubBlock),
+		Draw:                          deepCopyPoSpaceLotteryDraw(subBlock.Draw),
 	}
 
 	return deepCopyOfHashSubBlock
 }
 
-func deepCopySpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) SpaceMintBlockchain.SpaceCommitment {
+func MakeDeepCopyOfSpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) SpaceMintBlockchain.SpaceCommitment {
 	copyOfSpaceCommitment := SpaceMintBlockchain.SpaceCommitment{
 		Id:         spaceCommitment.Id,
 		N:          spaceCommitment.N,
@@ -117,18 +117,23 @@ func deepCopySpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) Sp
 func deepCopySpaceCommitments(spaceCommitments []SpaceMintBlockchain.SpaceCommitment) []SpaceMintBlockchain.SpaceCommitment {
 	spaceCommitmentsCopy := make([]SpaceMintBlockchain.SpaceCommitment, len(spaceCommitments))
 	for i, spaceCommit := range spaceCommitments {
-		spaceCommitmentsCopy[i] = deepCopySpaceCommit(spaceCommit)
+		spaceCommitmentsCopy[i] = MakeDeepCopyOfSpaceCommit(spaceCommit)
 	}
 	return spaceCommitmentsCopy
 }
 
-func deepCopyTransactionSubBlock(subBlock SpaceMintBlockchain.TransactionSubBlock) (copyOfSubBlock SpaceMintBlockchain.TransactionSubBlock) {
-
+func MakeDeepCopyOfTransaction(transactions SpaceMintBlockchain.SpacemintTransactions) SpaceMintBlockchain.SpacemintTransactions {
 	spaceMintTransactionCopy := SpaceMintBlockchain.SpacemintTransactions{
-		Payments:         deepCopyTransactions(subBlock.Transactions.Payments),
-		SpaceCommitments: deepCopySpaceCommitments(subBlock.Transactions.SpaceCommitments),
-		Penalties:        nil, //TODO Implement
+		Payments:         deepCopyPayments(transactions.Payments),
+		SpaceCommitments: deepCopySpaceCommitments(transactions.SpaceCommitments),
+		Penalties:        []SpaceMintBlockchain.Penalty{}, //TODO Implement
 	}
+	return spaceMintTransactionCopy
+}
+
+func MakeDeepCopyOfTransactionSubBlock(subBlock SpaceMintBlockchain.TransactionSubBlock) (copyOfSubBlock SpaceMintBlockchain.TransactionSubBlock) {
+
+	spaceMintTransactionCopy := MakeDeepCopyOfTransaction(subBlock.Transactions)
 
 	deepCopyOfTransactionSubBlock := SpaceMintBlockchain.TransactionSubBlock{
 		Slot:         subBlock.Slot,
@@ -142,7 +147,7 @@ func deepCopySignatureSubBlock(subBlock SpaceMintBlockchain.SignatureSubBlock) S
 	deepCopyOfSignatureSubBlock := SpaceMintBlockchain.SignatureSubBlock{
 		Slot:                                  subBlock.Slot,
 		SignatureOnCurrentTransactionSubBlock: deepCopyByteSlice(subBlock.SignatureOnCurrentTransactionSubBlock),
-		SignatureOnParentSubBlock:             deepCopyByteSlice(subBlock.SignatureOnParentSubBlock),
+		SignatureOnParentSignatureSubBlock:    deepCopyByteSlice(subBlock.SignatureOnParentSignatureSubBlock),
 	}
 	return deepCopyOfSignatureSubBlock
 }
@@ -181,7 +186,8 @@ func MakeDeepCopyOfMessage(msg Message) (copyOfMessage Message) {
 	deepCopyMessage := Message{
 		MessageType:       msg.MessageType,
 		MessageSender:     msg.MessageSender,
-		SignedTransaction: MakeDeepCopyOfTransaction(msg.SignedTransaction),
+		SignedTransaction: MakeDeepCopyOfPayment(msg.SignedTransaction),
+		SpaceCommitment:   MakeDeepCopyOfSpaceCommit(msg.SpaceCommitment),
 		PoWMessageBlocks:  blocksCopy,
 		SpaceMintBlocks:   PoSBlocksCopy,
 		PeerMap:           peersCopy,
