@@ -1,7 +1,7 @@
 package Message
 
 import (
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
@@ -63,12 +63,12 @@ func MakeDeepCopyOfPoSBlock(block SpaceMintBlockchain.Block) (copyOfBlock SpaceM
 	return deepCopyBlock
 }
 
-func deepCopyOpeningTriple(triple Models.OpeningTriple) Models.OpeningTriple {
+func deepCopyOpeningTriple(triple PoSpaceModels.OpeningTriple) PoSpaceModels.OpeningTriple {
 	copyOfOpeningValues := make([]sha256.HashValue, len(triple.OpenValues))
 	for i, value := range triple.OpenValues {
 		copyOfOpeningValues[i] = value
 	}
-	copyOfTriple := Models.OpeningTriple{
+	copyOfTriple := PoSpaceModels.OpeningTriple{
 		Index:      triple.Index,
 		Value:      triple.Value,
 		OpenValues: copyOfOpeningValues,
@@ -76,8 +76,8 @@ func deepCopyOpeningTriple(triple Models.OpeningTriple) Models.OpeningTriple {
 	return copyOfTriple
 }
 
-func deepCopyOpeningTriples(triples []Models.OpeningTriple) []Models.OpeningTriple {
-	triplesCopy := make([]Models.OpeningTriple, len(triples))
+func deepCopyOpeningTriples(triples []PoSpaceModels.OpeningTriple) []PoSpaceModels.OpeningTriple {
+	triplesCopy := make([]PoSpaceModels.OpeningTriple, len(triples))
 	for i, triple := range triples {
 		triplesCopy[i] = deepCopyOpeningTriple(triple)
 	}

@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/google/uuid"
+	"strconv"
 )
 
 type SpacemintTransactions struct {
@@ -21,6 +22,8 @@ func (transactions *SpacemintTransactions) ToByteArray() []byte {
 	}
 	for _, spaceCommitment := range transactions.SpaceCommitments {
 		buffer.WriteString(spaceCommitment.Id.String())
+		buffer.WriteString(";_;")
+		buffer.WriteString(strconv.Itoa(spaceCommitment.N))
 		buffer.WriteString(";_;")
 		buffer.WriteString(spaceCommitment.PublicKey)
 		buffer.WriteString(";_;")

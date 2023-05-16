@@ -1,16 +1,17 @@
-package SpaceMintBlockchain
+package models
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math"
 	"math/big"
 )
 
-func CalculateQuality(block Block, n int64) (quality float64) {
+func CalculateQuality(AnswerHashA sha256.HashValue, n int64) (quality float64) {
 	//Floating point quality might not be optimal, but should be good enough for our purposes
 
 	//All is done under the assumption that a hash has size 32 bytes and there is lots of unneeded allocation
 	hashValue := &big.Int{}
-	hashValue = hashValue.SetBytes(block.HashOfBlock().ToSlice()) //TODO Should not be the hash of the block, but the hash of the challenges a_i
+	hashValue = hashValue.SetBytes(AnswerHashA.ToSlice())
 	hashValueFloat := &big.Float{}
 	hashValueFloat = hashValueFloat.SetInt(hashValue)
 

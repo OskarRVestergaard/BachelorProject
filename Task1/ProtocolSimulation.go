@@ -2,8 +2,8 @@ package Task1
 
 import (
 	"crypto/rand"
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math"
 	"math/big"
@@ -14,7 +14,7 @@ import (
 
 //Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
 
-func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
+func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
 	edges := make([][]bool, size, size)
 	for i := range edges {
 		edges[i] = make([]bool, size, size)
@@ -32,12 +32,12 @@ func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
 	edges[5][6] = true
 	edges[5][7] = true
 
-	resultGraph := &Models.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
+	resultGraph := &PoSpaceModels.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
 
 	return resultGraph
 }
 
-func GenerateParameters() Models.Parameters {
+func GenerateParameters() PoSpaceModels.Parameters {
 	random, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt))
 	if err != nil {
 		print("ERROR HAPPENED:")
@@ -46,7 +46,7 @@ func GenerateParameters() Models.Parameters {
 	id := random.String()
 	size := 8 //If changed, edge generation should also be made more general
 	graphEdges := generateDirectedAcyclicGraphStructure(size)
-	result := Models.Parameters{
+	result := PoSpaceModels.Parameters{
 		Id:               id,
 		StorageBound:     2 * size,
 		GraphDescription: graphEdges,

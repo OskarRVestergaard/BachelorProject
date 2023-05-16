@@ -137,7 +137,9 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 			tree1 := listOfPeers[i-1].GetBlockTree().(SpaceMintBlockchain.Blocktree)
 			tree2 := listOfPeers[i].GetBlockTree().(SpaceMintBlockchain.Blocktree)
 			test := tree1.Equals(tree2)
-			assert.True(t, test)
+			if !test {
+				assert.True(t, test) //This conditional is for debugging purposes
+			}
 		}
 	}
 	assert.True(t, true)

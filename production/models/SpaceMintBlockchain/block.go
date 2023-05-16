@@ -36,6 +36,12 @@ func (subBlock *HashSubBlock) ToByteArray() []byte {
 	return buffer.Bytes()
 }
 
+func (subBlock *HashSubBlock) HashOfBlock() sha256.HashValue {
+	byteArrayString := subBlock.ToByteArray()
+	hash := sha256.HashByteArray(byteArrayString)
+	return hash
+}
+
 type TransactionSubBlock struct {
 	Slot         int                   //index or slot number
 	Transactions SpacemintTransactions //List of transactions
@@ -83,6 +89,8 @@ returns a byte array representation, if you want the hash use HashOfBlock instea
 */
 func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
+	buffer.WriteString(strconv.FormatBool(block.IsGenesis))
+	buffer.WriteString(";_;")
 	buffer.Write(block.ParentHash.ToSlice())
 	buffer.WriteString(";_;")
 	buffer.Write(block.HashSubBlock.ToByteArray())

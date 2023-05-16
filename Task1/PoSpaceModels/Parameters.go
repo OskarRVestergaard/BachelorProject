@@ -1,4 +1,4 @@
-package Models
+package PoSpaceModels
 
 // Parameters is a struct with parameters for use in a proof of space between a verifier and a prover.
 // Id is a random string used to make the proof unique.

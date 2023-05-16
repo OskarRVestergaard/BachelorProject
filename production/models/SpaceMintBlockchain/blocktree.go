@@ -2,6 +2,7 @@ package SpaceMintBlockchain
 
 import (
 	"encoding/binary"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
@@ -39,12 +40,12 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
 		return Blocktree{}, false
 	}
-	var blockQuality = CalculateQuality(genesisBlock, 1000)
+	var blockQuality = models.CalculateQuality(genesisBlock.HashOfBlock(), 1000) //Does not really matter, but could be important if chain quality is fully implemented
 	var genesisNode = node{
 		block:              genesisBlock,
 		length:             0,
 		singleBlockQuality: blockQuality,
-		chainQuality:       CalculateChainQuality([]float64{blockQuality}),
+		chainQuality:       models.CalculateChainQuality([]float64{blockQuality}),
 	}
 	var genesisHash = genesisBlock.HashOfBlock()
 	treeMapContainer := map[sha256.HashValue]node{}
@@ -195,13 +196,14 @@ func (tree *Blocktree) AddBlock(block Block, proofSizeN int64) int {
 	}
 
 	//Create and add the new block
-	var blockQuality = CalculateQuality(block, proofSizeN)
+	var triplesHash = sha256.HashByteArray(PoSpaceModels.ListOfTripleToByteArray(block.HashSubBlock.Draw.ProofOfSpaceA))
+	var blockQuality = models.CalculateQuality(triplesHash, proofSizeN)
 	var chainQualities = append([]float64{blockQuality}, tree.collectBlockQualitiesForHead()...)
 	var newNode = node{
 		block:              block,
 		length:             parentNode.length + 1,
 		singleBlockQuality: blockQuality,
-		chainQuality:       CalculateChainQuality(chainQualities),
+		chainQuality:       models.CalculateChainQuality(chainQualities),
 	}
 	//Don't add node while subscribers are being notified
 	subscribers := <-tree.subscribers
@@ -272,7 +274,10 @@ func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
 	if !reflect.DeepEqual(treeMap1, treeMap2) {
 		return false
 	}
-	return reflect.DeepEqual(tree.head.block, comparisonTree.head.block)
+	if !reflect.DeepEqual(tree.head.block, comparisonTree.head.block) {
+		return false //This conditional is not needed, but is here for debugging purposes
+	}
+	return true
 }
 
 func (tree *Blocktree) GetChallengesForExtendingOnHead(n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
