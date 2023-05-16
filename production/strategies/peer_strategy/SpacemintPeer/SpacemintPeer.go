@@ -105,9 +105,9 @@ func (p *PoSpacePeer) Connect(ip string, port int) {
 	}
 }
 
-func (p *PoSpacePeer) floodSpaceCommit(commitment sha256.HashValue, n int, pk string) {
+func (p *PoSpacePeer) floodSpaceCommit(commitment sha256.HashValue, id uuid.UUID, n int, pk string) {
 	spaceTransaction := SpaceMintBlockchain.SpaceCommitment{
-		Id:         uuid.New(),
+		Id:         id,
 		N:          n,
 		PublicKey:  pk,
 		Commitment: commitment,
@@ -223,7 +223,7 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	poSpaceParameters := Task1.GenerateParameters()
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
 	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
-	p.floodSpaceCommit(commitment, n, verificationKey)
+	p.floodSpaceCommit(commitment, poSpaceParameters.Id, n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -368,14 +368,14 @@ func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
 	}
 	chalA, chalB := blockTree.GetChallengesForExtendingOnBlockWithHash(block.ParentHash, commitmentOfProof.N)
 	location := PoSpace.MiningLocation{
-		Slot:          block.SignatureSubBlock.Slot,
+		Slot:          block.HashSubBlock.Slot - 1,
 		ParentHash:    block.ParentHash,
 		ChallengeSetP: chalA,
 		ChallengeSetV: chalB,
 	}
 	//TODO Discuss and handle real parameters
 	prm := Task1.GenerateParameters()
-	prm.Id = commitmentOfProof.Id.String()
+	prm.Id = commitmentOfProof.Id
 	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
 		p.blockTreeChan <- blockTree
 		p.knownCommitments <- knownCommitments

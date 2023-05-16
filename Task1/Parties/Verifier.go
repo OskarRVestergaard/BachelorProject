@@ -46,7 +46,7 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck PoSpaceModels.OpeningT
 	//Compare to check that the node matches both the original graph and the merkle tree
 	shouldBe := tripleToCheck.Value
 	nodeLabel := []byte(strconv.Itoa(tripleToCheck.Index))
-	toBeHashed := []byte(V.parameters.Id)
+	toBeHashed := []byte(V.parameters.Id.String())
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
 	hash := sha256.HashByteArray(toBeHashed)

@@ -1,12 +1,10 @@
 package Task1
 
 import (
-	"crypto/rand"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-	"math"
-	"math/big"
+	"github.com/google/uuid"
 )
 
 //Some slight modifications has been made to the original protocol, such as sending the index back and forth, the size
@@ -38,12 +36,7 @@ func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
 }
 
 func GenerateParameters() PoSpaceModels.Parameters {
-	random, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt))
-	if err != nil {
-		print("ERROR HAPPENED:")
-		print(err.Error())
-	}
-	id := random.String()
+	id := uuid.New()
 	size := 8 //If changed, edge generation should also be made more general
 	graphEdges := generateDirectedAcyclicGraphStructure(size)
 	result := PoSpaceModels.Parameters{

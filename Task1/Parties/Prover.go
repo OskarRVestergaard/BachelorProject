@@ -20,7 +20,7 @@ func (P *Prover) pebbleGraph() {
 	size := P.pebbledGraph.Size
 	for i := 0; i < size; i++ {
 		vertexLabel := []byte(strconv.Itoa(i))
-		toBeHashed := []byte(id)
+		toBeHashed := []byte(id.String())
 		toBeHashed = append(toBeHashed, vertexLabel...)
 		for j := 0; j < size; j++ {
 			jIsParent := P.pebbledGraph.Edges[j][i]

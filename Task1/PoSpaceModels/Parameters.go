@@ -1,5 +1,7 @@
 package PoSpaceModels
 
+import "github.com/google/uuid"
+
 // Parameters is a struct with parameters for use in a proof of space between a verifier and a prover.
 // Id is a random string used to make the proof unique.
 // StorageBound is an int which sets a bound on the memory to be used by the prover.
@@ -9,7 +11,7 @@ package PoSpaceModels
 // SampleDistribution assumed to be uniform and statistical security parameter is not used.
 // (but would be used to determine how many samples to check)
 type Parameters struct {
-	Id               string
+	Id               uuid.UUID
 	StorageBound     int
 	GraphDescription *Graph
 }
