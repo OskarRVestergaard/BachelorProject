@@ -265,7 +265,7 @@ func (p *PoWPeer) blockHandlerLoop() {
 }
 
 func (p *PoWPeer) verifyBlock(block PoWblockchain.Block) bool {
-	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
+	//Ideally this also needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	//TODO This is potentially very slow, but could be faster using dynamic programming in the case the chain best chain does not switch often
 	if !block.HasCorrectSignature(p.signatureStrategy) {
 		return false

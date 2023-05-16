@@ -96,9 +96,9 @@ func deepCopyPoSpaceLotteryDraw(draw PoSpace.LotteryDraw) PoSpace.LotteryDraw {
 
 func deepCopyHashSubBlock(subBlock SpaceMintBlockchain.HashSubBlock) SpaceMintBlockchain.HashSubBlock {
 	deepCopyOfHashSubBlock := SpaceMintBlockchain.HashSubBlock{
-		Slot:                      subBlock.Slot,
-		SignatureOnParentSubBlock: deepCopyByteSlice(subBlock.SignatureOnParentSubBlock),
-		Draw:                      deepCopyPoSpaceLotteryDraw(subBlock.Draw),
+		Slot:                          subBlock.Slot,
+		SignatureOnParentHashSubBlock: deepCopyByteSlice(subBlock.SignatureOnParentHashSubBlock),
+		Draw:                          deepCopyPoSpaceLotteryDraw(subBlock.Draw),
 	}
 
 	return deepCopyOfHashSubBlock
@@ -147,7 +147,7 @@ func deepCopySignatureSubBlock(subBlock SpaceMintBlockchain.SignatureSubBlock) S
 	deepCopyOfSignatureSubBlock := SpaceMintBlockchain.SignatureSubBlock{
 		Slot:                                  subBlock.Slot,
 		SignatureOnCurrentTransactionSubBlock: deepCopyByteSlice(subBlock.SignatureOnCurrentTransactionSubBlock),
-		SignatureOnParentSubBlock:             deepCopyByteSlice(subBlock.SignatureOnParentSubBlock),
+		SignatureOnParentSignatureSubBlock:    deepCopyByteSlice(subBlock.SignatureOnParentSignatureSubBlock),
 	}
 	return deepCopyOfSignatureSubBlock
 }

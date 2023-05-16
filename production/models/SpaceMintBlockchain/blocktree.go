@@ -127,7 +127,11 @@ func (tree *Blocktree) getTransactionsInChain(block Block) []SpacemintTransactio
 	for !block.IsGenesis {
 		transactionsAccumulator = append(transactionsAccumulator, block.TransactionSubBlock.Transactions)
 		nextHash := block.ParentHash
-		block = tree.hashToNode(nextHash, tree.nodeContainer).block
+		nod, isEmpty := tree.hashToNode(nextHash, tree.nodeContainer)
+		if isEmpty {
+			panic("Parent in tree does not exist, tree is inconsistent")
+		}
+		block = nod.block
 		i++
 		if i > 10000000 {
 			panic("There is probably a cycle in what was supposed to be a tree")
@@ -141,17 +145,22 @@ HashToBlock
 
 returns the Block that hashes to the parameter
 */
-func (tree *Blocktree) HashToBlock(hash sha256.HashValue) Block {
-	block := tree.hashToNode(hash, tree.nodeContainer).block
-	return block
+func (tree *Blocktree) HashToBlock(hash sha256.HashValue) (Block, bool) {
+	nod, isEmpty := tree.hashToNode(hash, tree.nodeContainer)
+	return nod.block, isEmpty
 }
 
-func (tree *Blocktree) hashToNode(hash sha256.HashValue, treeMap map[sha256.HashValue]node) node {
+func (tree *Blocktree) hashToNode(hash sha256.HashValue, treeMap map[sha256.HashValue]node) (nod node, isEmpty bool) {
 	result, foundKey := treeMap[hash]
 	if !foundKey {
-		panic("Hash given to tree is not in tree!")
+		return node{
+			block:              Block{},
+			length:             0,
+			singleBlockQuality: 0,
+			chainQuality:       0,
+		}, true
 	}
-	return result
+	return result, false
 }
 
 /*
@@ -226,8 +235,12 @@ func (tree *Blocktree) startSubscriptionHandler() {
 }
 
 func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n int) PoSpace.MiningLocation {
-	newBlock := tree.hashToNode(hashOfBlockToMineOn, tree.nodeContainer).block
-	challengeSetP, challengesSetV := tree.getChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
+	nod, isEmpty := tree.hashToNode(hashOfBlockToMineOn, tree.nodeContainer)
+	if isEmpty {
+		panic("GetMiningLocation called on invalid hash")
+	}
+	newBlock := nod.block
+	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
 	newLocation := PoSpace.MiningLocation{
 		Slot:          newBlock.TransactionSubBlock.Slot + 1,
 		ParentHash:    hashOfBlockToMineOn,
@@ -283,12 +296,12 @@ func (tree *Blocktree) Equals(comparisonTree Blocktree) bool {
 func (tree *Blocktree) GetChallengesForExtendingOnHead(n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
 	//Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6
 	head := tree.GetHead()
-	return tree.getChallengesForExtendingOnBlockWithHash(head.HashOfBlock(), n)
+	return tree.GetChallengesForExtendingOnBlockWithHash(head.HashOfBlock(), n)
 }
 
-func (tree *Blocktree) getChallengesForExtendingOnBlockWithHash(parentHash sha256.HashValue, n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
+func (tree *Blocktree) GetChallengesForExtendingOnBlockWithHash(parentHash sha256.HashValue, n int) (ProofChallengeSetP []int, CorrectCommitmentChallengesSetV []int) {
 	//TODO Should be calculated with dynamically fixed point prior in the chain according to the protocol as described on page 6 Here we just use the parent block
-	challengesSamplingBlock := tree.HashToBlock(parentHash)
+	challengesSamplingBlock, _ := tree.HashToBlock(parentHash)
 	//We only sample from the proof chain to avoid some cases of challenge grinding
 	hashSubBlockHash := sha256.HashByteArray(challengesSamplingBlock.HashSubBlock.ToByteArray())
 	HashAsInt := int64(binary.LittleEndian.Uint64(hashSubBlockHash.ToSlice()))
@@ -319,7 +332,11 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 	for !currentNode.block.IsGenesis {
 		qualityAccumulator = append(qualityAccumulator, currentNode.singleBlockQuality)
 		nextHash := currentNode.block.ParentHash
-		currentNode = tree.hashToNode(nextHash, tree.nodeContainer)
+		nod, isEmpty := tree.hashToNode(nextHash, tree.nodeContainer)
+		if isEmpty {
+			panic("Parent in tree does not exist, tree is inconsistent")
+		}
+		currentNode = nod
 		i++
 		if i > 10000000 {
 			panic("There is probably a cycle in what was supposed to be a tree")

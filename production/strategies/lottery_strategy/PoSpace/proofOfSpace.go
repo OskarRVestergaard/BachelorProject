@@ -116,8 +116,9 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 	proverSingleton <- prover
 }
 
-func (lottery *PoSpace) Verify(draw LotteryDraw, miningLocation MiningLocation, commitment sha256.HashValue) bool {
+func (lottery *PoSpace) Verify(parameters PoSpaceModels.Parameters, draw LotteryDraw, miningLocation MiningLocation, commitment sha256.HashValue) bool {
 	verifier := Parties.Verifier{}
+	verifier.InitializationPhase1(parameters)
 	verifier.SaveCommitment(commitment)
 	if verifier.VerifyChallenges(miningLocation.ChallengeSetP, draw.ProofOfSpaceA, false) {
 		return verifier.VerifyChallenges(miningLocation.ChallengeSetV, draw.ProofOfCorrectCommitmentB, true)

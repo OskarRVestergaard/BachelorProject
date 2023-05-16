@@ -5,7 +5,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1"
 	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
@@ -268,9 +267,9 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 		IsGenesis:  false,
 		ParentHash: parentHash,
 		HashSubBlock: SpaceMintBlockchain.HashSubBlock{
-			Slot:                      slot,
-			SignatureOnParentSubBlock: nil,
-			Draw:                      draw,
+			Slot:                          slot,
+			SignatureOnParentHashSubBlock: nil,
+			Draw:                          draw,
 		},
 		TransactionSubBlock: SpaceMintBlockchain.TransactionSubBlock{
 			Slot: slot,
@@ -283,11 +282,14 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{
 			Slot:                                  slot,
 			SignatureOnCurrentTransactionSubBlock: nil,
-			SignatureOnParentSubBlock:             nil,
+			SignatureOnParentSignatureSubBlock:    nil,
 		},
 	}
 
-	parentBlock := blocktree.HashToBlock(parentHash)
+	parentBlock, isEmpty := blocktree.HashToBlock(parentHash)
+	if isEmpty {
+		panic("Something went wrong druing block creation, tried to create a block with no valid parent!")
+	}
 	resultBlock.SignBlock(parentBlock, p.signatureStrategy, secretKey)
 	return resultBlock, false
 }
@@ -297,7 +299,11 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpace.LotteryDraw) {
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
-	extendedOnSlot := blocktree.HashToBlock(draw.ParentHash).TransactionSubBlock.Slot
+	nod, isEmpty := blocktree.HashToBlock(draw.ParentHash)
+	if isEmpty {
+		panic("Trying to send block with no valid parent")
+	}
+	extendedOnSlot := nod.TransactionSubBlock.Slot
 	slot := utils.CalculateSlot(p.startTime)
 	for slot <= extendedOnSlot {
 		time.Sleep(constants.SlotLength / 10)
@@ -327,25 +333,56 @@ func (p *PoSpacePeer) blockHandlerLoop() {
 	}
 }
 
-func (p *PoSpacePeer) verifyBlock(block PoWblockchain.Block) bool {
-	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
+func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
+	//Ideally this also needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	//TODO This is potentially very slow, but could be faster using dynamic programming in the case the chain best chain does not switch often
-	if !block.HasCorrectSignature(p.signatureStrategy) {
+	blockTree := <-p.blockTreeChan
+	parentBlock, isEmpty := blockTree.HashToBlock(block.ParentHash)
+	if isEmpty {
+		p.unhandledBlocks <- block
+		p.blockTreeChan <- blockTree
+		time.Sleep(200 * time.Millisecond)
 		return false
 	}
-	if !p.verifyTransactions(block.BlockData.Transactions) {
+	if !block.HasConsistentSignaturesAndSlots(parentBlock, p.signatureStrategy) {
+		p.blockTreeChan <- blockTree
 		return false
 	}
-	//TODO When draw is sent over network, then these checks makes sense
-	//if block.Draw.Vk != block.Vk {
-	//	return false
-	//}
-	//if block.Draw.ParentHash != block.ParentHash {
-	//	return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
-	//}
-	//if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
-	//	return false
-	//}
+	if !p.verifyTransactions(block.TransactionSubBlock.Transactions.Payments) {
+		p.blockTreeChan <- blockTree
+		return false
+	}
+	if !block.ParentHash.Equals(block.HashSubBlock.Draw.ParentHash) {
+		p.blockTreeChan <- blockTree
+		return false
+	}
+	knownCommitments := <-p.knownCommitments
+	commitmentOfProof, isKnown := knownCommitments[block.HashSubBlock.Draw.Vk]
+	if !isKnown {
+		//We have not heard about this peer allocation this space, maybe it has just not arrived yet, is a full system, they would have to be delivered long before (contained is a prior block)
+		p.unhandledBlocks <- block
+		p.blockTreeChan <- blockTree
+		p.knownCommitments <- knownCommitments
+		time.Sleep(200 * time.Millisecond)
+		return false
+	}
+	chalA, chalB := blockTree.GetChallengesForExtendingOnBlockWithHash(block.ParentHash, commitmentOfProof.N)
+	location := PoSpace.MiningLocation{
+		Slot:          block.SignatureSubBlock.Slot,
+		ParentHash:    block.ParentHash,
+		ChallengeSetP: chalA,
+		ChallengeSetV: chalB,
+	}
+	//TODO Discuss and handle real parameters
+	prm := Task1.GenerateParameters()
+	prm.Id = commitmentOfProof.Id.String()
+	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
+		p.blockTreeChan <- blockTree
+		p.knownCommitments <- knownCommitments
+		return false
+	}
+	p.blockTreeChan <- blockTree
+	p.knownCommitments <- knownCommitments
 	return true
 }
 
@@ -360,14 +397,13 @@ func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedPaymentTran
 }
 
 func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
-	//	if !p.verifyBlock(block) {
-	//		return
-	//	}
+	if !p.verifyBlock(block) {
+		return
+	}
 	blocktree := <-p.blockTreeChan
 	block = Message.MakeDeepCopyOfPoSBlock(block)
 	knownCommitments := <-p.knownCommitments
 	commitmentOfProof := knownCommitments[block.HashSubBlock.Draw.Vk]
-	//TODO Make sure this is correct information that links to the block
 	var t = blocktree.AddBlock(block, int64(commitmentOfProof.N))
 	p.knownCommitments <- knownCommitments
 	switch t {
@@ -382,11 +418,9 @@ func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
 		p.blockTreeChan <- blocktree
 	case 0:
 		//Parent is not in the tree, try to add later
-		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
-		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
-
+		//This case is actually avoided because of the verification step earlier
 		p.blockTreeChan <- blocktree
-		time.Sleep(1000 * time.Millisecond) //Needs to be enough time for the other block to arrive
+		time.Sleep(200 * time.Millisecond) //Needs to be enough time for the other block to arrive
 		p.unhandledBlocks <- block
 	case 1:
 		//Block successfully added to the tree
