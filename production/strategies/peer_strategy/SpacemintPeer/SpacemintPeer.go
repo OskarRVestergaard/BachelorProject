@@ -280,9 +280,15 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 				Penalties:        []SpaceMintBlockchain.Penalty{},
 			},
 		},
-		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{},
+		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{
+			Slot:                                  slot,
+			SignatureOnCurrentTransactionSubBlock: nil,
+			SignatureOnParentSubBlock:             nil,
+		},
 	}
-	resultBlock.SignBlock(nil, p.signatureStrategy, secretKey) //TODO Fix
+
+	parentBlock := blocktree.HashToBlock(parentHash)
+	resultBlock.SignBlock(parentBlock, p.signatureStrategy, secretKey)
 	return resultBlock, false
 }
 

@@ -22,8 +22,13 @@ type HashSubBlock struct {
 	Draw                      PoSpace.LotteryDraw //The Proof of space associated with the block
 }
 
-func (block *Block) SignBlock(parentBlock *Block, signatureStrategy signature_strategy.SignatureInterface, secretKey string) {
-	//TODO Implement
+func (block *Block) SignBlock(parentBlock Block, signatureStrategy signature_strategy.SignatureInterface, secretKey string) {
+	currentTransactionSubBlockSignature := signatureStrategy.Sign(block.TransactionSubBlock.ToByteArray(), secretKey)
+	prevSignatureSubBlockSignature := signatureStrategy.Sign(parentBlock.SignatureSubBlock.ToByteArray(), secretKey)
+	prevHashSubBlockSignature := signatureStrategy.Sign(parentBlock.SignatureSubBlock.ToByteArray(), secretKey)
+	block.SignatureSubBlock.SignatureOnCurrentTransactionSubBlock = currentTransactionSubBlockSignature
+	block.SignatureSubBlock.SignatureOnParentSubBlock = prevSignatureSubBlockSignature
+	block.HashSubBlock.SignatureOnParentSubBlock = prevHashSubBlockSignature
 }
 
 func (subBlock *HashSubBlock) ToByteArray() []byte {

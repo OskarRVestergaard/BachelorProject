@@ -102,7 +102,7 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 
 	HashOfAnswers := sha256.HashByteArray(PoSpaceModels.ListOfTripleToByteArray(proofOfSpaceExecution))
 	quality := models.CalculateQuality(HashOfAnswers, int64(lottery.n))
-	qualityIsGoodEnough := 0.98 < quality //TODO, One could use the best known total sum of N in network to calculate what quality would give a realistic chance to win
+	qualityIsGoodEnough := 0.97 < quality //TODO, One could use the best known total sum of N in network to calculate what quality would give a realistic chance to win
 	if qualityIsGoodEnough {
 		proofOfCorrectCommitment := prover.AnswerChallenges(miningLocation.ChallengeSetV, true)
 		draw := LotteryDraw{
