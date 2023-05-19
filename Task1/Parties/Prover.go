@@ -1,9 +1,11 @@
 package Parties
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/utils"
+	"strconv"
+
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-	"strconv"
 )
 
 type Prover struct {
@@ -37,11 +39,8 @@ func (P *Prover) pebbleGraph() {
 func (P *Prover) createMerkleTreeFromGraph() {
 	//Makes assumptions on the given graph, such as it being a DAG and sorted topologically by index
 	size := P.pebbledGraph.Size
-	i := 1
-	for i < size {
-		i = i * 2
-	}
-	if i != size {
+
+	if !utils.PowerOfTwo(size) {
 		panic("Graph must have 2^n number of nodes")
 	}
 	tree := Models.MerkleTree{Nodes: make([]sha256.HashValue, size*2-1, size*2-1)}

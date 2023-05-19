@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"math/rand"
 )
 
 func main() {
-	var t = createGraph()
+	var t = createGraph(1, 4, 4)
 	print(t)
 	//noOfPeers := 2
 	//noOfMsgs := 2
@@ -36,42 +37,67 @@ func main() {
 
 }
 
-func createGraph() [][]bool {
-	var bipartiteExpanders = 5
-	var sourceNodes = 5
-	edges := make([][]bool, sourceNodes, sourceNodes)
-	for i := range edges {
-		edges[i] = make([]bool, (bipartiteExpanders * sourceNodes), (bipartiteExpanders * sourceNodes))
+func createGraph(seed int, n int, k int) [][]bool {
+	if !utils.PowerOfTwo(n) {
+		panic("n must be a power of two")
 	}
-	//edges[0][1] = true
-	//edges[0][2] = true
-	//edges[0][3] = true
-	//edges[1][3] = true
-	//edges[1][4] = true
-	//edges[2][4] = true
-	//edges[2][5] = true
-	for i1 := 0; i1 < sourceNodes; i1++ {
-		for i2 := 0; i2 < bipartiteExpanders; i2++ {
-			edges[i1][1] = true
-		}
+	if !utils.PowerOfTwo(k) {
+		panic("k must be a power of two")
+	}
+
+	edges := make([][]bool, n*k, n*k)
+	for i := range edges {
+		edges[i] = make([]bool, n*k, n*k)
 	}
 
 	var d = CalculateD()
-	for i := 0; i < bipartiteExpanders; i++ {
-		for j := 0; j <= sourceNodes; j++ {
-			for t := 0; t < d; t++ {
-				var random = rand.Intn(sourceNodes - 1)
-				edges[i][random] = true
-			}
-			//var random = rand.Intn(sourceNodes - 1)
-			//edges[i][random] = true
+
+	source := rand.NewSource(5)
+	rando := rand.New(source)
+
+	preds := make([][]int, n, n)
+	for i := range preds {
+		preds[i] = make([]int, d, d)
+		for k := range preds[i] {
+			preds[i][k] = -1
 		}
-		//rand.Intn(100)
-		//edges[]
+		for j := 0; j < d; j++ {
+			newNumber := false
+			for !newNumber {
+				random := rando.Intn(n)
+				if !numberAlreadyChosen(random, preds[i]) {
+					preds[i][j] = random
+					newNumber = true
+				}
+			}
+		}
 	}
-	return edges
+
+	for i := range preds {
+		for j := range preds[i] {
+			edges[preds[i][j]][n+i] = true
+		}
+	}
+
+	for i := 0; i < len(edges)-n; i++ {
+		for j := 0; j < len(edges)-n; j++ {
+			if edges[i][j] { // == true
+				edges[i+n][j+n] = true
+			}
+		}
+	}
+
+	return [][]bool{}
 }
 func CalculateD() int {
-	return 1
+	return 2
+}
 
+func numberAlreadyChosen(n int, lst []int) bool {
+	for _, b := range lst {
+		if b == n {
+			return true
+		}
+	}
+	return false
 }

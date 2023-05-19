@@ -1,11 +1,12 @@
 package utils
 
 import (
+	"time"
+
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
-	"time"
 )
 
 func GetSomeKey[t comparable](m map[t]t) t {
@@ -46,4 +47,12 @@ func StartTimeSlotUpdater(startTime time.Time) chan int {
 		}
 	}()
 	return updater
+}
+
+func PowerOfTwo(n int) bool {
+	i := 1
+	for i < n {
+		i = i * 2
+	}
+	return i == n
 }
