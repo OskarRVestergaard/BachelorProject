@@ -87,7 +87,7 @@ func (p *PoWPeer) Connect(ip string, port int) {
 		Port: port,
 	}
 	ownIpPort := p.network.GetAddress().ToString()
-	print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
+	//print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
 	err := p.network.SendMessageTo(Message.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
 
 	if err != nil {

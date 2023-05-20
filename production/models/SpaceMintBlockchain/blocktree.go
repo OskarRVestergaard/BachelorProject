@@ -347,6 +347,8 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 	return qualityAccumulator
 }
 
+//Tree visualization
+
 /*
 Method is probably very slow, since it checks the whole tree for children, going the other direction is much easier
 It is only supposed to be used in testing

@@ -51,7 +51,7 @@ func TestPOWNetwork16Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 8; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(6000 * time.Millisecond)
 	}
@@ -71,6 +71,11 @@ func TestPOWNetwork16Peers(t *testing.T) {
 		}
 	}
 	assert.True(t, true)
+	tree1 := listOfPeers[0].GetBlockTree().(PoWblockchain.Blocktree)
+	visualTree := tree1.RootToVisualNode()
+	chainFromHead := tree1.HeadToChain()
+	print(&chainFromHead)
+	print(&visualTree)
 }
 
 func TestPoSpaceNetwork4Peers(t *testing.T) {
