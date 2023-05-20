@@ -347,11 +347,6 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 	return qualityAccumulator
 }
 
-type visualNode struct {
-	blockInformation node
-	children         []visualNode
-}
-
 /*
 Method is probably very slow, since it checks the whole tree for children, going the other direction is much easier
 It is only supposed to be used in testing
@@ -367,29 +362,61 @@ func (tree *Blocktree) getChildren(parent node) []sha256.HashValue {
 	return children
 }
 
+type visualNode struct {
+	blockInformation node
+	children         []visualNode
+}
+
 /*
-TreeToStruct
+HashToVisualNode
 Probably very slow, to be used only for manual testing
 Also not tail recursive
 */
-func (tree *Blocktree) TreeFromRootToStruct() visualNode {
-	return tree.treeToStruct(tree.genesisHash)
+func (tree *Blocktree) RootToVisualNode() visualNode {
+	return tree.HashToVisualNode(tree.genesisHash)
 }
 
-func (tree *Blocktree) treeToStruct(blockHash sha256.HashValue) visualNode {
+func (tree *Blocktree) HashToVisualNode(blockHash sha256.HashValue) visualNode {
 	currentNode, isEmpty := tree.hashToNode(blockHash, tree.nodeContainer)
 	if isEmpty {
-		panic("treeToStruct given hash not in use")
+		panic("HashToVisualNode given hash not in use")
 	}
 	children := tree.getChildren(currentNode)
 	var childrenVisualNodes []visualNode
 
 	for _, child := range children {
-		childrenVisualNodes = append(childrenVisualNodes, tree.treeToStruct(child))
+		childrenVisualNodes = append(childrenVisualNodes, tree.HashToVisualNode(child))
 	}
 
 	return visualNode{
 		blockInformation: currentNode,
 		children:         childrenVisualNodes,
+	}
+}
+
+type Chain struct {
+	blockInformation node
+	parent           *Chain
+}
+
+func (tree *Blocktree) HeadToChain() Chain {
+	return tree.HashToChain(tree.head.block.HashOfBlock())
+}
+
+func (tree *Blocktree) HashToChain(blockHash sha256.HashValue) Chain {
+	currentNode, isEmpty := tree.hashToNode(blockHash, tree.nodeContainer)
+	if isEmpty {
+		panic("HashToChain given hash not in use")
+	}
+	if currentNode.block.IsGenesis {
+		return Chain{
+			blockInformation: currentNode,
+			parent:           nil,
+		}
+	}
+	parentChain := tree.HashToChain(currentNode.block.ParentHash)
+	return Chain{
+		blockInformation: currentNode,
+		parent:           &parentChain,
 	}
 }

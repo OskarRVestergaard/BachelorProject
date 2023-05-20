@@ -7,4 +7,4 @@ var BlockSpaceCommitAmountLimit = 32
 var BlockPenaltyAmountLimit = 32
 
 var Hardness = 23
-var SlotLength = 2000 * time.Millisecond
+var SlotLength = 4000 * time.Millisecond

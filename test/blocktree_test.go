@@ -144,7 +144,9 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 	}
 	assert.True(t, true)
 	tree1 := listOfPeers[0].GetBlockTree().(SpaceMintBlockchain.Blocktree)
-	visualTree := tree1.TreeFromRootToStruct()
+	visualTree := tree1.RootToVisualNode()
+	chainFromHead := tree1.HeadToChain()
+	print(&chainFromHead)
 	print(&visualTree)
 }
 
