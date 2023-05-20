@@ -39,14 +39,12 @@ func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
 	return resultGraph
 }
 
-func GenerateParameters() PoSpaceModels.Parameters {
+func GenerateParameters(seed int64, n int, k int) PoSpaceModels.Parameters {
 	id := uuid.New()
-	//size := 8 //If changed, edge generation should also be made more general
-	//graphEdges := generateDirectedAcyclicGraphStructure(size)
-	graphEdges := createGraph(5, 64, 64)
+	graphEdges := createGraph(seed, n, k)
 	result := PoSpaceModels.Parameters{
 		Id:               id,
-		StorageBound:     64 * 64,
+		StorageBound:     2 * n * k * n * k,
 		GraphDescription: graphEdges,
 	}
 	return result
@@ -55,7 +53,7 @@ func GenerateParameters() PoSpaceModels.Parameters {
 func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
 	prover := Parties.Prover{}
 	verifier := Parties.Verifier{}
-	prm := GenerateParameters()
+	prm := GenerateParameters(5, 64, 64)
 
 	//Prover and verifier gets ready for the protocol, the prover generates the hash-values of the graph
 	//and computes a merkle tree commitment on it.
