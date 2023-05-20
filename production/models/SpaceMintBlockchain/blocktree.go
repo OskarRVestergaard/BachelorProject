@@ -20,6 +20,7 @@ Use the NewBlockTree method for creating a block tree!
 The struct methods are NOT thread safe (except for the handling of subscribers)
 */
 type Blocktree struct {
+	genesisHash   sha256.HashValue
 	nodeContainer map[sha256.HashValue]node
 	head          node
 	subscribers   chan []subscriber
@@ -52,6 +53,7 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	treeMapContainer[genesisHash] = genesisNode
 	newHeadBlocks := make(chan Block, 20)
 	tree := Blocktree{
+		genesisHash:   genesisHash,
 		nodeContainer: treeMapContainer,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
@@ -343,4 +345,80 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 		}
 	}
 	return qualityAccumulator
+}
+
+//Tree visualization
+
+/*
+Method is probably very slow, since it checks the whole tree for children, going the other direction is much easier
+It is only supposed to be used in testing
+*/
+func (tree *Blocktree) getChildren(parent node) []sha256.HashValue {
+	var children []sha256.HashValue
+	parentHash := parent.block.HashOfBlock()
+	for hashValues, potentialChild := range tree.nodeContainer {
+		if potentialChild.block.ParentHash.Equals(parentHash) {
+			children = append(children, hashValues)
+		}
+	}
+	return children
+}
+
+type visualNode struct {
+	blockInformation node
+	children         []visualNode
+}
+
+/*
+HashToVisualNode
+Probably very slow, to be used only for manual testing
+Also not tail recursive
+*/
+func (tree *Blocktree) RootToVisualNode() visualNode {
+	return tree.HashToVisualNode(tree.genesisHash)
+}
+
+func (tree *Blocktree) HashToVisualNode(blockHash sha256.HashValue) visualNode {
+	currentNode, isEmpty := tree.hashToNode(blockHash, tree.nodeContainer)
+	if isEmpty {
+		panic("HashToVisualNode given hash not in use")
+	}
+	children := tree.getChildren(currentNode)
+	var childrenVisualNodes []visualNode
+
+	for _, child := range children {
+		childrenVisualNodes = append(childrenVisualNodes, tree.HashToVisualNode(child))
+	}
+
+	return visualNode{
+		blockInformation: currentNode,
+		children:         childrenVisualNodes,
+	}
+}
+
+type Chain struct {
+	blockInformation node
+	parent           *Chain
+}
+
+func (tree *Blocktree) HeadToChain() Chain {
+	return tree.HashToChain(tree.head.block.HashOfBlock())
+}
+
+func (tree *Blocktree) HashToChain(blockHash sha256.HashValue) Chain {
+	currentNode, isEmpty := tree.hashToNode(blockHash, tree.nodeContainer)
+	if isEmpty {
+		panic("HashToChain given hash not in use")
+	}
+	if currentNode.block.IsGenesis {
+		return Chain{
+			blockInformation: currentNode,
+			parent:           nil,
+		}
+	}
+	parentChain := tree.HashToChain(currentNode.block.ParentHash)
+	return Chain{
+		blockInformation: currentNode,
+		parent:           &parentChain,
+	}
 }
