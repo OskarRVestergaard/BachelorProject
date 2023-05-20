@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	var t = createGraph(1, 4, 4)
+	var t = createGraph(1, 64, 64)
 	print(t)
 
 	//calculatedcalculateDParameter()
@@ -54,7 +54,7 @@ func createGraph(seed int, n int, k int) [][]bool {
 		edges[i] = make([]bool, n*k, n*k)
 	}
 
-	var d = CalculateD()
+	var d = CalculateD(1/4, 1/2)
 
 	source := rand.NewSource(5)
 	rando := rand.New(source)
@@ -91,11 +91,7 @@ func createGraph(seed int, n int, k int) [][]bool {
 		}
 	}
 
-	return [][]bool{}
-}
-func CalculateD() int {
-	//calculatedcalculateDParameter	//todo call this with prm
-	return 2
+	return edges
 }
 
 func numberAlreadyChosen(n int, lst []int) bool {
@@ -107,11 +103,10 @@ func numberAlreadyChosen(n int, lst []int) bool {
 	return false
 }
 
-func calculatedcalculateDParameter(alfa float64, beta float64) float64 {
-	return (calculateEntropy(alfa) + calculateEntropy(beta)) / (calculateEntropy(alfa) - beta*calculateEntropy(alfa/beta))
+func CalculateD(alpha float64, beta float64) int {
+	return int((calculateEntropy(alpha) + calculateEntropy(beta)) / (calculateEntropy(alpha) - beta*calculateEntropy(alpha/beta)))
 }
 
 func calculateEntropy(t float64) float64 {
-	result := -t*math.Log2(t)*t - (1-t)*math.Log2(1-t) //TODO binary entropy?
-	return result
+	return -t*math.Log2(t)*t - (1-t)*math.Log2(1-t)
 }
