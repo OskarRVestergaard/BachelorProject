@@ -25,8 +25,7 @@ func (P *Prover) pebbleGraph() {
 		toBeHashed := []byte(id.String())
 		toBeHashed = append(toBeHashed, vertexLabel...)
 		for j := 0; j < size; j++ {
-			jIsParent := P.pebbledGraph.Edges[j][i]
-			if jIsParent {
+			if P.pebbledGraph.IfEdge(j, i) {
 				parentHashValue := P.pebbledGraph.Value[j].ToSlice()
 				toBeHashed = append(toBeHashed, parentHashValue...)
 			}
@@ -91,7 +90,7 @@ func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTripl
 	//Find parents of the nodes
 	if withParents {
 		for index, _ := range indicesSet {
-			parents := P.pebbledGraph.GetParents(index)
+			parents := P.pebbledGraph.GetPredecessors(index)
 			for _, parent := range parents {
 				indicesSet[parent] = member
 			}

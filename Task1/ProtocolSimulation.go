@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
 	"math"
 	//"math/big"
@@ -17,43 +18,50 @@ import (
 //Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
 
 func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
-	edges := make([][]bool, size, size)
-	for i := range edges {
-		edges[i] = make([]bool, size, size)
-	}
-	edges[0][1] = true
-	edges[0][2] = true
-	edges[0][3] = true
-	edges[1][3] = true
-	edges[1][4] = true
-	edges[2][4] = true
-	edges[2][5] = true
-	edges[0][7] = true
-	edges[2][6] = true
-	edges[3][6] = true
-	edges[5][6] = true
-	edges[5][7] = true
-
-	resultGraph := &PoSpaceModels.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
+	resultGraph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
+	resultGraph.InitGraph(size)
+	resultGraph.AddEdge(0, 1)
+	resultGraph.AddEdge(0, 2)
+	resultGraph.AddEdge(0, 3)
+	resultGraph.AddEdge(1, 3)
+	resultGraph.AddEdge(1, 4)
+	resultGraph.AddEdge(2, 4)
+	resultGraph.AddEdge(2, 5)
+	resultGraph.AddEdge(0, 7)
+	resultGraph.AddEdge(2, 6)
+	resultGraph.AddEdge(3, 6)
+	resultGraph.AddEdge(5, 6)
+	resultGraph.AddEdge(5, 7)
 
 	return resultGraph
 }
 
-func GenerateParameters(seed int64, n int, k int) PoSpaceModels.Parameters {
+func GenerateTestingParameters() PoSpaceModels.Parameters {
 	id := uuid.New()
-	graphEdges := createGraph(seed, n, k)
+	size := 8 //If changed, edge generation should also be made more general
+	graphStructure := generateDirectedAcyclicGraphStructure(size)
 	result := PoSpaceModels.Parameters{
 		Id:               id,
-		StorageBound:     2 * n * k * n * k,
-		GraphDescription: graphEdges,
+		StorageBound:     2 * size,
+		GraphDescription: graphStructure,
 	}
 	return result
 }
 
-func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
+func GenerateParameters(seed int64, n int, k int) PoSpaceModels.Parameters {
+	id := uuid.New()
+	graphStructure := createGraph(seed, n, k)
+	result := PoSpaceModels.Parameters{
+		Id:               id,
+		StorageBound:     2 * n * k,
+		GraphDescription: graphStructure,
+	}
+	return result
+}
+
+func SimulateInitialization(prm PoSpaceModels.Parameters) (Parties.Prover, Parties.Verifier, bool) {
 	prover := Parties.Prover{}
 	verifier := Parties.Verifier{}
-	prm := GenerateParameters(5, 64, 64)
 
 	//Prover and verifier gets ready for the protocol, the prover generates the hash-values of the graph
 	//and computes a merkle tree commitment on it.
@@ -88,27 +96,22 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 }
 
 func createGraph(seed int64, n int, k int) *PoSpaceModels.Graph {
-	if !utils.PowerOfTwo(n) {
-		panic("n must be a power of two")
+	size := n * k
+	if !utils.PowerOfTwo(size) {
+		panic("n and k must be a power of two")
 	}
-	if !utils.PowerOfTwo(k) {
-		panic("k must be a power of two")
-	}
-
-	edges := make([][]bool, n*k, n*k)
-	for i := range edges {
-		edges[i] = make([]bool, n*k, n*k)
-	}
-
-	var d = int(math.Ceil(CalculateD(0.25, 0.5)))
+	graph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
+	graph.InitGraph(size)
+	var d = int(math.Ceil(CalculateD(constants.Alpha, constants.Beta)))
+	d = 3 // TODO REMOVE :D
 	source := mathRand.NewSource(seed)
 	rando := mathRand.New(source)
 
 	preds := make([][]int, n, n)
 	for i := range preds {
 		preds[i] = make([]int, d, d)
-		for k := range preds[i] {
-			preds[i][k] = -1
+		for k2 := range preds[i] {
+			preds[i][k2] = -1
 		}
 		for j := 0; j < d; j++ {
 			newNumber := false
@@ -124,21 +127,22 @@ func createGraph(seed int64, n int, k int) *PoSpaceModels.Graph {
 
 	for i := range preds {
 		for j := range preds[i] {
-			edges[preds[i][j]][n+i] = true
+			graph.AddEdge(preds[i][j], n+i)
 		}
 	}
 
-	for i := 0; i < len(edges)-n; i++ {
-		for j := 0; j < len(edges)-n; j++ {
-			if edges[i][j] { // == true
-				edges[i+n][j+n] = true
+	for i := 0; i < k-2; i++ {
+		firstIndex := (i + 1) * n
+		for j := firstIndex; j < firstIndex+n; j++ {
+			for y := firstIndex - n; y < firstIndex; y++ {
+				if graph.IfEdge(y, j) {
+					graph.AddEdge(y+n, j+n)
+				}
 			}
 		}
 	}
 
-	resultGraph := &PoSpaceModels.Graph{Size: n * k, Edges: edges, Value: make([]sha256.HashValue, n*k, n*k)}
-
-	return resultGraph
+	return graph
 }
 
 func numberAlreadyChosen(n int, lst []int) bool {

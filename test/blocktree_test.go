@@ -82,7 +82,8 @@ func TestPoSpaceNetwork4Peers(t *testing.T) {
 	noOfPeers := 4
 	noOfMsgs := 4
 	noOfNames := 4
-	sizeOfProofsN := 8
+	sizeOfProofsN := 4
+
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(sizeOfProofsN)
@@ -111,13 +112,18 @@ func TestPoSpaceNetwork4Peers(t *testing.T) {
 		}
 	}
 	assert.True(t, true)
+	tree1 := listOfPeers[0].GetBlockTree().(SpaceMintBlockchain.Blocktree)
+	visualTree := tree1.RootToVisualNode()
+	chainFromHead := tree1.HeadToChain()
+	print(&chainFromHead)
+	print(&visualTree)
 }
 
 func TestPoSpaceNetwork16Peers(t *testing.T) {
 	noOfPeers := 16
 	noOfMsgs := 2
 	noOfNames := 16
-	sizeOfProofsN := 8
+	sizeOfProofsN := 128
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(sizeOfProofsN)

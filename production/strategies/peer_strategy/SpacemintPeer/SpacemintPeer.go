@@ -220,10 +220,10 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	head := blocktree.GetHead()
 	initialMiningLocation := blocktree.GetMiningLocation(head.HashOfBlock(), n)
 	winningDraws := make(chan PoSpace.LotteryDraw, 10)
-	poSpaceParameters := Task1.GenerateParameters()
+	poSpaceParameters := Task1.GenerateParameters(5, n, constants.GraphK)
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
 	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
-	p.floodSpaceCommit(commitment, poSpaceParameters.Id, n, verificationKey)
+	p.floodSpaceCommit(commitment, poSpaceParameters.Id, constants.GraphK*n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -368,13 +368,13 @@ func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
 	}
 	chalA, chalB := blockTree.GetChallengesForExtendingOnBlockWithHash(block.ParentHash, commitmentOfProof.N)
 	location := PoSpace.MiningLocation{
-		Slot:          block.HashSubBlock.Slot - 1,
+		Slot:          parentBlock.HashSubBlock.Slot,
 		ParentHash:    block.ParentHash,
 		ChallengeSetP: chalA,
 		ChallengeSetV: chalB,
 	}
-	//TODO Discuss and handle real parameters
-	prm := Task1.GenerateParameters()
+	// TODO FIX SEED
+	prm := Task1.GenerateParameters(5, commitmentOfProof.N/constants.GraphK, constants.GraphK)
 	prm.Id = commitmentOfProof.Id
 	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
 		p.blockTreeChan <- blockTree

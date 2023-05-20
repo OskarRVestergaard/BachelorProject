@@ -6,6 +6,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"math/rand"
 	"reflect"
 	"time"
@@ -309,17 +310,17 @@ func (tree *Blocktree) GetChallengesForExtendingOnBlockWithHash(parentHash sha25
 	HashAsInt := int64(binary.LittleEndian.Uint64(hashSubBlockHash.ToSlice()))
 	rnd := rand.New(rand.NewSource(HashAsInt)) // Math.rand is good for our case, since we want something deterministic given the seed and n
 
-	challengeAmountA := n / 8 //TODO Discuss what this should be
-	challengeAmountB := n / 4 //TODO Same as above
+	challengeAmountA := 1 //TODO Discuss what this should be
+	challengeAmountB := 2 //TODO Same as above
 
 	challengesSetP := make([]int, challengeAmountA)
 	challengesSetV := make([]int, challengeAmountB)
 	for i := 0; i < challengeAmountA; i++ {
-		challengeNumber := rnd.Int() % n
+		challengeNumber := rnd.Intn(n * constants.GraphK)
 		challengesSetP[i] = challengeNumber
 	}
 	for i := 0; i < challengeAmountB; i++ {
-		challengeNumber := rnd.Int() % n
+		challengeNumber := rnd.Intn(n * constants.GraphK)
 		challengesSetV[i] = challengeNumber
 	}
 	return challengesSetP, challengesSetV

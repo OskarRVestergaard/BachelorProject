@@ -90,7 +90,7 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 		if !exists {
 			return false
 		}
-		parents := V.parameters.GraphDescription.GetParents(challenge)
+		parents := V.parameters.GraphDescription.GetPredecessors(challenge)
 		if withGraphConsistencyCheck {
 			parentTriples := make([]PoSpaceModels.OpeningTriple, len(parents))
 			for i, parentIndex := range parents {
