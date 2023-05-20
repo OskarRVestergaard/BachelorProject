@@ -143,6 +143,9 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 		}
 	}
 	assert.True(t, true)
+	tree1 := listOfPeers[0].GetBlockTree().(SpaceMintBlockchain.Blocktree)
+	visualTree := tree1.TreeFromRootToStruct()
+	print(&visualTree)
 }
 
 func TestRandom(t *testing.T) {

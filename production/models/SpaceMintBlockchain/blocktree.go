@@ -20,6 +20,7 @@ Use the NewBlockTree method for creating a block tree!
 The struct methods are NOT thread safe (except for the handling of subscribers)
 */
 type Blocktree struct {
+	genesisHash   sha256.HashValue
 	nodeContainer map[sha256.HashValue]node
 	head          node
 	subscribers   chan []subscriber
@@ -52,6 +53,7 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 	treeMapContainer[genesisHash] = genesisNode
 	newHeadBlocks := make(chan Block, 20)
 	tree := Blocktree{
+		genesisHash:   genesisHash,
 		nodeContainer: treeMapContainer,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
@@ -343,4 +345,51 @@ func (tree *Blocktree) collectBlockQualitiesForHead() (blockQualitiesFromHeadToG
 		}
 	}
 	return qualityAccumulator
+}
+
+type visualNode struct {
+	blockInformation node
+	children         []visualNode
+}
+
+/*
+Method is probably very slow, since it checks the whole tree for children, going the other direction is much easier
+It is only supposed to be used in testing
+*/
+func (tree *Blocktree) getChildren(parent node) []sha256.HashValue {
+	var children []sha256.HashValue
+	parentHash := parent.block.HashOfBlock()
+	for hashValues, potentialChild := range tree.nodeContainer {
+		if potentialChild.block.ParentHash.Equals(parentHash) {
+			children = append(children, hashValues)
+		}
+	}
+	return children
+}
+
+/*
+TreeToStruct
+Probably very slow, to be used only for manual testing
+Also not tail recursive
+*/
+func (tree *Blocktree) TreeFromRootToStruct() visualNode {
+	return tree.treeToStruct(tree.genesisHash)
+}
+
+func (tree *Blocktree) treeToStruct(blockHash sha256.HashValue) visualNode {
+	currentNode, isEmpty := tree.hashToNode(blockHash, tree.nodeContainer)
+	if isEmpty {
+		panic("treeToStruct given hash not in use")
+	}
+	children := tree.getChildren(currentNode)
+	var childrenVisualNodes []visualNode
+
+	for _, child := range children {
+		childrenVisualNodes = append(childrenVisualNodes, tree.treeToStruct(child))
+	}
+
+	return visualNode{
+		blockInformation: currentNode,
+		children:         childrenVisualNodes,
+	}
 }
