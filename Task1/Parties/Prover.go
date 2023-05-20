@@ -4,10 +4,8 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"strconv"
 
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
-
 )
 
 type Prover struct {

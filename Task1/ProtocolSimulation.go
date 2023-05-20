@@ -5,10 +5,10 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
-	"math"
-	"math/big"
-	mathRand "math/rand"
 	"github.com/google/uuid"
+	"math"
+	//"math/big"
+	mathRand "math/rand"
 )
 
 //Some slight modifications has been made to the original protocol, such as sending the index back and forth, the size
@@ -41,7 +41,7 @@ func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
 
 func GenerateParameters() PoSpaceModels.Parameters {
 	id := uuid.New()
-	size := 8 //If changed, edge generation should also be made more general
+	//size := 8 //If changed, edge generation should also be made more general
 	//graphEdges := generateDirectedAcyclicGraphStructure(size)
 	graphEdges := createGraph(5, 64, 64)
 	result := PoSpaceModels.Parameters{
@@ -89,7 +89,7 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	return result
 }
 
-func createGraph(seed int64, n int, k int) *Models.Graph {
+func createGraph(seed int64, n int, k int) *PoSpaceModels.Graph {
 	if !utils.PowerOfTwo(n) {
 		panic("n must be a power of two")
 	}
@@ -138,7 +138,7 @@ func createGraph(seed int64, n int, k int) *Models.Graph {
 		}
 	}
 
-	resultGraph := &Models.Graph{Size: n * k, Edges: edges, Value: make([]sha256.HashValue, n*k, n*k)}
+	resultGraph := &PoSpaceModels.Graph{Size: n * k, Edges: edges, Value: make([]sha256.HashValue, n*k, n*k)}
 
 	return resultGraph
 }
