@@ -1,14 +1,8 @@
 package main
 
-import (
-	"github.com/OskarRVestergaard/BachelorProject/production/utils"
-	"math"
-	"math/rand"
-)
-
 func main() {
-	var t = createGraph(1, 64, 64)
-	print(t)
+	//var t = createGraph(1, 64, 64)
+	//print(t)
 
 	//calculatedcalculateDParameter()
 
@@ -39,74 +33,4 @@ func main() {
 	//}
 	//println("finished s
 
-}
-
-func createGraph(seed int, n int, k int) [][]bool {
-	if !utils.PowerOfTwo(n) {
-		panic("n must be a power of two")
-	}
-	if !utils.PowerOfTwo(k) {
-		panic("k must be a power of two")
-	}
-
-	edges := make([][]bool, n*k, n*k)
-	for i := range edges {
-		edges[i] = make([]bool, n*k, n*k)
-	}
-
-	var d = CalculateD(1/4, 1/2)
-
-	source := rand.NewSource(5)
-	rando := rand.New(source)
-
-	preds := make([][]int, n, n)
-	for i := range preds {
-		preds[i] = make([]int, d, d)
-		for k := range preds[i] {
-			preds[i][k] = -1
-		}
-		for j := 0; j < d; j++ {
-			newNumber := false
-			for !newNumber {
-				random := rando.Intn(n)
-				if !numberAlreadyChosen(random, preds[i]) {
-					preds[i][j] = random
-					newNumber = true
-				}
-			}
-		}
-	}
-
-	for i := range preds {
-		for j := range preds[i] {
-			edges[preds[i][j]][n+i] = true
-		}
-	}
-
-	for i := 0; i < len(edges)-n; i++ {
-		for j := 0; j < len(edges)-n; j++ {
-			if edges[i][j] { // == true
-				edges[i+n][j+n] = true
-			}
-		}
-	}
-
-	return edges
-}
-
-func numberAlreadyChosen(n int, lst []int) bool {
-	for _, b := range lst {
-		if b == n {
-			return true
-		}
-	}
-	return false
-}
-
-func CalculateD(alpha float64, beta float64) int {
-	return int((calculateEntropy(alpha) + calculateEntropy(beta)) / (calculateEntropy(alpha) - beta*calculateEntropy(alpha/beta)))
-}
-
-func calculateEntropy(t float64) float64 {
-	return -t*math.Log2(t)*t - (1-t)*math.Log2(1-t)
 }

@@ -5,8 +5,10 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"math"
 	"math/big"
+	mathRand "math/rand"
 )
 
 //Some slight modifications has been made to the original protocol, such as sending the index back and forth, the size
@@ -44,11 +46,18 @@ func GenerateParameters() Models.Parameters {
 		print(err.Error())
 	}
 	id := random.String()
-	size := 8 //If changed, edge generation should also be made more general
-	graphEdges := generateDirectedAcyclicGraphStructure(size)
+
+	// --------
+
+	//size := 8 //If changed, edge generation should also be made more general
+	//graphEdges := generateDirectedAcyclicGraphStructure(size)
+
+	graphEdges := createGraph(5, 64, 64)
+
+	// ---------
 	result := Models.Parameters{
 		Id:               id,
-		StorageBound:     2 * size,
+		StorageBound:     64 * 64,
 		GraphDescription: graphEdges,
 	}
 	return result
@@ -89,4 +98,75 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	//Verifier verifies the openings but does not consult the hard to pebble graph
 	result := verifier.VerifyChallenges(challenges, answerMsg, false)
 	return result
+}
+
+func createGraph(seed int64, n int, k int) *Models.Graph {
+	if !utils.PowerOfTwo(n) {
+		panic("n must be a power of two")
+	}
+	if !utils.PowerOfTwo(k) {
+		panic("k must be a power of two")
+	}
+
+	edges := make([][]bool, n*k, n*k)
+	for i := range edges {
+		edges[i] = make([]bool, n*k, n*k)
+	}
+
+	var d = int(math.Ceil(CalculateD(0.25, 0.5)))
+	source := mathRand.NewSource(seed)
+	rando := mathRand.New(source)
+
+	preds := make([][]int, n, n)
+	for i := range preds {
+		preds[i] = make([]int, d, d)
+		for k := range preds[i] {
+			preds[i][k] = -1
+		}
+		for j := 0; j < d; j++ {
+			newNumber := false
+			for !newNumber {
+				random := rando.Intn(n)
+				if !numberAlreadyChosen(random, preds[i]) {
+					preds[i][j] = random
+					newNumber = true
+				}
+			}
+		}
+	}
+
+	for i := range preds {
+		for j := range preds[i] {
+			edges[preds[i][j]][n+i] = true
+		}
+	}
+
+	for i := 0; i < len(edges)-n; i++ {
+		for j := 0; j < len(edges)-n; j++ {
+			if edges[i][j] { // == true
+				edges[i+n][j+n] = true
+			}
+		}
+	}
+
+	resultGraph := &Models.Graph{Size: n * k, Edges: edges, Value: make([]sha256.HashValue, n*k, n*k)}
+
+	return resultGraph
+}
+
+func numberAlreadyChosen(n int, lst []int) bool {
+	for _, b := range lst {
+		if b == n {
+			return true
+		}
+	}
+	return false
+}
+
+func CalculateD(alpha float64, beta float64) float64 {
+	return (calculateEntropy(alpha) + calculateEntropy(beta)) / (calculateEntropy(alpha) - beta*calculateEntropy(alpha/beta))
+}
+
+func calculateEntropy(t float64) float64 {
+	return -t*math.Log2(t)*t - (1-t)*math.Log2(1-t)
 }
