@@ -5,9 +5,9 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1"
 	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
-	"github.com/OskarRVestergaard/BachelorProject/production/models/PoWblockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
@@ -26,11 +26,14 @@ type PoSpacePeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
 	lotteryStrategy            *PoSpace.PoSpace
 	publicToSecret             chan map[string]string
-	unfinalizedTransactions    chan []models.SignedTransaction
+	knownCommitments           chan map[string]SpaceMintBlockchain.SpaceCommitment
+	unfinalizedTransactions    chan SpaceMintBlockchain.SpacemintTransactions
 	blockTreeChan              chan SpaceMintBlockchain.Blocktree
 	unhandledBlocks            chan SpaceMintBlockchain.Block
 	unhandledMessages          chan Message.Message
-	maximumTransactionsInBlock int
+	maximumPaymentsInBlock     int
+	maximumSpaceCommitsInBlock int
+	maximumPenaltiesInBlock    int
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
@@ -50,8 +53,14 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 
 	p.stopMiningSignal = make(chan struct{})
 
-	p.unfinalizedTransactions = make(chan []models.SignedTransaction, 1)
-	p.unfinalizedTransactions <- make([]models.SignedTransaction, 0, 100)
+	p.unfinalizedTransactions = make(chan SpaceMintBlockchain.SpacemintTransactions, 1)
+	p.unfinalizedTransactions <- SpaceMintBlockchain.SpacemintTransactions{
+		Payments:         []models.SignedPaymentTransaction{},
+		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{},
+		Penalties:        []SpaceMintBlockchain.Penalty{},
+	}
+	p.knownCommitments = make(chan map[string]SpaceMintBlockchain.SpaceCommitment, 1)
+	p.knownCommitments <- make(map[string]SpaceMintBlockchain.SpaceCommitment)
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan SpaceMintBlockchain.Blocktree, 1)
@@ -60,7 +69,9 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 		panic("Could not generate new blocktree")
 	}
 	p.unhandledBlocks = make(chan SpaceMintBlockchain.Block, 20)
-	p.maximumTransactionsInBlock = constants.BlockSize
+	p.maximumPaymentsInBlock = constants.BlockPaymentAmountLimit
+	p.maximumSpaceCommitsInBlock = constants.BlockSpaceCommitAmountLimit
+	p.maximumPenaltiesInBlock = constants.BlockPenaltyAmountLimit
 	p.unhandledMessages = make(chan Message.Message, 50)
 	p.blockTreeChan <- newBlockTree
 
@@ -86,7 +97,7 @@ func (p *PoSpacePeer) Connect(ip string, port int) {
 		Port: port,
 	}
 	ownIpPort := p.network.GetAddress().ToString()
-	print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
+	//print(ownIpPort + " Connecting to " + addr.ToString() + "\n")
 	err := p.network.SendMessageTo(Message.Message{MessageType: constants.JoinMessage, MessageSender: ownIpPort}, addr)
 
 	if err != nil {
@@ -94,34 +105,48 @@ func (p *PoSpacePeer) Connect(ip string, port int) {
 	}
 }
 
+func (p *PoSpacePeer) floodSpaceCommit(commitment sha256.HashValue, id uuid.UUID, n int, pk string) {
+	spaceTransaction := SpaceMintBlockchain.SpaceCommitment{
+		Id:         id,
+		N:          n,
+		PublicKey:  pk,
+		Commitment: commitment,
+	}
+	ipPort := p.network.GetAddress().ToString()
+	msg := Message.Message{MessageType: constants.SpaceCommitTransaction, MessageSender: ipPort, SpaceCommitment: spaceTransaction}
+	p.addSpaceCommit(Message.MakeDeepCopyOfSpaceCommit(spaceTransaction))
+	p.network.FloodMessageToAllKnown(Message.MakeDeepCopyOfMessage(msg))
+}
+
 func (p *PoSpacePeer) FloodSignedTransaction(from string, to string, amount int) {
 	secretSigningKey, foundSecretKey := p.getSecretKey(from)
 	if !foundSecretKey {
 		return
 	}
-	trans := models.SignedTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
-	trans.SignTransaction(p.signatureStrategy, secretSigningKey)
+	payment := models.SignedPaymentTransaction{Id: uuid.New(), From: from, To: to, Amount: amount, Signature: nil}
+	payment.SignTransaction(p.signatureStrategy, secretSigningKey)
 	ipPort := p.network.GetAddress().ToString()
-	msg := Message.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: trans}
-	p.addTransaction(trans)
+	msg := Message.Message{MessageType: constants.SignedTransaction, MessageSender: ipPort, SignedTransaction: payment}
+	p.addPayment(payment)
 	p.network.FloodMessageToAllKnown(msg)
 }
 
 func (p *PoSpacePeer) messageHandlerLoop(incomingMessages chan Message.Message) {
 	for {
 		msg := <-incomingMessages
-		p.handleMessage(msg)
+		p.handleMessage(Message.MakeDeepCopyOfMessage(msg))
 	}
 }
 
 func (p *PoSpacePeer) handleMessage(msg Message.Message) {
 	msgType := (msg).MessageType
-
 	switch msgType {
 	case constants.SignedTransaction:
 		if utils.TransactionHasCorrectSignature(p.signatureStrategy, msg.SignedTransaction) {
-			p.addTransaction(Message.MakeDeepCopyOfTransaction(msg.SignedTransaction))
+			p.addPayment(msg.SignedTransaction)
 		}
+	case constants.SpaceCommitTransaction:
+		p.addSpaceCommit(msg.SpaceCommitment)
 	case constants.JoinMessage:
 
 	case constants.BlockDelivery:
@@ -148,8 +173,12 @@ func (p *PoSpacePeer) getSecretKey(pk string) (secretKey string, isKnownKey bool
 	return secretSigningKey, true
 }
 
+/*
+GetBlockTree
+
+For testing only, it is NOT thread safe, but is called after the blocktree does not change anymore, it can still be useful for testing
+*/
 func (p *PoSpacePeer) GetBlockTree() interface{} {
-	//TODO Not at all thread safe to use it this way, fine if used for reading during testing
 	blocktree := <-p.blockTreeChan
 	p.blockTreeChan <- blocktree
 	return blocktree
@@ -193,7 +222,8 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	winningDraws := make(chan PoSpace.LotteryDraw, 10)
 	poSpaceParameters := Task1.GenerateParameters()
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
-	p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
+	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
+	p.floodSpaceCommit(commitment, poSpaceParameters.Id, n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -222,37 +252,45 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 	allTransactionsToAdd := blocktree.GetTransactionsNotInTree(unfinalizedTransactions)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 
-	var transactionsToAdd []models.SignedTransaction
-	if len(allTransactionsToAdd) <= p.maximumTransactionsInBlock {
-		transactionsToAdd = allTransactionsToAdd
+	var paymentsToAdd = allTransactionsToAdd.Payments
+	if len(allTransactionsToAdd.Payments) > p.maximumPaymentsInBlock {
+		paymentsToAdd = allTransactionsToAdd.Payments[:p.maximumPaymentsInBlock]
 	}
-	if len(allTransactionsToAdd) > p.maximumTransactionsInBlock {
-		transactionsToAdd = make([]models.SignedTransaction, p.maximumTransactionsInBlock)
-		for i := 0; i < p.maximumTransactionsInBlock; i++ {
-			transactionsToAdd[i] = allTransactionsToAdd[i]
-			//This could maybe cause starvation of transactions, if not enough blocks are made to saturate transaction demand
-		}
+	var SpaceCommitsToAdd = allTransactionsToAdd.SpaceCommitments
+	if len(allTransactionsToAdd.SpaceCommitments) > p.maximumSpaceCommitsInBlock {
+		SpaceCommitsToAdd = allTransactionsToAdd.SpaceCommitments[:p.maximumSpaceCommitsInBlock]
 	}
+	//Same for penalty
+
 	//
 	resultBlock := SpaceMintBlockchain.Block{
 		IsGenesis:  false,
 		ParentHash: parentHash,
 		HashSubBlock: SpaceMintBlockchain.HashSubBlock{
-			Slot:                      slot,
-			SignatureOnParentSubBlock: nil,
-			Draw:                      draw,
+			Slot:                          slot,
+			SignatureOnParentHashSubBlock: nil,
+			Draw:                          draw,
 		},
 		TransactionSubBlock: SpaceMintBlockchain.TransactionSubBlock{
 			Slot: slot,
 			Transactions: SpaceMintBlockchain.SpacemintTransactions{
-				Payments:         transactionsToAdd,
-				SpaceCommitments: nil,
-				Penalties:        nil,
+				Payments:         paymentsToAdd,
+				SpaceCommitments: SpaceCommitsToAdd,
+				Penalties:        []SpaceMintBlockchain.Penalty{},
 			},
 		},
-		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{},
+		SignatureSubBlock: SpaceMintBlockchain.SignatureSubBlock{
+			Slot:                                  slot,
+			SignatureOnCurrentTransactionSubBlock: nil,
+			SignatureOnParentSignatureSubBlock:    nil,
+		},
 	}
-	resultBlock.SignBlock(nil, p.signatureStrategy, secretKey) //TODO Fix
+
+	parentBlock, isEmpty := blocktree.HashToBlock(parentHash)
+	if isEmpty {
+		panic("Something went wrong druing block creation, tried to create a block with no valid parent!")
+	}
+	resultBlock.SignBlock(parentBlock, p.signatureStrategy, secretKey)
 	return resultBlock, false
 }
 
@@ -261,7 +299,11 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpace.LotteryDraw) {
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
-	extendedOnSlot := blocktree.HashToBlock(draw.ParentHash).TransactionSubBlock.Slot
+	nod, isEmpty := blocktree.HashToBlock(draw.ParentHash)
+	if isEmpty {
+		panic("Trying to send block with no valid parent")
+	}
+	extendedOnSlot := nod.TransactionSubBlock.Slot
 	slot := utils.CalculateSlot(p.startTime)
 	for slot <= extendedOnSlot {
 		time.Sleep(constants.SlotLength / 10)
@@ -291,29 +333,60 @@ func (p *PoSpacePeer) blockHandlerLoop() {
 	}
 }
 
-func (p *PoSpacePeer) verifyBlock(block PoWblockchain.Block) bool {
-	//TODO Needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
+func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
+	//Ideally this also needs to verify that the transactions are not already present too (just like the sender did), since someone not following the protocol could exploit this
 	//TODO This is potentially very slow, but could be faster using dynamic programming in the case the chain best chain does not switch often
-	if !block.HasCorrectSignature(p.signatureStrategy) {
+	blockTree := <-p.blockTreeChan
+	parentBlock, isEmpty := blockTree.HashToBlock(block.ParentHash)
+	if isEmpty {
+		p.unhandledBlocks <- block
+		p.blockTreeChan <- blockTree
+		time.Sleep(200 * time.Millisecond)
 		return false
 	}
-	if !p.verifyTransactions(block.BlockData.Transactions) {
+	if !block.HasConsistentSignaturesAndSlots(parentBlock, p.signatureStrategy) {
+		p.blockTreeChan <- blockTree
 		return false
 	}
-	//TODO When draw is sent over network, then these checks makes sense
-	//if block.Draw.Vk != block.Vk {
-	//	return false
-	//}
-	//if block.Draw.ParentHash != block.ParentHash {
-	//	return false //TODO Instance of new block (slot2) being sent with an old draw (slot1)
-	//}
-	//if !p.lotteryStrategy.Verify(block.Vk, block.ParentHash, p.hardness, block.Draw.Counter) {
-	//	return false
-	//}
+	if !p.verifyTransactions(block.TransactionSubBlock.Transactions.Payments) {
+		p.blockTreeChan <- blockTree
+		return false
+	}
+	if !block.ParentHash.Equals(block.HashSubBlock.Draw.ParentHash) {
+		p.blockTreeChan <- blockTree
+		return false
+	}
+	knownCommitments := <-p.knownCommitments
+	commitmentOfProof, isKnown := knownCommitments[block.HashSubBlock.Draw.Vk]
+	if !isKnown {
+		//We have not heard about this peer allocation this space, maybe it has just not arrived yet, is a full system, they would have to be delivered long before (contained is a prior block)
+		p.unhandledBlocks <- block
+		p.blockTreeChan <- blockTree
+		p.knownCommitments <- knownCommitments
+		time.Sleep(200 * time.Millisecond)
+		return false
+	}
+	chalA, chalB := blockTree.GetChallengesForExtendingOnBlockWithHash(block.ParentHash, commitmentOfProof.N)
+	location := PoSpace.MiningLocation{
+		Slot:          block.HashSubBlock.Slot - 1,
+		ParentHash:    block.ParentHash,
+		ChallengeSetP: chalA,
+		ChallengeSetV: chalB,
+	}
+	//TODO Discuss and handle real parameters
+	prm := Task1.GenerateParameters()
+	prm.Id = commitmentOfProof.Id
+	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
+		p.blockTreeChan <- blockTree
+		p.knownCommitments <- knownCommitments
+		return false
+	}
+	p.blockTreeChan <- blockTree
+	p.knownCommitments <- knownCommitments
 	return true
 }
 
-func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedTransaction) bool {
+func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedPaymentTransaction) bool {
 	for _, transaction := range transactions {
 		transactionSignatureIsCorrect := utils.TransactionHasCorrectSignature(p.signatureStrategy, transaction)
 		if !transactionSignatureIsCorrect {
@@ -324,12 +397,15 @@ func (p *PoSpacePeer) verifyTransactions(transactions []models.SignedTransaction
 }
 
 func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
-	//	if !p.verifyBlock(block) {
-	//		return
-	//	}
+	if !p.verifyBlock(block) {
+		return
+	}
 	blocktree := <-p.blockTreeChan
 	block = Message.MakeDeepCopyOfPoSBlock(block)
-	var t = blocktree.AddBlock(block)
+	knownCommitments := <-p.knownCommitments
+	commitmentOfProof := knownCommitments[block.HashSubBlock.Draw.Vk]
+	var t = blocktree.AddBlock(block, int64(commitmentOfProof.N))
+	p.knownCommitments <- knownCommitments
 	switch t {
 	case -3:
 		//Slot number is not greater than parent
@@ -342,11 +418,9 @@ func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
 		p.blockTreeChan <- blocktree
 	case 0:
 		//Parent is not in the tree, try to add later
-		//TODO Maybe have another slice that are blocks which are waiting for parents to be added,
-		//TODO such that they can be added immediately follow the parents addition to the tree (in case 1)
-
+		//This case is actually avoided because of the verification step earlier
 		p.blockTreeChan <- blocktree
-		time.Sleep(1000 * time.Millisecond) //Needs to be enough time for the other block to arrive
+		time.Sleep(200 * time.Millisecond) //Needs to be enough time for the other block to arrive
 		p.unhandledBlocks <- block
 	case 1:
 		//Block successfully added to the tree
@@ -357,9 +431,12 @@ func (p *PoSpacePeer) handleBlock(block SpaceMintBlockchain.Block) {
 	}
 }
 
-func (p *PoSpacePeer) addTransaction(t models.SignedTransaction) {
+func (p *PoSpacePeer) addTransaction(t SpaceMintBlockchain.SpacemintTransactions) {
 	unfinalizedTransactions := <-p.unfinalizedTransactions
-	unfinalizedTransactions = append(unfinalizedTransactions, t)
+	newTransaction := Message.MakeDeepCopyOfTransaction(t)
+	unfinalizedTransactions.Payments = append(unfinalizedTransactions.Payments, newTransaction.Payments...)
+	unfinalizedTransactions.SpaceCommitments = append(unfinalizedTransactions.SpaceCommitments, newTransaction.SpaceCommitments...)
+	unfinalizedTransactions.Penalties = append(unfinalizedTransactions.Penalties, newTransaction.Penalties...)
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
@@ -368,4 +445,28 @@ func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.LotteryDraw) {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)
 	}
+}
+
+func (p *PoSpacePeer) addPayment(payment models.SignedPaymentTransaction) {
+	transactionToAdd := SpaceMintBlockchain.SpacemintTransactions{
+		Payments:         []models.SignedPaymentTransaction{payment},
+		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{},
+		Penalties:        []SpaceMintBlockchain.Penalty{},
+	}
+	p.addTransaction(transactionToAdd)
+}
+
+func (p *PoSpacePeer) addSpaceCommit(spaceCommitment SpaceMintBlockchain.SpaceCommitment) {
+	//"unsafe" fix to avoid the miner startup problem, space commits are accepted immediate, instead of just being added to the chain
+	currentlyKnownCommitments := <-p.knownCommitments
+	currentlyKnownCommitments[spaceCommitment.PublicKey] = spaceCommitment
+	p.knownCommitments <- currentlyKnownCommitments
+	//The above should be safe to omit/delete if finalization is made
+
+	transactionToAdd := SpaceMintBlockchain.SpacemintTransactions{
+		Payments:         []models.SignedPaymentTransaction{},
+		SpaceCommitments: []SpaceMintBlockchain.SpaceCommitment{spaceCommitment},
+		Penalties:        []SpaceMintBlockchain.Penalty{},
+	}
+	p.addTransaction(transactionToAdd)
 }

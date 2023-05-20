@@ -17,23 +17,54 @@ type Block struct {
 }
 
 type HashSubBlock struct {
-	Slot                      int                 //index or slot number
-	SignatureOnParentSubBlock []byte              //Signature linking this block to its parent
-	Draw                      PoSpace.LotteryDraw //The Proof of space associated with the block
+	Slot                          int                 //index or slot number
+	SignatureOnParentHashSubBlock []byte              //Signature linking this block to its parent
+	Draw                          PoSpace.LotteryDraw //The Proof of space associated with the block
 }
 
-func (block *Block) SignBlock(parentBlock *Block, signatureStrategy signature_strategy.SignatureInterface, secretKey string) {
-	//TODO Implement
+func (block *Block) HasConsistentSignaturesAndSlots(parentBlock Block, signatureStrategy signature_strategy.SignatureInterface) bool {
+	if block.HashSubBlock.Slot != block.TransactionSubBlock.Slot {
+		return false
+	}
+	if block.SignatureSubBlock.Slot != block.TransactionSubBlock.Slot {
+		return false
+	}
+	vk := block.HashSubBlock.Draw.Vk
+	if !signatureStrategy.Verify(vk, block.TransactionSubBlock.ToByteArray(), block.SignatureSubBlock.SignatureOnCurrentTransactionSubBlock) {
+		return false
+	}
+	if !signatureStrategy.Verify(vk, parentBlock.SignatureSubBlock.ToByteArray(), block.SignatureSubBlock.SignatureOnParentSignatureSubBlock) {
+		return false
+	}
+	if !signatureStrategy.Verify(vk, parentBlock.HashSubBlock.ToByteArray(), block.HashSubBlock.SignatureOnParentHashSubBlock) {
+		return false
+	}
+	return true
+}
+
+func (block *Block) SignBlock(parentBlock Block, signatureStrategy signature_strategy.SignatureInterface, secretKey string) {
+	currentTransactionSubBlockSignature := signatureStrategy.Sign(block.TransactionSubBlock.ToByteArray(), secretKey)
+	prevSignatureSubBlockSignature := signatureStrategy.Sign(parentBlock.SignatureSubBlock.ToByteArray(), secretKey)
+	prevHashSubBlockSignature := signatureStrategy.Sign(parentBlock.HashSubBlock.ToByteArray(), secretKey)
+	block.SignatureSubBlock.SignatureOnCurrentTransactionSubBlock = currentTransactionSubBlockSignature
+	block.SignatureSubBlock.SignatureOnParentSignatureSubBlock = prevSignatureSubBlockSignature
+	block.HashSubBlock.SignatureOnParentHashSubBlock = prevHashSubBlockSignature
 }
 
 func (subBlock *HashSubBlock) ToByteArray() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(strconv.Itoa(subBlock.Slot))
 	buffer.WriteString(";_;")
-	buffer.Write(subBlock.SignatureOnParentSubBlock)
+	buffer.Write(subBlock.SignatureOnParentHashSubBlock)
 	buffer.WriteString(";_;")
 	buffer.Write(subBlock.Draw.ToByteArray())
 	return buffer.Bytes()
+}
+
+func (subBlock *HashSubBlock) HashOfBlock() sha256.HashValue {
+	byteArrayString := subBlock.ToByteArray()
+	hash := sha256.HashByteArray(byteArrayString)
+	return hash
 }
 
 type TransactionSubBlock struct {
@@ -52,7 +83,7 @@ func (subBlock *TransactionSubBlock) ToByteArray() []byte {
 type SignatureSubBlock struct {
 	Slot                                  int //index or slot number
 	SignatureOnCurrentTransactionSubBlock []byte
-	SignatureOnParentSubBlock             []byte
+	SignatureOnParentSignatureSubBlock    []byte
 }
 
 func (subBlock *SignatureSubBlock) ToByteArray() []byte {
@@ -61,7 +92,7 @@ func (subBlock *SignatureSubBlock) ToByteArray() []byte {
 	buffer.WriteString(";_;")
 	buffer.Write(subBlock.SignatureOnCurrentTransactionSubBlock)
 	buffer.WriteString(";_;")
-	buffer.Write(subBlock.SignatureOnParentSubBlock)
+	buffer.Write(subBlock.SignatureOnParentSignatureSubBlock)
 	return buffer.Bytes()
 }
 
@@ -83,6 +114,8 @@ returns a byte array representation, if you want the hash use HashOfBlock instea
 */
 func (block *Block) ToByteArray() []byte {
 	var buffer bytes.Buffer
+	buffer.WriteString(strconv.FormatBool(block.IsGenesis))
+	buffer.WriteString(";_;")
 	buffer.Write(block.ParentHash.ToSlice())
 	buffer.WriteString(";_;")
 	buffer.Write(block.HashSubBlock.ToByteArray())

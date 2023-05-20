@@ -2,18 +2,18 @@ package Parties
 
 import (
 	"crypto/rand"
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math/big"
 	"strconv"
 )
 
 type Verifier struct {
-	parameters       Models.Parameters
+	parameters       PoSpaceModels.Parameters
 	proverCommitment sha256.HashValue
 }
 
-func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
+func (V *Verifier) verifyOpening(triple PoSpaceModels.OpeningTriple) bool {
 	position := triple.Index
 	currentHash := triple.Value
 	for _, value := range triple.OpenValues {
@@ -29,7 +29,7 @@ func (V *Verifier) verifyOpening(triple Models.OpeningTriple) bool {
 }
 
 // CheckCorrectPebbleOfNode should be split since it uses information from "both sides" of the network traffic
-func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, parentTriples []Models.OpeningTriple) bool {
+func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck PoSpaceModels.OpeningTriple, parentTriples []PoSpaceModels.OpeningTriple) bool {
 	//Get and check opening of the node itself
 	if !V.verifyOpening(tripleToCheck) {
 		return false
@@ -46,14 +46,14 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck Models.OpeningTriple, 
 	//Compare to check that the node matches both the original graph and the merkle tree
 	shouldBe := tripleToCheck.Value
 	nodeLabel := []byte(strconv.Itoa(tripleToCheck.Index))
-	toBeHashed := []byte(V.parameters.Id)
+	toBeHashed := []byte(V.parameters.Id.String())
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
 	hash := sha256.HashByteArray(toBeHashed)
 	return hash.Equals(shouldBe)
 }
 
-func (V *Verifier) InitializationPhase1(params Models.Parameters) {
+func (V *Verifier) InitializationPhase1(params PoSpaceModels.Parameters) {
 	V.parameters = params
 }
 
@@ -76,14 +76,15 @@ func (V *Verifier) PickChallenges() []int {
 	return result
 }
 
-func (V *Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTriple, withGraphConsistencyCheck bool) bool {
+func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.OpeningTriple, withGraphConsistencyCheck bool) bool {
 	//Organize triples
 	size := len(challenges)
-	tripleMap := make(map[int]Models.OpeningTriple, size)
+	tripleMap := make(map[int]PoSpaceModels.OpeningTriple, size)
 	for _, triple := range triples {
 		tripleMap[triple.Index] = triple
 	}
 	//Verify for each challenge that enough data was provided and that the data is correct.
+	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
 	for _, challenge := range challenges {
 		challengeTriple, exists := tripleMap[challenge]
 		if !exists {
@@ -91,7 +92,7 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []Models.OpeningTr
 		}
 		parents := V.parameters.GraphDescription.GetParents(challenge)
 		if withGraphConsistencyCheck {
-			parentTriples := make([]Models.OpeningTriple, len(parents))
+			parentTriples := make([]PoSpaceModels.OpeningTriple, len(parents))
 			for i, parentIndex := range parents {
 				parentTriples[i], exists = tripleMap[parentIndex]
 				if !exists {

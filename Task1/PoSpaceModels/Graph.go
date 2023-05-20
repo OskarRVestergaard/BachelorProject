@@ -1,4 +1,4 @@
-package Models
+package PoSpaceModels
 
 import "github.com/OskarRVestergaard/BachelorProject/production/sha256"
 

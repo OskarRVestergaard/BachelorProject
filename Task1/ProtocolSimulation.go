@@ -1,14 +1,14 @@
 package Task1
 
 import (
-	"crypto/rand"
-	"github.com/OskarRVestergaard/BachelorProject/Task1/Models"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"math"
 	"math/big"
 	mathRand "math/rand"
+	"github.com/google/uuid"
 )
 
 //Some slight modifications has been made to the original protocol, such as sending the index back and forth, the size
@@ -16,7 +16,7 @@ import (
 
 //Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
 
-func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
+func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
 	edges := make([][]bool, size, size)
 	for i := range edges {
 		edges[i] = make([]bool, size, size)
@@ -34,28 +34,17 @@ func generateDirectedAcyclicGraphStructure(size int) *Models.Graph {
 	edges[5][6] = true
 	edges[5][7] = true
 
-	resultGraph := &Models.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
+	resultGraph := &PoSpaceModels.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
 
 	return resultGraph
 }
 
-func GenerateParameters() Models.Parameters {
-	random, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt))
-	if err != nil {
-		print("ERROR HAPPENED:")
-		print(err.Error())
-	}
-	id := random.String()
-
-	// --------
-
-	//size := 8 //If changed, edge generation should also be made more general
+func GenerateParameters() PoSpaceModels.Parameters {
+	id := uuid.New()
+	size := 8 //If changed, edge generation should also be made more general
 	//graphEdges := generateDirectedAcyclicGraphStructure(size)
-
 	graphEdges := createGraph(5, 64, 64)
-
-	// ---------
-	result := Models.Parameters{
+	result := PoSpaceModels.Parameters{
 		Id:               id,
 		StorageBound:     64 * 64,
 		GraphDescription: graphEdges,

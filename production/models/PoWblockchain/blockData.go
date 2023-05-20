@@ -7,7 +7,7 @@ import (
 
 type BlockData struct {
 	Hardness     int
-	Transactions []models.SignedTransaction
+	Transactions []models.SignedPaymentTransaction
 }
 
 func (blockData *BlockData) ToString() string {

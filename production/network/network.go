@@ -69,7 +69,7 @@ func (network *Network) SendMessageTo(message Message.Message, address Address) 
 		network.encoders <- encoders
 	}
 	msg := outgoingMessage{
-		message:     message,
+		message:     Message.MakeDeepCopyOfMessage(message),
 		destination: address,
 	}
 	network.outgoingMessages <- msg
@@ -80,7 +80,7 @@ func (network *Network) FloodMessageToAllKnown(message Message.Message) {
 	encoders := <-network.encoders
 	for address, _ := range encoders {
 		msg := outgoingMessage{
-			message:     message,
+			message:     Message.MakeDeepCopyOfMessage(message),
 			destination: address,
 		}
 		network.outgoingMessages <- msg

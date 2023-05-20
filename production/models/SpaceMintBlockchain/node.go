@@ -25,8 +25,8 @@ func (node1 *node) hasGreaterPathWeightThan(node2 node) int {
 	}
 
 	//length is equal, therefore compare quality
-	var node1quality = CalculateQuality(node1.block) // TODO THIS SHOULD NOT BE SINGLE BLOCK QUALITY, BUT CHAIN QUALITY
-	var node2quality = CalculateQuality(node2.block) // TODO THIS SHOULD NOT BE SINGLE BLOCK QUALITY, BUT CHAIN QUALITY
+	var node1quality = node1.chainQuality
+	var node2quality = node2.chainQuality
 
 	if node1quality > node2quality {
 		return 1

@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-type SignedTransaction struct {
+type SignedPaymentTransaction struct {
 	Id        uuid.UUID
 	From      string
 	To        string
@@ -16,36 +16,36 @@ type SignedTransaction struct {
 	Signature []byte
 }
 
-func (signedTransaction *SignedTransaction) ToByteArray() []byte {
+func (signedPaymentTransaction *SignedPaymentTransaction) ToByteArray() []byte {
 	var buffer bytes.Buffer
-	buffer.Write(signedTransaction.ToByteArrayWithoutSign())
+	buffer.Write(signedPaymentTransaction.ToByteArrayWithoutSign())
 	buffer.WriteString(";_;")
-	buffer.Write(signedTransaction.Signature)
+	buffer.Write(signedPaymentTransaction.Signature)
 	return buffer.Bytes()
 }
 
-func (signedTransaction *SignedTransaction) ToByteArrayWithoutSign() []byte {
+func (signedPaymentTransaction *SignedPaymentTransaction) ToByteArrayWithoutSign() []byte {
 	var buffer bytes.Buffer
-	buffer.WriteString(signedTransaction.Id.String())
+	buffer.WriteString(signedPaymentTransaction.Id.String())
 	buffer.WriteString(";_;")
-	buffer.WriteString(signedTransaction.From)
+	buffer.WriteString(signedPaymentTransaction.From)
 	buffer.WriteString(";_;")
-	buffer.WriteString(signedTransaction.To)
+	buffer.WriteString(signedPaymentTransaction.To)
 	buffer.WriteString(";_;")
-	buffer.WriteString(strconv.Itoa(signedTransaction.Amount))
+	buffer.WriteString(strconv.Itoa(signedPaymentTransaction.Amount))
 	return buffer.Bytes()
 }
 
-func (signedTransaction *SignedTransaction) SignTransaction(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
-	byteArrayTransaction := signedTransaction.ToByteArrayWithoutSign()
+func (signedPaymentTransaction *SignedPaymentTransaction) SignTransaction(signatureStrategy signature_strategy.SignatureInterface, secretSigningKey string) {
+	byteArrayTransaction := signedPaymentTransaction.ToByteArrayWithoutSign()
 	hashedTransaction := sha256.HashByteArray(byteArrayTransaction).ToSlice()
 	signature := signatureStrategy.Sign(hashedTransaction, secretSigningKey)
-	signedTransaction.Signature = signature
+	signedPaymentTransaction.Signature = signature
 }
 
-func GetTransactionsInList1ButNotList2(list1 []SignedTransaction, list2 []SignedTransaction) []SignedTransaction {
+func GetTransactionsInList1ButNotList2(list1 []SignedPaymentTransaction, list2 []SignedPaymentTransaction) []SignedPaymentTransaction {
 	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
-	var difference []SignedTransaction
+	var difference []SignedPaymentTransaction
 	found := false
 	for _, val1 := range list1 {
 		found = false
