@@ -6,7 +6,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"math/rand"
 	"reflect"
 	"time"
@@ -26,6 +25,7 @@ type Blocktree struct {
 	head          node
 	subscribers   chan []subscriber
 	newHeadBlocks chan Block
+	k             int
 }
 
 type subscriber struct {
@@ -38,7 +38,7 @@ NewBlocktree
 
 Constructor for making a new Blocktree, second parameter false if something went wrong such as the genesisBlock having IsGenesis equaling false
 */
-func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
+func NewBlocktree(genesisBlock Block, k int) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
 		return Blocktree{}, false
 	}
@@ -58,6 +58,7 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 		nodeContainer: treeMapContainer,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
+		k:             k,
 	}
 	tree.startSubscriptionHandler()
 	return tree, true
@@ -243,7 +244,7 @@ func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n
 		panic("GetMiningLocation called on invalid hash")
 	}
 	newBlock := nod.block
-	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n*constants.GraphK)
+	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n*tree.k)
 	newLocation := PoSpace.MiningLocation{
 		Slot:          newBlock.TransactionSubBlock.Slot + 1, //This slot number is not used, the miner mine for every time slot
 		ParentHash:    hashOfBlockToMineOn,

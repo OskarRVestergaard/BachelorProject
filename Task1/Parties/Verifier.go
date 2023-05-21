@@ -115,7 +115,7 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 			}
 		}
 		if usedCounter < len(tripleMap) {
-			print("wut")
+			print("Prover sent everything it needed, but also send additional openings (which should not be allowed)")
 		}
 	}
 	return true

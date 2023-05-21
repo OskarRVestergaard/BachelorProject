@@ -6,7 +6,7 @@ import (
 )
 
 type PeerInterface interface {
-	RunPeer(IpPort string, startTime time.Time)
+	RunPeer(IpPort string, startTime time.Time, constants PeerConstants)
 	CreateAccount() string
 	GetBlockTree() interface{}
 	StartMining(n int) error

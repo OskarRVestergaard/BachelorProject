@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool) ([]peer_strategy.PeerInterface, []string) {
+func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool, blockChainConstants peer_strategy.PeerConstants) ([]peer_strategy.PeerInterface, []string) {
 
 	startTime := time.Now()
 	listOfPeers := make([]peer_strategy.PeerInterface, noOfPeers)
@@ -26,7 +26,7 @@ func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool) ([]peer_stra
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = p
-		p.RunPeer("127.0.0.1:"+port, startTime)
+		p.RunPeer("127.0.0.1:"+port, startTime, blockChainConstants)
 	}
 	time.Sleep(150 * time.Millisecond)
 	for i := 0; i < noOfPeers; i++ {
