@@ -8,6 +8,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoW"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -35,9 +36,11 @@ type PoWPeer struct {
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
 	startTime                  time.Time
+	constants                  peer_strategy.PeerConstants
 }
 
-func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
+func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time, constants peer_strategy.PeerConstants) {
+	p.constants = constants
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoW.PoW{}
@@ -55,7 +58,7 @@ func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time) {
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan PoWblockchain.Blocktree, 1)
-	newBlockTree, blockTreeCreationWentWell := PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock())
+	newBlockTree, blockTreeCreationWentWell := PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock(p.constants.Hardness))
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
@@ -235,10 +238,10 @@ func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLottery
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
 	extendedOnSlot := blocktree.HashToBlock(draw.ParentHash).Slot
-	slot := utils.CalculateSlot(p.startTime)
+	slot := utils.CalculateSlot(p.startTime, p.constants.SlotLength)
 	for slot <= extendedOnSlot {
-		time.Sleep(constants.SlotLength / 10)
-		slot = utils.CalculateSlot(p.startTime)
+		time.Sleep(p.constants.SlotLength / 10)
+		slot = utils.CalculateSlot(p.startTime, p.constants.SlotLength)
 	}
 	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
 	if isEmpty {

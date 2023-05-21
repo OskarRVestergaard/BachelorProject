@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
 	"math/rand"
 	"testing"
 	"time"
@@ -15,8 +16,9 @@ func TestPOWNetwork2Peers(t *testing.T) {
 	noOfPeers := 2
 	noOfMsgs := 3
 	noOfNames := 2
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)             //send msg
+	constants := peer_strategy.GetStandardConstants()
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false, constants) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)                        //send msg
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(0)
 		if err != nil {
@@ -43,8 +45,9 @@ func TestPOWNetwork16Peers(t *testing.T) {
 	noOfPeers := 16
 	noOfMsgs := 2
 	noOfNames := 64
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false) //setup peer
-	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)             //send msg
+	constants := peer_strategy.GetStandardConstants()
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false, constants) //setup peer
+	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)                        //send msg
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(0)
 		if err != nil {
@@ -82,9 +85,9 @@ func TestPoSpaceNetwork4Peers(t *testing.T) {
 	noOfPeers := 4
 	noOfMsgs := 4
 	noOfNames := 4
-	sizeOfProofsN := 16
-
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
+	sizeOfProofsN := 32
+	constants := peer_strategy.GetStandardConstants()
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true, constants) //setup peer
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(sizeOfProofsN)
 		if err != nil {
@@ -124,7 +127,8 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 	noOfMsgs := 2
 	noOfNames := 16
 	sizeOfProofsN := 256
-	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true) //setup peer
+	constants := peer_strategy.GetStandardConstants()
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true, constants) //setup peer
 	for _, peer := range listOfPeers {
 		err := peer.StartMining(sizeOfProofsN)
 		if err != nil {

@@ -5,7 +5,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"github.com/google/uuid"
 	"math"
 	//"math/big"
@@ -48,9 +47,9 @@ func GenerateTestingParameters() PoSpaceModels.Parameters {
 	return result
 }
 
-func GenerateParameters(seed int64, n int, k int) PoSpaceModels.Parameters {
+func GenerateParameters(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) PoSpaceModels.Parameters {
 	id := uuid.New()
-	graphStructure := createGraph(seed, n, k)
+	graphStructure := createGraph(seed, n, k, alpha, beta, useForcedD, forcedD)
 	result := PoSpaceModels.Parameters{
 		Id:               id,
 		StorageBound:     2 * n * k,
@@ -95,15 +94,19 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	return result
 }
 
-func createGraph(seed int64, n int, k int) *PoSpaceModels.Graph {
+func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) *PoSpaceModels.Graph {
 	size := n * k
 	if !utils.PowerOfTwo(size) {
 		panic("n and k must be a power of two")
 	}
 	graph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
 	graph.InitGraph(size)
-	var d = int(math.Ceil(CalculateD(constants.Alpha, constants.Beta)))
-	d = 3 // TODO REMOVE :D
+	var d int
+	if useForcedD {
+		d = forcedD
+	} else {
+		d = int(math.Ceil(CalculateD(alpha, beta)))
+	}
 	source := mathRand.NewSource(seed)
 	rando := mathRand.New(source)
 

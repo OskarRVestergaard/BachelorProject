@@ -12,8 +12,9 @@ import (
 
 func TestBlockTransactionsOnBlocksAndOwn(t *testing.T) {
 	var Unhandled []models.SignedPaymentTransaction
+	var hardness = 20
 
-	var blockTree, blockTreeCreationWentWell = PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock())
+	var blockTree, blockTreeCreationWentWell = PoWblockchain.NewBlocktree(PoWblockchain.CreateGenesisBlock(hardness))
 	assert.True(t, blockTreeCreationWentWell)
 	for i := 0; i < 100; i++ {
 		var b = models.SignedPaymentTransaction{

@@ -9,6 +9,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -38,9 +39,11 @@ type PoSpacePeer struct {
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
 	startTime                  time.Time
+	constants                  peer_strategy.PeerConstants
 }
 
-func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
+func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time, constants peer_strategy.PeerConstants) {
+	p.constants = constants
 	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoSpace.PoSpace{}
@@ -64,7 +67,7 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan SpaceMintBlockchain.Blocktree, 1)
-	newBlockTree, blockTreeCreationWentWell := SpaceMintBlockchain.NewBlocktree(SpaceMintBlockchain.CreateGenesisBlock())
+	newBlockTree, blockTreeCreationWentWell := SpaceMintBlockchain.NewBlocktree(SpaceMintBlockchain.CreateGenesisBlock(), p.constants.GraphK)
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
@@ -194,7 +197,7 @@ func (p *PoSpacePeer) startBlocksToMinePasser(initialMiningLocation PoSpace.Mini
 			mostRecentMiningLocation <- newLocation
 		}
 	}()
-	slotNotifier := utils.StartTimeSlotUpdater(p.startTime)
+	slotNotifier := utils.StartTimeSlotUpdater(p.startTime, p.constants.SlotLength)
 	hashesSendToMiner := make(chan PoSpace.MiningLocation, 10)
 	go func() {
 		for {
@@ -221,10 +224,10 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	head := blocktree.GetHead()
 	initialMiningLocation := blocktree.GetMiningLocation(head.HashOfBlock(), n)
 	winningDraws := make(chan PoSpace.LotteryDraw, 10)
-	poSpaceParameters := Task1.GenerateParameters(5, n, constants.GraphK)
+	poSpaceParameters := Task1.GenerateParameters(5, n, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD)
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
 	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
-	p.floodSpaceCommit(commitment, poSpaceParameters.Id, constants.GraphK*n, verificationKey)
+	p.floodSpaceCommit(commitment, poSpaceParameters.Id, p.constants.GraphK*n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -305,10 +308,10 @@ func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpace.LotteryDraw) {
 		panic("Trying to send block with no valid parent")
 	}
 	extendedOnSlot := nod.TransactionSubBlock.Slot
-	slot := utils.CalculateSlot(p.startTime)
+	slot := utils.CalculateSlot(p.startTime, p.constants.SlotLength)
 	for slot <= extendedOnSlot {
-		time.Sleep(constants.SlotLength / 10)
-		slot = utils.CalculateSlot(p.startTime)
+		time.Sleep(p.constants.SlotLength / 10)
+		slot = utils.CalculateSlot(p.startTime, p.constants.SlotLength)
 	}
 	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
 	if isEmpty {
@@ -375,7 +378,7 @@ func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
 		ChallengeSetV: chalB,
 	}
 	// TODO FIX SEED
-	prm := Task1.GenerateParameters(5, commitmentOfProof.N/constants.GraphK, constants.GraphK)
+	prm := Task1.GenerateParameters(5, commitmentOfProof.N/p.constants.GraphK, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD)
 	prm.Id = commitmentOfProof.Id
 	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
 		p.blockTreeChan <- blockTree
