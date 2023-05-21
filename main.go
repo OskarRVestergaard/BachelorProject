@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"os"
 )
 
 func main() {
-
-	fmt.Println("asdasd")
-	for {
-		time.Sleep(20000 * time.Millisecond)
-		fmt.Println("hej")
-	}
-	fmt.Println("")
+	path, _ := os.Getwd()
+	fmt.Println(path)
+	//fmt.Println("asdasd")
+	//for {
+	//	//time.Sleep(20000 * time.Millisecond)
+	//	fmt.Println("hej")
+	//}
+	//fmt.Println("")
 	//var t = createGraph(1, 64, 64)
 	//print(t)
 

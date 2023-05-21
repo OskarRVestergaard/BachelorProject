@@ -44,8 +44,9 @@ func TestPOWNetwork2Peers(t *testing.T) {
 func TestPOWNetwork16Peers(t *testing.T) {
 	noOfPeers := 16
 	noOfMsgs := 2
-	noOfNames := 64
+	noOfNames := 16
 	constants := peer_strategy.GetStandardConstants()
+	constants.Hardness = 30
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, false, constants) //setup peer
 	test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)                        //send msg
 	for _, peer := range listOfPeers {

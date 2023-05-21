@@ -1,14 +1,16 @@
-FROM golang:1.16-alpine
+FROM golang:1.19.0-buster
 
 WORKDIR /app
 
-COPY go.mod ./
+#COPY go.mod ./
+COPY . .
 RUN go mod download
 
-COPY *.go ./
+#COPY *.go ./
 
-RUN go build -o /go-docker-demo
+RUN #go build -o  /go-docker-demo
 
 EXPOSE 8080
 
-CMD [ "/go-docker-demo" ]
+ENTRYPOINT ["go","test","-run","TestPOWNetwork16Peers","./test"]
+#ENTRYPOINT ["ls"]
