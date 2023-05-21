@@ -1,6 +1,9 @@
 package main
 
+import "fmt"
+
 func main() {
+	fmt.Println("asdasd")
 	//var t = createGraph(1, 64, 64)
 	//print(t)
 
