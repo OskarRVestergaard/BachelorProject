@@ -1,9 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func main() {
+
 	fmt.Println("asdasd")
+	for {
+		time.Sleep(20000 * time.Millisecond)
+		fmt.Println("hej")
+	}
+	fmt.Println("")
 	//var t = createGraph(1, 64, 64)
 	//print(t)
 
