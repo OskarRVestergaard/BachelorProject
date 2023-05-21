@@ -87,7 +87,7 @@ func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions SpacemintT
 }
 
 func getSpaceCommitsInList1ButNotList2(list1 []SpaceCommitment, list2 []SpaceCommitment) []SpaceCommitment {
-	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then it would run in nlogn+mlogm
 	var difference []SpaceCommitment
 	found := false
 	for _, val1 := range list1 {
@@ -243,9 +243,9 @@ func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n
 		panic("GetMiningLocation called on invalid hash")
 	}
 	newBlock := nod.block
-	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
+	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n*constants.GraphK)
 	newLocation := PoSpace.MiningLocation{
-		Slot:          newBlock.TransactionSubBlock.Slot + 1,
+		Slot:          newBlock.TransactionSubBlock.Slot + 1, //This slot number is not used, the miner mine for every time slot
 		ParentHash:    hashOfBlockToMineOn,
 		ChallengeSetP: challengeSetP,
 		ChallengeSetV: challengesSetV,
@@ -316,11 +316,11 @@ func (tree *Blocktree) GetChallengesForExtendingOnBlockWithHash(parentHash sha25
 	challengesSetP := make([]int, challengeAmountA)
 	challengesSetV := make([]int, challengeAmountB)
 	for i := 0; i < challengeAmountA; i++ {
-		challengeNumber := rnd.Intn(n * constants.GraphK)
+		challengeNumber := rnd.Intn(n)
 		challengesSetP[i] = challengeNumber
 	}
 	for i := 0; i < challengeAmountB; i++ {
-		challengeNumber := rnd.Intn(n * constants.GraphK)
+		challengeNumber := rnd.Intn(n)
 		challengesSetV[i] = challengeNumber
 	}
 	return challengesSetP, challengesSetV

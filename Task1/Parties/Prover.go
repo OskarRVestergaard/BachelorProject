@@ -24,13 +24,14 @@ func (P *Prover) pebbleGraph() {
 		vertexLabel := []byte(strconv.Itoa(i))
 		toBeHashed := []byte(id.String())
 		toBeHashed = append(toBeHashed, vertexLabel...)
+
 		for j := 0; j < size; j++ {
 			if P.pebbledGraph.IfEdge(j, i) {
 				parentHashValue := P.pebbledGraph.Value[j].ToSlice()
 				toBeHashed = append(toBeHashed, parentHashValue...)
+
 			}
 		}
-
 		P.pebbledGraph.Value[i] = sha256.HashByteArray(toBeHashed)
 	}
 }
@@ -101,6 +102,6 @@ func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTripl
 	for i, _ := range indicesSet {
 		result = append(result, P.GetOpeningTriple(i))
 	}
-	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
+	result = PoSpaceModels.SortOpeningTriples(result)
 	return result
 }

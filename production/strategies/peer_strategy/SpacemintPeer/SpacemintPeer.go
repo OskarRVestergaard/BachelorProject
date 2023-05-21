@@ -198,8 +198,9 @@ func (p *PoSpacePeer) startBlocksToMinePasser(initialMiningLocation PoSpace.Mini
 	hashesSendToMiner := make(chan PoSpace.MiningLocation, 10)
 	go func() {
 		for {
-			_ = <-slotNotifier //TODO, Send slot along with hashes, instead of letting the miner calculate the slot itself
+			newSlot := <-slotNotifier
 			hashToMineOn := <-mostRecentMiningLocation
+			hashToMineOn.Slot = newSlot
 			hashesSendToMiner <- hashToMineOn
 			mostRecentMiningLocation <- hashToMineOn
 		}
