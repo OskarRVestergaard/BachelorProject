@@ -21,7 +21,7 @@ func TestTask1InitializationAndExecution(t *testing.T) {
 }
 
 func TestTask1WithStackedExpanders(t *testing.T) {
-	prm := Task1.GenerateParameters(5, 128, 128, 0.5, 0.25, true, 20)
+	prm := Task1.GenerateParameters(5, 4096, 128, 0.5, 0.25, true, 25)
 	p, v, initOkay := Task1.SimulateInitialization(prm)
 	assert.True(t, initOkay)
 	execOkay := Task1.SimulateExecution(p, v)

@@ -1,4 +1,4 @@
-package PoSpaceModels
+package Graph
 
 import "github.com/OskarRVestergaard/BachelorProject/production/sha256"
 

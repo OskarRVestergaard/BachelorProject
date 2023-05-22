@@ -1,7 +1,9 @@
 package Parties
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
+	"sort"
 	"strconv"
 
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
@@ -10,7 +12,7 @@ import (
 
 type Prover struct {
 	parameters   PoSpaceModels.Parameters
-	pebbledGraph *PoSpaceModels.Graph
+	pebbledGraph *Graph.Graph
 	merkleTree   *PoSpaceModels.MerkleTree
 	commitment   sha256.HashValue
 }
@@ -20,19 +22,31 @@ func (P *Prover) pebbleGraph() {
 	id := P.parameters.Id
 	P.pebbledGraph = P.parameters.GraphDescription
 	size := P.pebbledGraph.Size
+	tempHashingSlice := make([]byte, size*32+32) //The maximum size that can be hashed at any given point is if all nodes are involved, the constant factor should account for the label and id
 	for i := 0; i < size; i++ {
+		s := 0
+		uniqueId := []byte(id.String())
+		for _, b := range uniqueId {
+			tempHashingSlice[s] = b
+			s++
+		}
 		vertexLabel := []byte(strconv.Itoa(i))
-		toBeHashed := []byte(id.String())
-		toBeHashed = append(toBeHashed, vertexLabel...)
-
-		for j := 0; j < size; j++ {
-			if P.pebbledGraph.IfEdge(j, i) {
-				parentHashValue := P.pebbledGraph.Value[j].ToSlice()
-				toBeHashed = append(toBeHashed, parentHashValue...)
-
+		for _, b := range vertexLabel {
+			tempHashingSlice[s] = b
+			s++
+		}
+		parents := P.pebbledGraph.GetPredecessors(i)
+		sort.Slice(parents, func(i, j int) bool {
+			return parents[i] < parents[j]
+		})
+		for _, parent := range parents {
+			parentHashValue := P.pebbledGraph.Value[parent].ToSlice()
+			for _, b := range parentHashValue {
+				tempHashingSlice[s] = b
+				s++
 			}
 		}
-		P.pebbledGraph.Value[i] = sha256.HashByteArray(toBeHashed)
+		P.pebbledGraph.Value[i] = sha256.HashByteArray(tempHashingSlice[0:s])
 	}
 }
 
@@ -82,12 +96,6 @@ func (P *Prover) GetOpeningTriple(index int) (triple PoSpaceModels.OpeningTriple
 }
 
 func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []PoSpaceModels.OpeningTriple) {
-	println()
-	print("prover is answering the following challenges: ")
-	for _, index := range indices {
-		print(" " + strconv.Itoa(index) + " ")
-	}
-	println()
 	//Remove duplicates using a set
 	var member struct{}
 	challengeIndicesSet := make(map[int]struct{})
@@ -113,11 +121,5 @@ func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTripl
 		result = append(result, P.GetOpeningTriple(i))
 	}
 	result = PoSpaceModels.SortOpeningTriples(result)
-	println()
-	print("It answered with: ")
-	for _, triple := range result {
-		print(" " + strconv.Itoa(triple.Index) + " ")
-	}
-	println()
 	return result
 }

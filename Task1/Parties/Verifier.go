@@ -80,32 +80,17 @@ func (V *Verifier) PickChallenges() []int {
 }
 
 func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.OpeningTriple, withGraphConsistencyCheck bool) bool {
-	println()
-	print("verifier believes the challenges are: ")
-	for _, challenge := range challenges {
-		print(" " + strconv.Itoa(challenge) + " ")
-	}
-	println()
-	println()
-	print("has been given the following openings: ")
-	for _, triple := range triples {
-		print(" " + strconv.Itoa(triple.Index) + " ")
-	}
-	println()
 	//Organize triples
 	size := len(challenges)
 	tripleMap := make(map[int]PoSpaceModels.OpeningTriple, size)
 	for _, triple := range triples {
 		tripleMap[triple.Index] = triple
 	}
-	usedCounter := 0
 	for _, challenge := range challenges {
 		challengeTriple, exists := tripleMap[challenge]
 		if !exists {
 			return false
 		}
-		usedCounter++
-		print(" v used (" + strconv.Itoa(challengeTriple.Index) + ")")
 		parents := V.parameters.GraphDescription.GetPredecessors(challenge)
 		sort.Slice(parents, func(i, j int) bool {
 			return parents[i] < parents[j]
@@ -117,8 +102,6 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 				if !exists {
 					return false
 				}
-				usedCounter++
-				print(" v used (" + strconv.Itoa(parentIndex) + ")")
 			}
 			if !V.checkCorrectPebbleOfNode(challengeTriple, parentTriples) {
 				return false
@@ -128,9 +111,6 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 				return false
 			}
 		}
-	}
-	if usedCounter < len(tripleMap) {
-		print("Prover sent everything it needed, but also send additional openings (which should not be allowed)")
 	}
 	return true
 }

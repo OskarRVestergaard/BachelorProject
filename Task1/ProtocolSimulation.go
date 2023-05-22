@@ -3,6 +3,7 @@ package Task1
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/google/uuid"
@@ -15,8 +16,8 @@ import (
 
 //Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
 
-func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
-	resultGraph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
+func generateDirectedAcyclicGraphStructure(size int) *Graph.Graph {
+	resultGraph := &Graph.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
 	resultGraph.InitGraph(size)
 	resultGraph.AddEdge(0, 1)
 	resultGraph.AddEdge(0, 2)
@@ -93,12 +94,12 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	return result
 }
 
-func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) *PoSpaceModels.Graph {
+func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) *Graph.Graph {
 	size := n * k
 	if !utils.PowerOfTwo(size) {
 		panic("n and k must be a power of two")
 	}
-	graph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
+	graph := &Graph.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
 	graph.InitGraph(size)
 	var d int
 	if useForcedD {
