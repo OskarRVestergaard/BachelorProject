@@ -82,26 +82,42 @@ func (P *Prover) GetOpeningTriple(index int) (triple PoSpaceModels.OpeningTriple
 }
 
 func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []PoSpaceModels.OpeningTriple) {
+	println()
+	print("prover is answering the following challenges: ")
+	for _, index := range indices {
+		print(" " + strconv.Itoa(index) + " ")
+	}
+	println()
 	//Remove duplicates using a set
 	var member struct{}
-	indicesSet := make(map[int]struct{})
+	challengeIndicesSet := make(map[int]struct{})
 	for _, value := range indices {
-		indicesSet[value] = member
+		challengeIndicesSet[value] = member
 	}
 	//Find parents of the nodes
+	parentIndicesSet := make(map[int]struct{})
 	if withParents {
-		for index, _ := range indicesSet {
+		for index, _ := range challengeIndicesSet {
 			parents := P.pebbledGraph.GetPredecessors(index)
 			for _, parent := range parents {
-				indicesSet[parent] = member
+				parentIndicesSet[parent] = member
 			}
 		}
 	}
 	//Append triple for each and return the result
 	result := make([]PoSpaceModels.OpeningTriple, 0, 0)
-	for i, _ := range indicesSet {
+	for i, _ := range challengeIndicesSet {
+		result = append(result, P.GetOpeningTriple(i))
+	}
+	for i, _ := range parentIndicesSet {
 		result = append(result, P.GetOpeningTriple(i))
 	}
 	result = PoSpaceModels.SortOpeningTriples(result)
+	println()
+	print("It answered with: ")
+	for _, triple := range result {
+		print(" " + strconv.Itoa(triple.Index) + " ")
+	}
+	println()
 	return result
 }

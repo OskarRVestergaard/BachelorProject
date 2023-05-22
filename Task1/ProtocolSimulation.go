@@ -7,7 +7,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/google/uuid"
 	"math"
-	//"math/big"
 	mathRand "math/rand"
 )
 
