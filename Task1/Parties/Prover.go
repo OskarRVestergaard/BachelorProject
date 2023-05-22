@@ -12,7 +12,7 @@ import (
 
 type Prover struct {
 	parameters   PoSpaceModels.Parameters
-	pebbledGraph *Graph.Graph
+	pebbledGraph Graph.Graph
 	merkleTree   *PoSpaceModels.MerkleTree
 	commitment   sha256.HashValue
 }
@@ -21,7 +21,7 @@ func (P *Prover) pebbleGraph() {
 	// Assumed to be topologically sorted DAG according to index
 	id := P.parameters.Id
 	P.pebbledGraph = P.parameters.GraphDescription
-	size := P.pebbledGraph.Size
+	size := P.pebbledGraph.GetSize()
 	tempHashingSlice := make([]byte, size*32+32) //The maximum size that can be hashed at any given point is if all nodes are involved, the constant factor should account for the label and id
 	for i := 0; i < size; i++ {
 		s := 0
@@ -40,19 +40,21 @@ func (P *Prover) pebbleGraph() {
 			return parents[i] < parents[j]
 		})
 		for _, parent := range parents {
-			parentHashValue := P.pebbledGraph.Value[parent].ToSlice()
+			parentHashValue := P.pebbledGraph.GetValue()[parent].ToSlice()
 			for _, b := range parentHashValue {
 				tempHashingSlice[s] = b
 				s++
 			}
 		}
-		P.pebbledGraph.Value[i] = sha256.HashByteArray(tempHashingSlice[0:s])
+		values := P.pebbledGraph.GetValue()
+		values[i] = sha256.HashByteArray(tempHashingSlice[0:s])
+		P.pebbledGraph.SetValue(values)
 	}
 }
 
 func (P *Prover) createMerkleTreeFromGraph() {
 	//Makes assumptions on the given graph, such as it being a DAG and sorted topologically by index
-	size := P.pebbledGraph.Size
+	size := P.pebbledGraph.GetSize()
 
 	if !utils.PowerOfTwo(size) {
 		panic("Graph must have 2^n number of nodes")
@@ -61,7 +63,7 @@ func (P *Prover) createMerkleTreeFromGraph() {
 	firstLeaf := size - 1
 	//Inserting value for leaves
 	for i := 0; i < size; i++ {
-		tree.Nodes[firstLeaf+i] = P.pebbledGraph.Value[i]
+		tree.Nodes[firstLeaf+i] = P.pebbledGraph.GetValue()[i]
 	}
 	//Computing parents
 	for i := firstLeaf - 1; i >= 0; i-- {

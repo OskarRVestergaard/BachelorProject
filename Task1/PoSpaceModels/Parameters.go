@@ -16,5 +16,5 @@ import (
 type Parameters struct {
 	Id               uuid.UUID
 	StorageBound     int
-	GraphDescription *Graph.Graph
+	GraphDescription Graph.Graph
 }

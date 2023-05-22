@@ -65,7 +65,7 @@ func (V *Verifier) SaveCommitment(commitment sha256.HashValue) {
 }
 
 func (V *Verifier) PickChallenges() []int {
-	size := V.parameters.GraphDescription.Size
+	size := V.parameters.GraphDescription.GetSize()
 	challengeAmount := 4
 	result := make([]int, challengeAmount, challengeAmount)
 	for i := 0; i < challengeAmount; i++ {
