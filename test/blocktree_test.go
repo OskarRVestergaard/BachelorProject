@@ -106,7 +106,7 @@ func TestPoSpaceNetwork4Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
-	time.Sleep(15000 * time.Millisecond)
+	time.Sleep(6000 * time.Millisecond)
 	for i, _ := range listOfPeers {
 		if i != 0 {
 			tree1 := listOfPeers[i-1].GetBlockTree().(SpaceMintBlockchain.Blocktree)
@@ -147,7 +147,7 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
-	time.Sleep(35000 * time.Millisecond)
+	time.Sleep(15000 * time.Millisecond)
 	for i, _ := range listOfPeers {
 		if i != 0 {
 			tree1 := listOfPeers[i-1].GetBlockTree().(SpaceMintBlockchain.Blocktree)
