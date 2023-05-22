@@ -22,7 +22,7 @@ func GetStandardConstants() PeerConstants {
 		BlockPenaltyAmountLimit:     32,
 		Hardness:                    23,
 		SlotLength:                  5000 * time.Millisecond,
-		GraphK:                      8,
+		GraphK:                      128,
 		Alpha:                       0.25,
 		Beta:                        0.5,
 		UseForcedD:                  false,

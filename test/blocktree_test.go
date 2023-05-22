@@ -127,7 +127,7 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 	noOfPeers := 16
 	noOfMsgs := 2
 	noOfNames := 16
-	sizeOfProofsN := 256
+	sizeOfProofsN := 512
 	constants := peer_strategy.GetStandardConstants()
 	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true, constants) //setup peer
 	for _, peer := range listOfPeers {
