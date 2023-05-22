@@ -166,6 +166,50 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 	print(&visualTree)
 }
 
+func TestSlowOver20MinBig8PeerTestAbout1GBprPeer(t *testing.T) {
+	noOfPeers := 8
+	noOfMsgs := 4
+	noOfNames := 8
+	sizeOfProofsN := 65536
+	constants := peer_strategy.GetStandardConstants()
+	constants.SlotLength = 40000 * time.Millisecond
+	listOfPeers, pkList := test_utils.SetupPeers(noOfPeers, noOfNames, true, constants) //setup peer
+	for _, peer := range listOfPeers {
+		err := peer.StartMining(sizeOfProofsN)
+		if err != nil {
+			print(err.Error())
+		}
+	}
+	time.Sleep(10000 * time.Millisecond) //Wait such that the peers are aware of who is mining
+	for i := 0; i < 60; i++ {
+		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
+		time.Sleep(20000 * time.Millisecond)
+	}
+	for _, peer := range listOfPeers {
+		err := peer.StopMining()
+		if err != nil {
+			print(err.Error())
+		}
+	}
+	time.Sleep(15000 * time.Millisecond)
+	for i, _ := range listOfPeers {
+		if i != 0 {
+			tree1 := listOfPeers[i-1].GetBlockTree().(SpaceMintBlockchain.Blocktree)
+			tree2 := listOfPeers[i].GetBlockTree().(SpaceMintBlockchain.Blocktree)
+			test := tree1.Equals(tree2)
+			if !test {
+				assert.True(t, test) //This conditional is for debugging purposes
+			}
+		}
+	}
+	assert.True(t, true)
+	tree1 := listOfPeers[0].GetBlockTree().(SpaceMintBlockchain.Blocktree)
+	visualTree := tree1.RootToVisualNode()
+	chainFromHead := tree1.HeadToChain()
+	print(&chainFromHead)
+	print(&visualTree)
+}
+
 func TestRandom(t *testing.T) {
 	rnd := rand.New(rand.NewSource(3))
 	rnd2 := rand.New(rand.NewSource(3))
