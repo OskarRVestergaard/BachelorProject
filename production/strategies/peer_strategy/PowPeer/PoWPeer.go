@@ -35,13 +35,12 @@ type PoWPeer struct {
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
-	startTime                  time.Time
 	constants                  peer_strategy.PeerConstants
+	startTime                  time.Time
 }
 
 func (p *PoWPeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
 	p.startTime = startTime
-	//Start notifier here dont keep p.starttime
 }
 
 func (p *PoWPeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
