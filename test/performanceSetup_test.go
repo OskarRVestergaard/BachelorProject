@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestPerformance16Peers(t *testing.T) {
+func TestPerformance(t *testing.T) {
 	//TestPoSpaceNetwork16Peers(t)
-	//TestSlowOver20MinBig8PeerTestAbout1GBprPeer()
+	TestSlowOver20MinBig8PeerTestAbout1GBprPeer(t)
 }
