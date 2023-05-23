@@ -38,13 +38,16 @@ type PoSpacePeer struct {
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
-	startTime                  time.Time
 	constants                  peer_strategy.PeerConstants
+	slotNotifier               chan int
 }
 
-func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time, constants peer_strategy.PeerConstants) {
+func (p *PoSpacePeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
+	p.slotNotifier = utils.StartTimeSlotUpdater(startTime, slotLength)
+}
+
+func (p *PoSpacePeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
 	p.constants = constants
-	p.startTime = startTime
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoSpace.PoSpace{}
 	address, err := network.StringToAddress(IpPort)
@@ -197,14 +200,15 @@ func (p *PoSpacePeer) startBlocksToMinePasser(initialMiningLocation PoSpace.Mini
 			mostRecentMiningLocation <- newLocation
 		}
 	}()
-	slotNotifier := utils.StartTimeSlotUpdater(p.startTime, p.constants.SlotLength)
 	hashesSendToMiner := make(chan PoSpace.MiningLocation, 10)
 	go func() {
 		for {
-			newSlot := <-slotNotifier
+			newSlot := <-p.slotNotifier
 			hashToMineOn := <-mostRecentMiningLocation
-			hashToMineOn.Slot = newSlot
-			hashesSendToMiner <- hashToMineOn
+			if hashToMineOn.Slot < newSlot {
+				hashToMineOn.Slot = newSlot
+				hashesSendToMiner <- hashToMineOn
+			}
 			mostRecentMiningLocation <- hashToMineOn
 		}
 	}()
@@ -223,10 +227,10 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	newMiningLocations := blocktree.SubScribeToGetHead(n)
 	head := blocktree.GetHead()
 	initialMiningLocation := blocktree.GetMiningLocation(head.HashOfBlock(), n)
-	winningDraws := make(chan PoSpace.LotteryDraw, 10)
+	winningDraws := make(chan PoSpace.WinInformation, 10)
 	poSpaceParameters := Task1.GenerateParameters(5, n, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD)
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
-	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
+	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, p.constants.QualityThreshold, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
 	p.floodSpaceCommit(commitment, poSpaceParameters.Id, p.constants.GraphK*n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
@@ -298,22 +302,12 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 	return resultBlock, false
 }
 
-func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpace.LotteryDraw) {
+func (p *PoSpacePeer) sendBlockWithTransactions(winningDraw PoSpace.WinInformation) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
-	nod, isEmpty := blocktree.HashToBlock(draw.ParentHash)
-	if isEmpty {
-		panic("Trying to send block with no valid parent")
-	}
-	extendedOnSlot := nod.TransactionSubBlock.Slot
-	slot := utils.CalculateSlot(p.startTime, p.constants.SlotLength)
-	for slot <= extendedOnSlot {
-		time.Sleep(p.constants.SlotLength / 10)
-		slot = utils.CalculateSlot(p.startTime, p.constants.SlotLength)
-	}
-	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
+	blockWithTransactions, isEmpty := p.createBlock(verificationKey, winningDraw.Slot, winningDraw.Draw, blocktree)
 	if isEmpty {
 		p.blockTreeChan <- blocktree
 		return
@@ -444,7 +438,7 @@ func (p *PoSpacePeer) addTransaction(t SpaceMintBlockchain.SpacemintTransactions
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.LotteryDraw) {
+func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.WinInformation) {
 	for {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)

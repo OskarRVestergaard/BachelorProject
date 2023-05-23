@@ -6,7 +6,7 @@ import (
 )
 
 type PeerInterface interface {
-	RunPeer(IpPort string, startTime time.Time, constants PeerConstants)
+	RunPeer(IpPort string, constants PeerConstants)
 	CreateAccount() string
 	GetBlockTree() interface{}
 	StartMining(n int) error
@@ -14,4 +14,5 @@ type PeerInterface interface {
 	GetAddress() network.Address
 	Connect(ip string, port int)
 	FloodSignedTransaction(from string, to string, amount int)
+	ActivatePeer(startTime time.Time, slotLength time.Duration)
 }

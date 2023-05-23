@@ -20,13 +20,15 @@ func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool, blockChainCo
 		var p peer_strategy.PeerInterface
 		if useProofOfSpace {
 			p = &SpacemintPeer.PoSpacePeer{}
+			p.ActivatePeer(startTime, blockChainConstants.SlotLength) //TODO PLACE AFTER START MINING
 		} else {
 			p = &PowPeer.PoWPeer{}
+			p.ActivatePeer(startTime, blockChainConstants.SlotLength) //TODO PLACE AFTER START MINING
 		}
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)
 		listOfPeers[i] = p
-		p.RunPeer("127.0.0.1:"+port, startTime, blockChainConstants)
+		p.RunPeer("127.0.0.1:"+port, blockChainConstants)
 	}
 	time.Sleep(150 * time.Millisecond)
 	for i := 0; i < noOfPeers; i++ {
