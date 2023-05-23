@@ -61,3 +61,7 @@ func (graph *GeneralGraph) GetSuccessors(node int) []int {
 func (graph *GeneralGraph) GetPredecessors(node int) []int {
 	return graph.predecessors[node]
 }
+
+func (graph *GeneralGraph) SortEdges() {
+	
+}

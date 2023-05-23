@@ -1,6 +1,9 @@
 package Graph
 
-import "github.com/OskarRVestergaard/BachelorProject/production/sha256"
+import (
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"sort"
+)
 
 type IdenticalExpandersGraph struct {
 	// Assumed to be topologically sorted DAG according to index
@@ -91,4 +94,17 @@ func (graph *IdenticalExpandersGraph) GetPredecessors(node int) []int {
 		predecessorsCopy[i] = oldVal + graph.n*(expanderNum-1)
 	}
 	return predecessorsCopy
+}
+
+func (graph *IdenticalExpandersGraph) SortEdges() {
+	for _, predecessors := range graph.predecessors {
+		sort.Slice(predecessors, func(i, j int) bool {
+			return predecessors[i] < predecessors[j]
+		})
+	}
+	for _, successors := range graph.successors {
+		sort.Slice(successors, func(i, j int) bool {
+			return successors[i] < successors[j]
+		})
+	}
 }

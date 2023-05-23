@@ -11,4 +11,5 @@ type Graph interface {
 	GetSize() int
 	GetValue() []sha256.HashValue
 	SetValue([]sha256.HashValue)
+	SortEdges()
 }

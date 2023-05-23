@@ -3,7 +3,6 @@ package Parties
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
-	"sort"
 	"strconv"
 
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
@@ -36,9 +35,6 @@ func (P *Prover) pebbleGraph() {
 			s++
 		}
 		parents := P.pebbledGraph.GetPredecessors(i)
-		sort.Slice(parents, func(i, j int) bool {
-			return parents[i] < parents[j]
-		})
 		for _, parent := range parents {
 			parentHashValue := P.pebbledGraph.GetValue()[parent].ToSlice()
 			for _, b := range parentHashValue {
@@ -115,11 +111,15 @@ func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTripl
 		}
 	}
 	//Append triple for each and return the result
-	result := make([]PoSpaceModels.OpeningTriple, 0, 0)
-	for i, _ := range challengeIndicesSet {
-		result = append(result, P.GetOpeningTriple(i))
+	//Union the two sets (parents probably much bigger)
+	resultIndicesSet := parentIndicesSet
+	for k, v := range challengeIndicesSet {
+		resultIndicesSet[k] = v
 	}
-	for i, _ := range parentIndicesSet {
+
+	//Make list and sort it
+	result := make([]PoSpaceModels.OpeningTriple, 0, 0)
+	for i, _ := range resultIndicesSet {
 		result = append(result, P.GetOpeningTriple(i))
 	}
 	result = PoSpaceModels.SortOpeningTriples(result)
