@@ -95,10 +95,15 @@ func TestPoSpaceNetwork4Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
+	time.Sleep(5000 * time.Millisecond)
+	starTime := time.Now()
+	for _, peer := range listOfPeers {
+		peer.ActivatePeer(starTime, constants.SlotLength)
+	}
 	time.Sleep(7000 * time.Millisecond) //Wait such that the peers are aware of who is mining
 	for i := 0; i < 4; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
-		time.Sleep(3000 * time.Millisecond)
+		time.Sleep(6000 * time.Millisecond)
 	}
 	for _, peer := range listOfPeers {
 		err := peer.StopMining()
@@ -136,6 +141,11 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
+	time.Sleep(20000 * time.Millisecond)
+	starTime := time.Now()
+	for _, peer := range listOfPeers {
+		peer.ActivatePeer(starTime, constants.SlotLength)
+	}
 	time.Sleep(10000 * time.Millisecond) //Wait such that the peers are aware of who is mining
 	for i := 0; i < 7; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
@@ -147,7 +157,7 @@ func TestPoSpaceNetwork16Peers(t *testing.T) {
 			print(err.Error())
 		}
 	}
-	time.Sleep(15000 * time.Millisecond)
+	time.Sleep(25000 * time.Millisecond)
 	for i, _ := range listOfPeers {
 		if i != 0 {
 			tree1 := listOfPeers[i-1].GetBlockTree().(SpaceMintBlockchain.Blocktree)
@@ -179,6 +189,10 @@ func TestSlowOver20MinBig8PeerTestAbout1GBprPeer(t *testing.T) {
 		if err != nil {
 			print(err.Error())
 		}
+	}
+	starTime := time.Now()
+	for _, peer := range listOfPeers {
+		peer.ActivatePeer(starTime, constants.SlotLength)
 	}
 	time.Sleep(10000 * time.Millisecond) //Wait such that the peers are aware of who is mining
 	for i := 0; i < 60; i++ {

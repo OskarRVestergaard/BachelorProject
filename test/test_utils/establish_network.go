@@ -11,7 +11,6 @@ import (
 
 func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool, blockChainConstants peer_strategy.PeerConstants) ([]peer_strategy.PeerInterface, []string) {
 
-	startTime := time.Now()
 	listOfPeers := make([]peer_strategy.PeerInterface, noOfPeers)
 
 	pkList := make([]string, noOfNames)
@@ -20,10 +19,8 @@ func SetupPeers(noOfPeers int, noOfNames int, useProofOfSpace bool, blockChainCo
 		var p peer_strategy.PeerInterface
 		if useProofOfSpace {
 			p = &SpacemintPeer.PoSpacePeer{}
-			p.ActivatePeer(startTime, blockChainConstants.SlotLength) //TODO PLACE AFTER START MINING
 		} else {
 			p = &PowPeer.PoWPeer{}
-			p.ActivatePeer(startTime, blockChainConstants.SlotLength) //TODO PLACE AFTER START MINING
 		}
 		freePort, _ := GetFreePort()
 		port := strconv.Itoa(freePort)

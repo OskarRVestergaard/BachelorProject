@@ -43,10 +43,11 @@ type PoSpacePeer struct {
 }
 
 func (p *PoSpacePeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
-	p.slotNotifier = utils.StartTimeSlotUpdater(startTime, slotLength)
+	utils.StartTimeSlotUpdater(startTime, slotLength, p.slotNotifier)
 }
 
 func (p *PoSpacePeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
+	p.slotNotifier = make(chan int, 4)
 	p.constants = constants
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoSpace.PoSpace{}
@@ -191,28 +192,38 @@ func (p *PoSpacePeer) GetBlockTree() interface{} {
 }
 
 func (p *PoSpacePeer) startBlocksToMinePasser(initialMiningLocation PoSpace.MiningLocation, newMiningLocations chan PoSpace.MiningLocation) chan PoSpace.MiningLocation {
-	mostRecentMiningLocation := make(chan PoSpace.MiningLocation, 1)
-	mostRecentMiningLocation <- initialMiningLocation
+	timeSlotBufferSize := 5
+	BestKnownLocations := make(chan []PoSpace.MiningLocation, 1) //The best mining locations for the last 5 slots
+	locations := make([]PoSpace.MiningLocation, timeSlotBufferSize, timeSlotBufferSize)
+	for i := 0; i < timeSlotBufferSize; i++ {
+		locations[i] = initialMiningLocation
+	}
+	BestKnownLocations <- locations
+
+	//Updater for best locations
 	go func() {
 		for {
-			newLocation := <-newMiningLocations
-			_ = <-mostRecentMiningLocation
-			mostRecentMiningLocation <- newLocation
+			newLocation := <-newMiningLocations //TODO Only new highest quality blocks are sent, but really we need the highest quality block for each slot, this should only be a problem when block are really late (they will get ignored)
+			slotMod := newLocation.Slot % timeSlotBufferSize
+			BestLocations := <-BestKnownLocations
+			BestLocations[slotMod] = newLocation
+			BestKnownLocations <- BestLocations
 		}
 	}()
-	hashesSendToMiner := make(chan PoSpace.MiningLocation, 10)
+
+	//Send what should be mined on to miner based on information about that slot
+	blocksToMiner := make(chan PoSpace.MiningLocation, 10)
 	go func() {
 		for {
 			newSlot := <-p.slotNotifier
-			hashToMineOn := <-mostRecentMiningLocation
-			if hashToMineOn.Slot < newSlot {
-				hashToMineOn.Slot = newSlot
-				hashesSendToMiner <- hashToMineOn
-			}
-			mostRecentMiningLocation <- hashToMineOn
+			BestLocations := <-BestKnownLocations
+			slotToMineOn := (newSlot - 1) % timeSlotBufferSize
+			HighestQualityBlockInThatSlot := BestLocations[slotToMineOn]
+			blocksToMiner <- HighestQualityBlockInThatSlot
+			BestKnownLocations <- BestLocations
 		}
 	}()
-	return hashesSendToMiner
+	return blocksToMiner
 }
 
 func (p *PoSpacePeer) StartMining(n int) error {
@@ -296,7 +307,7 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 
 	parentBlock, isEmpty := blocktree.HashToBlock(parentHash)
 	if isEmpty {
-		panic("Something went wrong druing block creation, tried to create a block with no valid parent!")
+		panic("Something went wrong during block creation, tried to create a block with no valid parent!")
 	}
 	resultBlock.SignBlock(parentBlock, p.signatureStrategy, secretKey)
 	return resultBlock, false

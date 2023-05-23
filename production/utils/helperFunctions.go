@@ -33,19 +33,18 @@ func CalculateSlot(startTime time.Time, slotLength time.Duration) int {
 /*
 startTimeSlotUpdater returns a channel that reports when a new time slot has started and what the time slot is
 */
-func StartTimeSlotUpdater(startTime time.Time, slotLength time.Duration) chan int {
-	updater := make(chan int)
+func StartTimeSlotUpdater(startTime time.Time, slotLength time.Duration, slotNotifier chan int) {
 	prevSlot := 0
 	go func() {
 		for {
 			currentSlot := CalculateSlot(startTime, slotLength)
 			if currentSlot > prevSlot {
-				updater <- currentSlot
+				slotNotifier <- currentSlot
+				prevSlot = currentSlot
 			}
 			time.Sleep(slotLength / 10)
 		}
 	}()
-	return updater
 }
 
 func PowerOfTwo(n int) bool {
