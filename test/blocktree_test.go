@@ -39,6 +39,7 @@ func testBlockChain(t *testing.T, constants TestingConstants) {
 		}(peer)
 	}
 	wg.Wait()
+	println("Miners finished setting up")
 	time.Sleep(constants.peerConstants.SlotLength)
 	starTime := time.Now()
 	for _, peer := range listOfPeers {
@@ -60,6 +61,7 @@ func testBlockChain(t *testing.T, constants TestingConstants) {
 		}(peer)
 	}
 	wg.Wait()
+	println("All mining activity has been stopped")
 	time.Sleep(2 * constants.peerConstants.SlotLength)
 	if constants.useProofOfSpace {
 		for i, _ := range listOfPeers {
