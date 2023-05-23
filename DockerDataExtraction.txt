@@ -1,0 +1,33 @@
+import subprocess
+import re
+
+def CollectTestData():
+    subprocess.run('docker build C:\\Users\\Oskar\\GolandProjects\\BachelorProject', shell=True)
+    for i in range(2):
+        f=open(f"C:\\Users\\Oskar\\TestPoSpaceNetwork16Peers{i}.txt","w")
+        process=subprocess.Popen('docker stats',stdout=f)
+        print("docker stats starting")
+        print("docker run starting")
+        subprocess.run("docker run go-docker-demo")
+        process.terminate()
+        print("iteration")
+
+
+def Format():
+    for i in range(2):
+        file=open(f"C:\\Users\\Oskar\\TestPoSpaceNetwork16Peers{i}.txt","r")
+        with open(f"C:\\Users\\Oskar\\TestPoSpaceNetwork16PeersFormat{i}.txt","w") as f:
+            f.write("CONTAINER_ID NAME CPU_% MEM_USAGE_/_LIMIT MEM_% NET_I/O BLOCK_I/O PIDS\n")
+            for line in file.readlines():
+                if re.match("^[a-zA-Z-0-9]+.*", line):
+                    f.write(re.sub("\s+", " ", line, count=0, flags=0).replace("%", "").replace("MiB", "").replace("GiB",
+                                                                                                                   "") + "\n")
+            f.close()
+
+
+
+
+if __name__ == '__main__':
+    CollectTestData()
+    Format()
+
