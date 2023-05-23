@@ -12,5 +12,5 @@ RUN #go build -o  /go-docker-demo
 
 EXPOSE 8080
 
-ENTRYPOINT ["go","test","-run","TestSlowOver10MinBig8PeerTestAbout1GBprPeer","./test"]
+ENTRYPOINT ["go","test","-run","TestSlow8PeerPoS","./test"]
 #ENTRYPOINT ["ls"]

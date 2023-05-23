@@ -60,7 +60,7 @@ func testBlockChain(t *testing.T, constants TestingConstants) {
 		}(peer)
 	}
 	wg.Wait()
-	time.Sleep(constants.peerConstants.SlotLength)
+	time.Sleep(2 * constants.peerConstants.SlotLength)
 	if constants.useProofOfSpace {
 		for i, _ := range listOfPeers {
 			if i != 0 {
@@ -96,15 +96,15 @@ func testBlockChain(t *testing.T, constants TestingConstants) {
 	}
 }
 
-func TestSlowOver15MinBig8PeerTestPoW(t *testing.T) {
+func TestSlow8PeerPoW(t *testing.T) {
 	peerConstants := peer_strategy.PeerConstants{
-		BlockPaymentAmountLimit:     20,
+		BlockPaymentAmountLimit:     40,
 		BlockSpaceCommitAmountLimit: 32,
 		BlockPenaltyAmountLimit:     32,
-		Hardness:                    28,
-		SlotLength:                  45000 * time.Millisecond,
+		Hardness:                    30,
+		SlotLength:                  40000 * time.Millisecond,
 		GraphK:                      128,
-		Alpha:                       0.625,
+		Alpha:                       0.0625,
 		Beta:                        0.925,
 		UseForcedD:                  false,
 		ForcedD:                     0,
@@ -113,35 +113,35 @@ func TestSlowOver15MinBig8PeerTestPoW(t *testing.T) {
 	testingConstants := TestingConstants{
 		peerConstants:      peerConstants,
 		noOfPeers:          8,
-		noOfMsgs:           4,
-		WaitBetweenMessage: 22500 * time.Millisecond,
-		Iterations:         5,
+		noOfMsgs:           1,
+		WaitBetweenMessage: 10000 * time.Millisecond,
+		Iterations:         60,
 		useProofOfSpace:    false,
 		ProofSizeN:         0,
 	}
 	testBlockChain(t, testingConstants)
 }
 
-func TestSlowOver20MinBig8PeerTestAbout1GBprPeerPoS(t *testing.T) {
+func TestSlow8PeerPoS(t *testing.T) {
 	peerConstants := peer_strategy.PeerConstants{
-		BlockPaymentAmountLimit:     20,
+		BlockPaymentAmountLimit:     40,
 		BlockSpaceCommitAmountLimit: 32,
 		BlockPenaltyAmountLimit:     32,
 		Hardness:                    28,
-		SlotLength:                  45000 * time.Millisecond,
+		SlotLength:                  40000 * time.Millisecond,
 		GraphK:                      128,
-		Alpha:                       0.625,
+		Alpha:                       0.0625,
 		Beta:                        0.925,
 		UseForcedD:                  false,
 		ForcedD:                     0,
-		QualityThreshold:            0.9999,
+		QualityThreshold:            0.99995,
 	}
 	testingConstants := TestingConstants{
 		peerConstants:      peerConstants,
 		noOfPeers:          8,
-		noOfMsgs:           4,
-		WaitBetweenMessage: 22500 * time.Millisecond,
-		Iterations:         5,
+		noOfMsgs:           1,
+		WaitBetweenMessage: 10000 * time.Millisecond,
+		Iterations:         60,
 		useProofOfSpace:    true,
 		ProofSizeN:         65536,
 	}
