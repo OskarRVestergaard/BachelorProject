@@ -9,7 +9,8 @@ import (
 )
 
 type PoSpace struct {
-	n int
+	n                int
+	qualityThreshold float64
 }
 
 type MiningLocation struct {
@@ -31,6 +32,11 @@ type LotteryDraw struct {
 	ProofOfCorrectCommitmentB []PoSpaceModels.OpeningTriple
 }
 
+type WinInformation struct {
+	Draw LotteryDraw
+	Slot int
+}
+
 func (draw LotteryDraw) ToByteArray() []byte {
 	var buffer bytes.Buffer
 	buffer.WriteString(draw.Vk)
@@ -43,8 +49,9 @@ func (draw LotteryDraw) ToByteArray() []byte {
 	return buffer.Bytes()
 }
 
-func (lottery *PoSpace) StartNewMiner(PoSpacePrm PoSpaceModels.Parameters, vk string, hardness int, initialMiningLocation MiningLocation, newMiningLocation chan MiningLocation, potentiallyWinningDraws chan LotteryDraw, stopMinerSignal chan struct{}) (commitment sha256.HashValue) {
+func (lottery *PoSpace) StartNewMiner(PoSpacePrm PoSpaceModels.Parameters, vk string, hardness int, qualityThreshold float64, initialMiningLocation MiningLocation, newMiningLocation chan MiningLocation, potentiallyWinningDraws chan WinInformation, stopMinerSignal chan struct{}) (commitment sha256.HashValue) {
 	newMiningLocationsCombination := make(chan channelCombination)
+	lottery.qualityThreshold = qualityThreshold
 	prover := Parties.Prover{}
 	lottery.n = PoSpacePrm.StorageBound / 2
 	prover.InitializationPhase1(PoSpacePrm)
@@ -78,7 +85,7 @@ func (lottery *PoSpace) combineChannels(newMiningLocations chan MiningLocation, 
 	}()
 }
 
-func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, initialMiningLocation MiningLocation, newBlockHashesInternal chan channelCombination, winningDraws chan LotteryDraw) {
+func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prover, vk string, initialMiningLocation MiningLocation, newBlockHashesInternal chan channelCombination, winningDraws chan WinInformation) {
 	lastSlot := -1
 	lastParent := sha256.HashValue{}
 	miningLocationCombination := channelCombination{
@@ -96,13 +103,13 @@ func (lottery *PoSpace) startNewMinerInternal(proverSingleton chan Parties.Prove
 	}
 }
 
-func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, vk string, miningLocation MiningLocation, winningDraws chan LotteryDraw) {
+func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, vk string, miningLocation MiningLocation, winningDraws chan WinInformation) {
 	prover := <-proverSingleton
 	proofOfSpaceExecution := prover.AnswerChallenges(miningLocation.ChallengeSetP, false)
 
 	HashOfAnswers := sha256.HashByteArray(PoSpaceModels.ListOfTripleToByteArray(proofOfSpaceExecution))
 	quality := models.CalculateQuality(HashOfAnswers, int64(lottery.n))
-	qualityIsGoodEnough := 0.9995 < quality //TODO, One could use the best known total sum of N in network to calculate what quality would give a realistic chance to win
+	qualityIsGoodEnough := lottery.qualityThreshold < quality //TODO, One could use the best known total sum of N in network to calculate what quality would give a realistic chance to win
 	if qualityIsGoodEnough {
 		proofOfCorrectCommitment := prover.AnswerChallenges(miningLocation.ChallengeSetV, true)
 		draw := LotteryDraw{
@@ -111,7 +118,11 @@ func (lottery *PoSpace) mineOnSingleBlock(proverSingleton chan Parties.Prover, v
 			ProofOfSpaceA:             proofOfSpaceExecution,
 			ProofOfCorrectCommitmentB: proofOfCorrectCommitment,
 		}
-		winningDraws <- draw
+		win := WinInformation{
+			Draw: draw,
+			Slot: miningLocation.Slot,
+		}
+		winningDraws <- win
 	}
 	proverSingleton <- prover
 }

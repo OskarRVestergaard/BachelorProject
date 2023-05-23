@@ -3,11 +3,10 @@ package Task1
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
-	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/google/uuid"
 	"math"
-	//"math/big"
 	mathRand "math/rand"
 )
 
@@ -16,9 +15,10 @@ import (
 
 //Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
 
-func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
-	resultGraph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
-	resultGraph.InitGraph(size)
+func generateDirectedAcyclicGraphStructure(size int) Graph.Graph {
+	var resultGraph Graph.Graph
+	resultGraph = &Graph.GeneralGraph{}
+	resultGraph.InitGraph(size, 0)
 	resultGraph.AddEdge(0, 1)
 	resultGraph.AddEdge(0, 2)
 	resultGraph.AddEdge(0, 3)
@@ -94,13 +94,14 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	return result
 }
 
-func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) *PoSpaceModels.Graph {
+func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) Graph.Graph {
 	size := n * k
 	if !utils.PowerOfTwo(size) {
 		panic("n and k must be a power of two")
 	}
-	graph := &PoSpaceModels.Graph{Size: size, Value: make([]sha256.HashValue, size, size)}
-	graph.InitGraph(size)
+	var graph Graph.Graph
+	graph = &Graph.IdenticalExpandersGraph{}
+	graph.InitGraph(n, k)
 	var d int
 	if useForcedD {
 		d = forcedD
@@ -134,16 +135,7 @@ func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForce
 		}
 	}
 
-	for i := 0; i < k-2; i++ {
-		firstIndex := (i + 1) * n
-		for j := firstIndex; j < firstIndex+n; j++ {
-			for y := firstIndex - n; y < firstIndex; y++ {
-				if graph.IfEdge(y, j) {
-					graph.AddEdge(y+n, j+n)
-				}
-			}
-		}
-	}
+	graph.SortEdges()
 
 	return graph
 }
@@ -158,7 +150,7 @@ func numberAlreadyChosen(n int, lst []int) bool {
 }
 
 func CalculateD(alpha float64, beta float64) float64 {
-	return (calculateEntropy(alpha) + calculateEntropy(beta)) / (calculateEntropy(alpha) - beta*calculateEntropy(alpha/beta))
+	return (calculateEntropy(alpha) + calculateEntropy(beta)) / (-alpha * math.Log2(beta))
 }
 
 func calculateEntropy(t float64) float64 {

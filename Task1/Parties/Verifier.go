@@ -65,7 +65,7 @@ func (V *Verifier) SaveCommitment(commitment sha256.HashValue) {
 }
 
 func (V *Verifier) PickChallenges() []int {
-	size := V.parameters.GraphDescription.Size
+	size := V.parameters.GraphDescription.GetSize()
 	challengeAmount := 4
 	result := make([]int, challengeAmount, challengeAmount)
 	for i := 0; i < challengeAmount; i++ {
@@ -86,13 +86,11 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 	for _, triple := range triples {
 		tripleMap[triple.Index] = triple
 	}
-	usedCounter := 0
 	for _, challenge := range challenges {
 		challengeTriple, exists := tripleMap[challenge]
 		if !exists {
 			return false
 		}
-		usedCounter++
 		parents := V.parameters.GraphDescription.GetPredecessors(challenge)
 		sort.Slice(parents, func(i, j int) bool {
 			return parents[i] < parents[j]
@@ -104,7 +102,6 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 				if !exists {
 					return false
 				}
-				usedCounter++
 			}
 			if !V.checkCorrectPebbleOfNode(challengeTriple, parentTriples) {
 				return false
@@ -113,9 +110,6 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 			if !V.verifyOpening(challengeTriple) {
 				return false
 			}
-		}
-		if usedCounter < len(tripleMap) {
-			print("Prover sent everything it needed, but also send additional openings (which should not be allowed)")
 		}
 	}
 	return true

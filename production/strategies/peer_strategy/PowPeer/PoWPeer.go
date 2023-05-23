@@ -39,9 +39,13 @@ type PoWPeer struct {
 	constants                  peer_strategy.PeerConstants
 }
 
-func (p *PoWPeer) RunPeer(IpPort string, startTime time.Time, constants peer_strategy.PeerConstants) {
-	p.constants = constants
+func (p *PoWPeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
 	p.startTime = startTime
+	//Start notifier here dont keep p.starttime
+}
+
+func (p *PoWPeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
+	p.constants = constants
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoW.PoW{}
 	address, err := network.StringToAddress(IpPort)
@@ -172,7 +176,7 @@ func (p *PoWPeer) StartMining(_ int) error {
 	head := blocktree.GetHead()
 	initialHash := head.HashOfBlock()
 	winningDraws := make(chan lottery_strategy.WinningLotteryParams, 10)
-	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
+	p.lotteryStrategy.StartNewMiner(verificationKey, p.hardness, 0.0, initialHash, newHeadHashes, winningDraws, p.stopMiningSignal)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree

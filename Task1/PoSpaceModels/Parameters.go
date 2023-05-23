@@ -1,6 +1,9 @@
 package PoSpaceModels
 
-import "github.com/google/uuid"
+import (
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
+	"github.com/google/uuid"
+)
 
 // Parameters is a struct with parameters for use in a proof of space between a verifier and a prover.
 // Id is a random string used to make the proof unique.
@@ -13,5 +16,5 @@ import "github.com/google/uuid"
 type Parameters struct {
 	Id               uuid.UUID
 	StorageBound     int
-	GraphDescription *Graph
+	GraphDescription Graph.Graph
 }
