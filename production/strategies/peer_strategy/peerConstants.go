@@ -22,12 +22,12 @@ func GetStandardConstants() PeerConstants {
 		BlockSpaceCommitAmountLimit: 32,
 		BlockPenaltyAmountLimit:     32,
 		Hardness:                    23,
-		SlotLength:                  5000 * time.Millisecond,
+		SlotLength:                  30000 * time.Millisecond,
 		GraphK:                      128,
-		Alpha:                       0.25,
-		Beta:                        0.5,
+		Alpha:                       0.625,
+		Beta:                        0.925,
 		UseForcedD:                  false,
 		ForcedD:                     0,
-		QualityThreshold:            0.8,
+		QualityThreshold:            0.999,
 	}
 }

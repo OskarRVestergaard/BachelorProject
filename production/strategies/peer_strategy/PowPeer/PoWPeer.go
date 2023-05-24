@@ -24,7 +24,7 @@ CURRENTLY IT ASSUMES THAT A PEER NEVER LEAVES AND TCP CONNECTIONS DON'T DROP
 
 type PoWPeer struct {
 	signatureStrategy          signature_strategy.SignatureInterface
-	lotteryStrategy            lottery_strategy.LotteryInterface //TODO Change to just use proof of work, and remove strategy, also proof of work should also send slot number along
+	lotteryStrategy            lottery_strategy.LotteryInterface
 	publicToSecret             chan map[string]string
 	unfinalizedTransactions    chan []models.SignedPaymentTransaction
 	blockTreeChan              chan PoWblockchain.Blocktree
@@ -35,17 +35,19 @@ type PoWPeer struct {
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
-	startTime                  time.Time
 	constants                  peer_strategy.PeerConstants
+	startTime                  time.Time
+	peerActivated              bool
 }
 
 func (p *PoWPeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
 	p.startTime = startTime
-	//Start notifier here dont keep p.starttime
+	p.peerActivated = true
 }
 
 func (p *PoWPeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
 	p.constants = constants
+	p.peerActivated = false
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoW.PoW{}
 	address, err := network.StringToAddress(IpPort)
@@ -242,9 +244,12 @@ func (p *PoWPeer) sendBlockWithTransactions(draw lottery_strategy.WinningLottery
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
 	extendedOnSlot := blocktree.HashToBlock(draw.ParentHash).Slot
+	for !p.peerActivated {
+		time.Sleep(p.constants.SlotLength / 5)
+	}
 	slot := utils.CalculateSlot(p.startTime, p.constants.SlotLength)
 	for slot <= extendedOnSlot {
-		time.Sleep(p.constants.SlotLength / 10)
+		time.Sleep(p.constants.SlotLength / 5)
 		slot = utils.CalculateSlot(p.startTime, p.constants.SlotLength)
 	}
 	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
