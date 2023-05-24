@@ -5,6 +5,6 @@ import (
 )
 
 func TestPerformance(t *testing.T) {
-	//TestPoSpaceNetwork16Peers(t)
-	TestSlowOver20MinBig8PeerTestAbout1GBprPeer(t)
+	TestPOWNetwork2Peers(t)
+	//TestSlowOver20MinBig8PeerTestAbout1GBprPeer(t)
 }
