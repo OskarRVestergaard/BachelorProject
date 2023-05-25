@@ -201,3 +201,81 @@ func TestFast8PeerPoS(t *testing.T) {
 	}
 	testBlockChain(t, testingConstants)
 }
+
+func TestSlow4PeerPoS(t *testing.T) {
+	peerConstants := peer_strategy.PeerConstants{
+		BlockPaymentAmountLimit:     40,
+		BlockSpaceCommitAmountLimit: 32,
+		BlockPenaltyAmountLimit:     32,
+		Hardness:                    26,
+		SlotLength:                  40000 * time.Millisecond,
+		GraphK:                      128,
+		Alpha:                       0.0625,
+		Beta:                        0.925,
+		UseForcedD:                  false,
+		ForcedD:                     0,
+		QualityThreshold:            0.99995,
+	}
+	testingConstants := TestingConstants{
+		peerConstants:      peerConstants,
+		noOfPeers:          4,
+		noOfMsgs:           1,
+		WaitBetweenMessage: 10000 * time.Millisecond,
+		Iterations:         60,
+		useProofOfSpace:    true,
+		ProofSizeN:         65536,
+	}
+	testBlockChain(t, testingConstants)
+}
+
+func TestBiggerSlow8PeerPoS(t *testing.T) {
+	peerConstants := peer_strategy.PeerConstants{
+		BlockPaymentAmountLimit:     40,
+		BlockSpaceCommitAmountLimit: 32,
+		BlockPenaltyAmountLimit:     32,
+		Hardness:                    26,
+		SlotLength:                  40000 * time.Millisecond,
+		GraphK:                      128,
+		Alpha:                       0.0625,
+		Beta:                        0.925,
+		UseForcedD:                  false,
+		ForcedD:                     0,
+		QualityThreshold:            0.99995,
+	}
+	testingConstants := TestingConstants{
+		peerConstants:      peerConstants,
+		noOfPeers:          8,
+		noOfMsgs:           1,
+		WaitBetweenMessage: 10000 * time.Millisecond,
+		Iterations:         60,
+		useProofOfSpace:    true,
+		ProofSizeN:         65536 * 2,
+	}
+	testBlockChain(t, testingConstants)
+}
+
+func TestSinglePeerPoS(t *testing.T) {
+	peerConstants := peer_strategy.PeerConstants{
+		BlockPaymentAmountLimit:     40,
+		BlockSpaceCommitAmountLimit: 32,
+		BlockPenaltyAmountLimit:     32,
+		Hardness:                    26,
+		SlotLength:                  40000 * time.Millisecond,
+		GraphK:                      128,
+		Alpha:                       0.0625,
+		Beta:                        0.925,
+		UseForcedD:                  false,
+		ForcedD:                     0,
+		QualityThreshold:            0.99995,
+	}
+	testingConstants := TestingConstants{
+		peerConstants:      peerConstants,
+		noOfPeers:          1,
+		noOfMsgs:           1,
+		WaitBetweenMessage: 10000 * time.Millisecond,
+		Iterations:         60,
+		useProofOfSpace:    true,
+		ProofSizeN:         65536,
+	}
+	testBlockChain(t, testingConstants)
+}

@@ -10,6 +10,10 @@ type GeneralGraph struct {
 	value        []sha256.HashValue
 }
 
+func (graph *GeneralGraph) DebugInfo() (int, int, [][]int, [][]int, []sha256.HashValue) {
+	return graph.size, graph.size, graph.predecessors, graph.successors, graph.value
+}
+
 func (graph *GeneralGraph) GetSize() int {
 	return graph.size
 }
@@ -22,10 +26,13 @@ func (graph *GeneralGraph) SetValue(value []sha256.HashValue) {
 	graph.value = value
 }
 
-func (graph *GeneralGraph) InitGraph(n int, k int) {
+func (graph *GeneralGraph) InitGraph(n int, k int, withValues bool) {
 	graph.size = n
-	graph.value = make([]sha256.HashValue, n, n)
-
+	if withValues {
+		graph.value = make([]sha256.HashValue, n, n)
+	} else {
+		graph.value = make([]sha256.HashValue, 0, 0)
+	}
 	graph.predecessors = make([][]int, n, n)
 	for i := range graph.predecessors {
 		graph.predecessors[i] = make([]int, 0)
@@ -63,5 +70,5 @@ func (graph *GeneralGraph) GetPredecessors(node int) []int {
 }
 
 func (graph *GeneralGraph) SortEdges() {
-	
+
 }
