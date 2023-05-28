@@ -3,6 +3,7 @@ package SpacemintPeer
 import (
 	"errors"
 	"github.com/OskarRVestergaard/BachelorProject/Task1"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/memoryHelper"
 	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
@@ -41,6 +42,7 @@ type PoSpacePeer struct {
 	isMiningMutex              sync.Mutex
 	constants                  peer_strategy.PeerConstants
 	slotNotifier               chan int
+	fixedPrm                   PoSpaceModels.Parameters
 }
 
 func (p *PoSpacePeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
@@ -50,6 +52,9 @@ func (p *PoSpacePeer) ActivatePeer(startTime time.Time, slotLength time.Duration
 func (p *PoSpacePeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
 	p.slotNotifier = make(chan int, 4)
 	p.constants = constants
+	if p.constants.FixedGraph {
+		p.fixedPrm = Task1.GenerateParameters(5, p.constants.FixedN, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD, false)
+	}
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoSpace.PoSpace{}
 	address, err := network.StringToAddress(IpPort)
@@ -384,7 +389,12 @@ func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
 		ChallengeSetV: chalB,
 	}
 	// TODO FIX SEED
-	prm := Task1.GenerateParameters(5, commitmentOfProof.N/p.constants.GraphK, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD, false)
+	var prm PoSpaceModels.Parameters
+	if p.constants.FixedGraph {
+		prm = p.fixedPrm
+	} else {
+		prm = Task1.GenerateParameters(5, commitmentOfProof.N/p.constants.GraphK, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD, false)
+	}
 	prm.Id = commitmentOfProof.Id
 	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
 		p.blockTreeChan <- blockTree
