@@ -311,8 +311,8 @@ func (tree *Blocktree) GetChallengesForExtendingOnBlockWithHash(parentHash sha25
 	HashAsInt := int64(binary.LittleEndian.Uint64(hashSubBlockHash.ToSlice()))
 	rnd := rand.New(rand.NewSource(HashAsInt)) // Math.rand is good for our case, since we want something deterministic given the seed and n
 
-	challengeAmountA := 1 //TODO Discuss what this should be
-	challengeAmountB := 2 //TODO Same as above
+	challengeAmountA := 3 //TODO Discuss what this should be
+	challengeAmountB := 8 //TODO Same as above
 
 	challengesSetP := make([]int, challengeAmountA)
 	challengesSetV := make([]int, challengeAmountB)

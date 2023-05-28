@@ -14,6 +14,8 @@ type PeerConstants struct {
 	UseForcedD                  bool
 	ForcedD                     int
 	QualityThreshold            float64
+	FixedGraph                  bool
+	FixedN                      int
 }
 
 func GetStandardConstants() PeerConstants {
@@ -29,5 +31,6 @@ func GetStandardConstants() PeerConstants {
 		UseForcedD:                  false,
 		ForcedD:                     0,
 		QualityThreshold:            0.999,
+		FixedGraph:                  false,
 	}
 }

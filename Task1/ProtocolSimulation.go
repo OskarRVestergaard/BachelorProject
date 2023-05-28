@@ -18,7 +18,7 @@ import (
 func generateDirectedAcyclicGraphStructure(size int) Graph.Graph {
 	var resultGraph Graph.Graph
 	resultGraph = &Graph.GeneralGraph{}
-	resultGraph.InitGraph(size, 0)
+	resultGraph.InitGraph(size, 0, true)
 	resultGraph.AddEdge(0, 1)
 	resultGraph.AddEdge(0, 2)
 	resultGraph.AddEdge(0, 3)
@@ -47,9 +47,9 @@ func GenerateTestingParameters() PoSpaceModels.Parameters {
 	return result
 }
 
-func GenerateParameters(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) PoSpaceModels.Parameters {
+func GenerateParameters(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int, withGraphValues bool) PoSpaceModels.Parameters {
 	id := uuid.New()
-	graphStructure := createGraph(seed, n, k, alpha, beta, useForcedD, forcedD)
+	graphStructure := createGraph(seed, n, k, alpha, beta, useForcedD, forcedD, withGraphValues)
 	result := PoSpaceModels.Parameters{
 		Id:               id,
 		StorageBound:     2 * n * k,
@@ -94,14 +94,14 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	return result
 }
 
-func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int) Graph.Graph {
+func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int, withValues bool) Graph.Graph {
 	size := n * k
 	if !utils.PowerOfTwo(size) {
 		panic("n and k must be a power of two")
 	}
 	var graph Graph.Graph
 	graph = &Graph.IdenticalExpandersGraph{}
-	graph.InitGraph(n, k)
+	graph.InitGraph(n, k, withValues)
 	var d int
 	if useForcedD {
 		d = forcedD

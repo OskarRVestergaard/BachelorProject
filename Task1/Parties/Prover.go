@@ -1,18 +1,17 @@
 package Parties
 
 import (
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
+	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"strconv"
-
-	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
-	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 )
 
 type Prover struct {
 	parameters   PoSpaceModels.Parameters
 	pebbledGraph Graph.Graph
-	merkleTree   *PoSpaceModels.MerkleTree
+	MerkleTree   *PoSpaceModels.MerkleTree
 	commitment   sha256.HashValue
 }
 
@@ -68,8 +67,9 @@ func (P *Prover) createMerkleTreeFromGraph() {
 		toBeHashed := append(leftChild, rightChild...)
 		tree.Nodes[i] = sha256.HashByteArray(toBeHashed)
 	}
-	P.merkleTree = &tree
-	P.commitment = P.merkleTree.GetRootCommitment()
+	P.MerkleTree = &tree
+	P.commitment = P.MerkleTree.GetRootCommitment()
+	P.pebbledGraph.SetValue(nil)
 }
 
 func (P *Prover) InitializationPhase1(params PoSpaceModels.Parameters) {
@@ -83,8 +83,8 @@ func (P *Prover) GetCommitment() sha256.HashValue {
 }
 
 func (P *Prover) GetOpeningTriple(index int) (triple PoSpaceModels.OpeningTriple) {
-	indexValue := P.merkleTree.GetLeaf(index)
-	openingValues := P.merkleTree.Open(index)
+	indexValue := P.MerkleTree.GetLeaf(index)
+	openingValues := P.MerkleTree.Open(index)
 	result := PoSpaceModels.OpeningTriple{
 		Index:      index,
 		Value:      indexValue,

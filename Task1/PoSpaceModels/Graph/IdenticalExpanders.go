@@ -14,6 +14,10 @@ type IdenticalExpandersGraph struct {
 	value        []sha256.HashValue
 }
 
+func (graph *IdenticalExpandersGraph) DebugInfo() (int, int, [][]int, [][]int, []sha256.HashValue) {
+	return graph.n, graph.k, graph.predecessors, graph.successors, graph.value
+}
+
 func (graph *IdenticalExpandersGraph) GetSize() int {
 	return graph.n * graph.k
 }
@@ -26,20 +30,25 @@ func (graph *IdenticalExpandersGraph) SetValue(value []sha256.HashValue) {
 	graph.value = value
 }
 
-func (graph *IdenticalExpandersGraph) InitGraph(n int, k int) {
+func (graph *IdenticalExpandersGraph) InitGraph(n int, k int, withValues bool) {
 	graph.n = n
 	graph.k = k
-	graph.value = make([]sha256.HashValue, n*k, n*k)
+	if withValues {
+		graph.value = make([]sha256.HashValue, n*k, n*k)
+	} else {
+		graph.value = make([]sha256.HashValue, 0, 0)
+	}
 
 	graph.predecessors = make([][]int, n, n)
 	for i := range graph.predecessors {
 		graph.predecessors[i] = make([]int, 0)
 	}
 
-	graph.successors = make([][]int, n, n)
-	for i := range graph.successors {
-		graph.successors[i] = make([]int, 0)
-	}
+	//Successors never used, waste of space
+	//graph.successors = make([][]int, n, n)
+	//for i := range graph.successors {
+	//	graph.successors[i] = make([]int, 0)
+	//}
 }
 
 func (graph *IdenticalExpandersGraph) AddEdge(from int, to int) {
@@ -47,7 +56,7 @@ func (graph *IdenticalExpandersGraph) AddEdge(from int, to int) {
 		panic("You can only add edges to the first bipartite expander!")
 	}
 	toto := to % graph.n
-	graph.successors[from] = append(graph.successors[from], toto)
+	//graph.successors[from] = append(graph.successors[from], toto)
 	graph.predecessors[toto] = append(graph.predecessors[toto], from)
 }
 
@@ -67,18 +76,19 @@ func (graph *IdenticalExpandersGraph) IfEdge(from int, to int) bool {
 }
 
 func (graph *IdenticalExpandersGraph) GetSuccessors(node int) []int {
-	expanderNum := node / graph.n
-	if expanderNum == graph.k-1 {
-		return []int{}
-	}
-	nodeMod := node % graph.n
-	successorsMod := graph.successors[nodeMod]
-	successorsCopy := make([]int, len(successorsMod))
-	copy(successorsCopy, successorsMod)
-	for i, oldVal := range successorsCopy {
-		successorsCopy[i] = oldVal + graph.n*(expanderNum+1)
-	}
-	return successorsCopy
+	panic("Successors disabled")
+	//expanderNum := node / graph.n
+	//if expanderNum == graph.k-1 {
+	//	return []int{}
+	//}
+	//nodeMod := node % graph.n
+	//successorsMod := graph.successors[nodeMod]
+	//successorsCopy := make([]int, len(successorsMod))
+	//copy(successorsCopy, successorsMod)
+	//for i, oldVal := range successorsCopy {
+	//	successorsCopy[i] = oldVal + graph.n*(expanderNum+1)
+	//}
+	//return successorsCopy
 }
 
 func (graph *IdenticalExpandersGraph) GetPredecessors(node int) []int {
@@ -102,9 +112,9 @@ func (graph *IdenticalExpandersGraph) SortEdges() {
 			return predecessors[i] < predecessors[j]
 		})
 	}
-	for _, successors := range graph.successors {
-		sort.Slice(successors, func(i, j int) bool {
-			return successors[i] < successors[j]
-		})
-	}
+	//for _, successors := range graph.successors {
+	//	sort.Slice(successors, func(i, j int) bool {
+	//		return successors[i] < successors[j]
+	//	})
+	//}
 }
