@@ -3,7 +3,7 @@ package Graph
 import "github.com/OskarRVestergaard/BachelorProject/production/sha256"
 
 type Graph interface {
-	InitGraph(n int, k int, withValues bool)
+	InitGraph(n int, k int, withValues bool, d int)
 	AddEdge(from int, to int)
 	IfEdge(from int, to int) bool
 	GetSuccessors(node int) []int

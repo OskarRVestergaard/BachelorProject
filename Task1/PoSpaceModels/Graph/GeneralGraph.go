@@ -26,7 +26,7 @@ func (graph *GeneralGraph) SetValue(value []sha256.HashValue) {
 	graph.value = value
 }
 
-func (graph *GeneralGraph) InitGraph(n int, k int, withValues bool) {
+func (graph *GeneralGraph) InitGraph(n int, k int, withValues bool, d int) {
 	graph.size = n
 	if withValues {
 		graph.value = make([]sha256.HashValue, n, n)

@@ -18,7 +18,7 @@ import (
 func generateDirectedAcyclicGraphStructure(size int) Graph.Graph {
 	var resultGraph Graph.Graph
 	resultGraph = &Graph.GeneralGraph{}
-	resultGraph.InitGraph(size, 0, true)
+	resultGraph.InitGraph(size, 0, true, 3)
 	resultGraph.AddEdge(0, 1)
 	resultGraph.AddEdge(0, 2)
 	resultGraph.AddEdge(0, 3)
@@ -101,13 +101,13 @@ func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForce
 	}
 	var graph Graph.Graph
 	graph = &Graph.IdenticalExpandersGraph{}
-	graph.InitGraph(n, k, withValues)
 	var d int
 	if useForcedD {
 		d = forcedD
 	} else {
 		d = int(math.Ceil(CalculateD(alpha, beta)))
 	}
+	graph.InitGraph(n, k, withValues, d)
 	source := mathRand.NewSource(seed)
 	rando := mathRand.New(source)
 
@@ -154,5 +154,5 @@ func CalculateD(alpha float64, beta float64) float64 {
 }
 
 func calculateEntropy(t float64) float64 {
-	return -t*math.Log2(t)*t - (1-t)*math.Log2(1-t)
+	return -t*math.Log2(t) - (1-t)*math.Log2(1-t)
 }

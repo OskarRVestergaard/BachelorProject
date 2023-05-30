@@ -30,7 +30,7 @@ func (graph *IdenticalExpandersGraph) SetValue(value []sha256.HashValue) {
 	graph.value = value
 }
 
-func (graph *IdenticalExpandersGraph) InitGraph(n int, k int, withValues bool) {
+func (graph *IdenticalExpandersGraph) InitGraph(n int, k int, withValues bool, d int) {
 	graph.n = n
 	graph.k = k
 	if withValues {
@@ -41,7 +41,7 @@ func (graph *IdenticalExpandersGraph) InitGraph(n int, k int, withValues bool) {
 
 	graph.predecessors = make([][]int, n, n)
 	for i := range graph.predecessors {
-		graph.predecessors[i] = make([]int, 0)
+		graph.predecessors[i] = make([]int, 0, d)
 	}
 
 	//Successors never used, waste of space

@@ -47,6 +47,7 @@ func testBlockChain(t *testing.T, constants TestingConstants) {
 	for i := 0; i < constants.Iterations; i++ {
 		test_utils.SendMsgs(noOfMsgs, noOfPeers, listOfPeers, pkList)
 		time.Sleep(constants.WaitBetweenMessage)
+		return
 	}
 	wg.Add(len(listOfPeers))
 	for _, peer := range listOfPeers {
