@@ -3,6 +3,7 @@ package PoSpaceModels
 import (
 	"bytes"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"sort"
 	"strconv"
 )
 
@@ -24,6 +25,13 @@ func (triple OpeningTriple) ToByteArray() []byte {
 		buffer.WriteString(";_;")
 	}
 	return buffer.Bytes()
+}
+
+func SortOpeningTriples(triples []OpeningTriple) []OpeningTriple {
+	sort.Slice(triples, func(i, j int) bool {
+		return triples[i].Index < triples[j].Index
+	})
+	return triples
 }
 
 func ListOfTripleToByteArray(triples []OpeningTriple) []byte {

@@ -5,6 +5,7 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"math/big"
+	"sort"
 	"strconv"
 )
 
@@ -50,7 +51,9 @@ func (V *Verifier) checkCorrectPebbleOfNode(tripleToCheck PoSpaceModels.OpeningT
 	toBeHashed = append(toBeHashed, nodeLabel...)
 	toBeHashed = append(toBeHashed, parentHashes...)
 	hash := sha256.HashByteArray(toBeHashed)
-	return hash.Equals(shouldBe)
+	result := hash.Equals(shouldBe)
+
+	return result
 }
 
 func (V *Verifier) InitializationPhase1(params PoSpaceModels.Parameters) {
@@ -62,8 +65,8 @@ func (V *Verifier) SaveCommitment(commitment sha256.HashValue) {
 }
 
 func (V *Verifier) PickChallenges() []int {
-	size := V.parameters.GraphDescription.Size
-	challengeAmount := size / 2
+	size := V.parameters.GraphDescription.GetSize()
+	challengeAmount := 4
 	result := make([]int, challengeAmount, challengeAmount)
 	for i := 0; i < challengeAmount; i++ {
 		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(size))) //Uniform random distribution of specific size, could maybe depend on parameters
@@ -83,14 +86,15 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 	for _, triple := range triples {
 		tripleMap[triple.Index] = triple
 	}
-	//Verify for each challenge that enough data was provided and that the data is correct.
-	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
 	for _, challenge := range challenges {
 		challengeTriple, exists := tripleMap[challenge]
 		if !exists {
 			return false
 		}
-		parents := V.parameters.GraphDescription.GetParents(challenge)
+		parents := V.parameters.GraphDescription.GetPredecessors(challenge)
+		sort.Slice(parents, func(i, j int) bool {
+			return parents[i] < parents[j]
+		})
 		if withGraphConsistencyCheck {
 			parentTriples := make([]PoSpaceModels.OpeningTriple, len(parents))
 			for i, parentIndex := range parents {
@@ -107,7 +111,6 @@ func (V *Verifier) VerifyChallenges(challenges []int, triples []PoSpaceModels.Op
 				return false
 			}
 		}
-
 	}
 	return true
 }

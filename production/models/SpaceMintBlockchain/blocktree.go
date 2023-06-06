@@ -25,6 +25,7 @@ type Blocktree struct {
 	head          node
 	subscribers   chan []subscriber
 	newHeadBlocks chan Block
+	k             int
 }
 
 type subscriber struct {
@@ -37,7 +38,7 @@ NewBlocktree
 
 Constructor for making a new Blocktree, second parameter false if something went wrong such as the genesisBlock having IsGenesis equaling false
 */
-func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
+func NewBlocktree(genesisBlock Block, k int) (Blocktree, bool) {
 	if !genesisBlock.IsGenesis {
 		return Blocktree{}, false
 	}
@@ -57,6 +58,7 @@ func NewBlocktree(genesisBlock Block) (Blocktree, bool) {
 		nodeContainer: treeMapContainer,
 		head:          genesisNode,
 		newHeadBlocks: newHeadBlocks,
+		k:             k,
 	}
 	tree.startSubscriptionHandler()
 	return tree, true
@@ -86,7 +88,7 @@ func (tree *Blocktree) GetTransactionsNotInTree(unhandledTransactions SpacemintT
 }
 
 func getSpaceCommitsInList1ButNotList2(list1 []SpaceCommitment, list2 []SpaceCommitment) []SpaceCommitment {
-	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then i would run in nlogn+mlogm
+	//Currently, since the lists are unsorted the algorithm just loops over all nm combinations, could be sorted first and then it would run in nlogn+mlogm
 	var difference []SpaceCommitment
 	found := false
 	for _, val1 := range list1 {
@@ -242,9 +244,9 @@ func (tree *Blocktree) GetMiningLocation(hashOfBlockToMineOn sha256.HashValue, n
 		panic("GetMiningLocation called on invalid hash")
 	}
 	newBlock := nod.block
-	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n)
+	challengeSetP, challengesSetV := tree.GetChallengesForExtendingOnBlockWithHash(hashOfBlockToMineOn, n*tree.k)
 	newLocation := PoSpace.MiningLocation{
-		Slot:          newBlock.TransactionSubBlock.Slot + 1,
+		Slot:          newBlock.TransactionSubBlock.Slot + 1, //This slot number is not used, the miner mine for every time slot
 		ParentHash:    hashOfBlockToMineOn,
 		ChallengeSetP: challengeSetP,
 		ChallengeSetV: challengesSetV,
@@ -309,17 +311,17 @@ func (tree *Blocktree) GetChallengesForExtendingOnBlockWithHash(parentHash sha25
 	HashAsInt := int64(binary.LittleEndian.Uint64(hashSubBlockHash.ToSlice()))
 	rnd := rand.New(rand.NewSource(HashAsInt)) // Math.rand is good for our case, since we want something deterministic given the seed and n
 
-	challengeAmountA := n / 8 //TODO Discuss what this should be
-	challengeAmountB := n / 4 //TODO Same as above
+	challengeAmountA := 3 //TODO Discuss what this should be
+	challengeAmountB := 8 //TODO Same as above
 
 	challengesSetP := make([]int, challengeAmountA)
 	challengesSetV := make([]int, challengeAmountB)
 	for i := 0; i < challengeAmountA; i++ {
-		challengeNumber := rnd.Int() % n
+		challengeNumber := rnd.Intn(n)
 		challengesSetP[i] = challengeNumber
 	}
 	for i := 0; i < challengeAmountB; i++ {
-		challengeNumber := rnd.Int() % n
+		challengeNumber := rnd.Intn(n)
 		challengesSetV[i] = challengeNumber
 	}
 	return challengesSetP, challengesSetV

@@ -3,8 +3,11 @@ package Task1
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/Parties"
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
-	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/google/uuid"
+	"math"
+	mathRand "math/rand"
 )
 
 //Some slight modifications has been made to the original protocol, such as sending the index back and forth, the size
@@ -12,45 +15,52 @@ import (
 
 //Maybe use int64 instead of switching between int types, and potentially allowing very big graphs
 
-func generateDirectedAcyclicGraphStructure(size int) *PoSpaceModels.Graph {
-	edges := make([][]bool, size, size)
-	for i := range edges {
-		edges[i] = make([]bool, size, size)
-	}
-	edges[0][1] = true
-	edges[0][2] = true
-	edges[0][3] = true
-	edges[1][3] = true
-	edges[1][4] = true
-	edges[2][4] = true
-	edges[2][5] = true
-	edges[0][7] = true
-	edges[2][6] = true
-	edges[3][6] = true
-	edges[5][6] = true
-	edges[5][7] = true
-
-	resultGraph := &PoSpaceModels.Graph{Size: size, Edges: edges, Value: make([]sha256.HashValue, size, size)}
+func generateDirectedAcyclicGraphStructure(size int) Graph.Graph {
+	var resultGraph Graph.Graph
+	resultGraph = &Graph.GeneralGraph{}
+	resultGraph.InitGraph(size, 0, true, 3)
+	resultGraph.AddEdge(0, 1)
+	resultGraph.AddEdge(0, 2)
+	resultGraph.AddEdge(0, 3)
+	resultGraph.AddEdge(1, 3)
+	resultGraph.AddEdge(1, 4)
+	resultGraph.AddEdge(2, 4)
+	resultGraph.AddEdge(2, 5)
+	resultGraph.AddEdge(0, 7)
+	resultGraph.AddEdge(2, 6)
+	resultGraph.AddEdge(3, 6)
+	resultGraph.AddEdge(5, 6)
+	resultGraph.AddEdge(5, 7)
 
 	return resultGraph
 }
 
-func GenerateParameters() PoSpaceModels.Parameters {
+func GenerateTestingParameters() PoSpaceModels.Parameters {
 	id := uuid.New()
 	size := 8 //If changed, edge generation should also be made more general
-	graphEdges := generateDirectedAcyclicGraphStructure(size)
+	graphStructure := generateDirectedAcyclicGraphStructure(size)
 	result := PoSpaceModels.Parameters{
 		Id:               id,
 		StorageBound:     2 * size,
-		GraphDescription: graphEdges,
+		GraphDescription: graphStructure,
 	}
 	return result
 }
 
-func SimulateInitialization() (Parties.Prover, Parties.Verifier, bool) {
+func GenerateParameters(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int, withGraphValues bool) PoSpaceModels.Parameters {
+	id := uuid.New()
+	graphStructure := createGraph(seed, n, k, alpha, beta, useForcedD, forcedD, withGraphValues)
+	result := PoSpaceModels.Parameters{
+		Id:               id,
+		StorageBound:     2 * n * k,
+		GraphDescription: graphStructure,
+	}
+	return result
+}
+
+func SimulateInitialization(prm PoSpaceModels.Parameters) (Parties.Prover, Parties.Verifier, bool) {
 	prover := Parties.Prover{}
 	verifier := Parties.Verifier{}
-	prm := GenerateParameters()
 
 	//Prover and verifier gets ready for the protocol, the prover generates the hash-values of the graph
 	//and computes a merkle tree commitment on it.
@@ -82,4 +92,67 @@ func SimulateExecution(prover Parties.Prover, verifier Parties.Verifier) bool {
 	//Verifier verifies the openings but does not consult the hard to pebble graph
 	result := verifier.VerifyChallenges(challenges, answerMsg, false)
 	return result
+}
+
+func createGraph(seed int64, n int, k int, alpha float64, beta float64, useForcedD bool, forcedD int, withValues bool) Graph.Graph {
+	size := n * k
+	if !utils.PowerOfTwo(size) {
+		panic("n and k must be a power of two")
+	}
+	var graph Graph.Graph
+	graph = &Graph.IdenticalExpandersGraph{}
+	var d int
+	if useForcedD {
+		d = forcedD
+	} else {
+		d = int(math.Ceil(CalculateD(alpha, beta)))
+	}
+	graph.InitGraph(n, k, withValues, d)
+	source := mathRand.NewSource(seed)
+	rando := mathRand.New(source)
+
+	preds := make([][]int, n, n)
+	for i := range preds {
+		preds[i] = make([]int, d, d)
+		for k2 := range preds[i] {
+			preds[i][k2] = -1
+		}
+		for j := 0; j < d; j++ {
+			newNumber := false
+			for !newNumber {
+				random := rando.Intn(n)
+				if !numberAlreadyChosen(random, preds[i]) {
+					preds[i][j] = random
+					newNumber = true
+				}
+			}
+		}
+	}
+
+	for i := range preds {
+		for j := range preds[i] {
+			graph.AddEdge(preds[i][j], n+i)
+		}
+	}
+
+	graph.SortEdges()
+
+	return graph
+}
+
+func numberAlreadyChosen(n int, lst []int) bool {
+	for _, b := range lst {
+		if b == n {
+			return true
+		}
+	}
+	return false
+}
+
+func CalculateD(alpha float64, beta float64) float64 {
+	return (calculateEntropy(alpha) + calculateEntropy(beta)) / (-alpha * math.Log2(beta))
+}
+
+func calculateEntropy(t float64) float64 {
+	return -t*math.Log2(t) - (1-t)*math.Log2(1-t)
 }

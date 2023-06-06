@@ -2,14 +2,16 @@ package Parties
 
 import (
 	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels/Graph"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
+	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"strconv"
 )
 
 type Prover struct {
 	parameters   PoSpaceModels.Parameters
-	pebbledGraph *PoSpaceModels.Graph
-	merkleTree   *PoSpaceModels.MerkleTree
+	pebbledGraph Graph.Graph
+	MerkleTree   *PoSpaceModels.MerkleTree
 	commitment   sha256.HashValue
 }
 
@@ -17,38 +19,46 @@ func (P *Prover) pebbleGraph() {
 	// Assumed to be topologically sorted DAG according to index
 	id := P.parameters.Id
 	P.pebbledGraph = P.parameters.GraphDescription
-	size := P.pebbledGraph.Size
+	size := P.pebbledGraph.GetSize()
+	tempHashingSlice := make([]byte, size*32+32) //The maximum size that can be hashed at any given point is if all nodes are involved, the constant factor should account for the label and id
 	for i := 0; i < size; i++ {
+		s := 0
+		uniqueId := []byte(id.String())
+		for _, b := range uniqueId {
+			tempHashingSlice[s] = b
+			s++
+		}
 		vertexLabel := []byte(strconv.Itoa(i))
-		toBeHashed := []byte(id.String())
-		toBeHashed = append(toBeHashed, vertexLabel...)
-		for j := 0; j < size; j++ {
-			jIsParent := P.pebbledGraph.Edges[j][i]
-			if jIsParent {
-				parentHashValue := P.pebbledGraph.Value[j].ToSlice()
-				toBeHashed = append(toBeHashed, parentHashValue...)
+		for _, b := range vertexLabel {
+			tempHashingSlice[s] = b
+			s++
+		}
+		parents := P.pebbledGraph.GetPredecessors(i)
+		for _, parent := range parents {
+			parentHashValue := P.pebbledGraph.GetValue()[parent].ToSlice()
+			for _, b := range parentHashValue {
+				tempHashingSlice[s] = b
+				s++
 			}
 		}
-
-		P.pebbledGraph.Value[i] = sha256.HashByteArray(toBeHashed)
+		values := P.pebbledGraph.GetValue()
+		values[i] = sha256.HashByteArray(tempHashingSlice[0:s])
+		P.pebbledGraph.SetValue(values)
 	}
 }
 
 func (P *Prover) createMerkleTreeFromGraph() {
 	//Makes assumptions on the given graph, such as it being a DAG and sorted topologically by index
-	size := P.pebbledGraph.Size
-	i := 1
-	for i < size {
-		i = i * 2
-	}
-	if i != size {
+	size := P.pebbledGraph.GetSize()
+
+	if !utils.PowerOfTwo(size) {
 		panic("Graph must have 2^n number of nodes")
 	}
 	tree := PoSpaceModels.MerkleTree{Nodes: make([]sha256.HashValue, size*2-1, size*2-1)}
 	firstLeaf := size - 1
 	//Inserting value for leaves
 	for i := 0; i < size; i++ {
-		tree.Nodes[firstLeaf+i] = P.pebbledGraph.Value[i]
+		tree.Nodes[firstLeaf+i] = P.pebbledGraph.GetValue()[i]
 	}
 	//Computing parents
 	for i := firstLeaf - 1; i >= 0; i-- {
@@ -57,8 +67,9 @@ func (P *Prover) createMerkleTreeFromGraph() {
 		toBeHashed := append(leftChild, rightChild...)
 		tree.Nodes[i] = sha256.HashByteArray(toBeHashed)
 	}
-	P.merkleTree = &tree
-	P.commitment = P.merkleTree.GetRootCommitment()
+	P.MerkleTree = &tree
+	P.commitment = P.MerkleTree.GetRootCommitment()
+	P.pebbledGraph.SetValue(nil)
 }
 
 func (P *Prover) InitializationPhase1(params PoSpaceModels.Parameters) {
@@ -72,8 +83,8 @@ func (P *Prover) GetCommitment() sha256.HashValue {
 }
 
 func (P *Prover) GetOpeningTriple(index int) (triple PoSpaceModels.OpeningTriple) {
-	indexValue := P.merkleTree.GetLeaf(index)
-	openingValues := P.merkleTree.Open(index)
+	indexValue := P.MerkleTree.GetLeaf(index)
+	openingValues := P.MerkleTree.Open(index)
 	result := PoSpaceModels.OpeningTriple{
 		Index:      index,
 		Value:      indexValue,
@@ -85,24 +96,32 @@ func (P *Prover) GetOpeningTriple(index int) (triple PoSpaceModels.OpeningTriple
 func (P *Prover) AnswerChallenges(indices []int, withParents bool) (openingTriples []PoSpaceModels.OpeningTriple) {
 	//Remove duplicates using a set
 	var member struct{}
-	indicesSet := make(map[int]struct{})
+	challengeIndicesSet := make(map[int]struct{})
 	for _, value := range indices {
-		indicesSet[value] = member
+		challengeIndicesSet[value] = member
 	}
 	//Find parents of the nodes
+	parentIndicesSet := make(map[int]struct{})
 	if withParents {
-		for index, _ := range indicesSet {
-			parents := P.pebbledGraph.GetParents(index)
+		for index, _ := range challengeIndicesSet {
+			parents := P.pebbledGraph.GetPredecessors(index)
 			for _, parent := range parents {
-				indicesSet[parent] = member
+				parentIndicesSet[parent] = member
 			}
 		}
 	}
 	//Append triple for each and return the result
+	//Union the two sets (parents probably much bigger)
+	resultIndicesSet := parentIndicesSet
+	for k, v := range challengeIndicesSet {
+		resultIndicesSet[k] = v
+	}
+
+	//Make list and sort it
 	result := make([]PoSpaceModels.OpeningTriple, 0, 0)
-	for i, _ := range indicesSet {
+	for i, _ := range resultIndicesSet {
 		result = append(result, P.GetOpeningTriple(i))
 	}
-	//TODO Challenges should also be sent in proper order to avoid proof of work on permutations
+	result = PoSpaceModels.SortOpeningTriples(result)
 	return result
 }

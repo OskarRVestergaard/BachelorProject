@@ -8,7 +8,7 @@ import (
 type PoW struct {
 }
 
-func (lottery *PoW) StartNewMiner(vk string, hardness int, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan lottery_strategy.WinningLotteryParams, stopMinerSignal chan struct{}) {
+func (lottery *PoW) StartNewMiner(vk string, hardness int, qualityThreshold float64, initialHash sha256.HashValue, newBlockHashes chan sha256.HashValue, winningDraws chan lottery_strategy.WinningLotteryParams, stopMinerSignal chan struct{}) {
 	newBlockHashesInternal := make(chan channelCombinationStruct)
 	lottery.combineChannels(newBlockHashes, stopMinerSignal, newBlockHashesInternal)
 	go lottery.startNewMinerInternal(vk, hardness, initialHash, newBlockHashesInternal, winningDraws)

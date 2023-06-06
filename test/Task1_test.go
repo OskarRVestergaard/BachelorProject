@@ -7,12 +7,22 @@ import (
 )
 
 func TestTask1Initialization(t *testing.T) {
-	_, _, result := Task1.SimulateInitialization()
+	prm := Task1.GenerateTestingParameters()
+	_, _, result := Task1.SimulateInitialization(prm)
 	assert.True(t, result)
 }
 
 func TestTask1InitializationAndExecution(t *testing.T) {
-	p, v, initOkay := Task1.SimulateInitialization()
+	prm := Task1.GenerateTestingParameters()
+	p, v, initOkay := Task1.SimulateInitialization(prm)
+	assert.True(t, initOkay)
+	execOkay := Task1.SimulateExecution(p, v)
+	assert.True(t, execOkay)
+}
+
+func TestTask1WithStackedExpanders(t *testing.T) {
+	prm := Task1.GenerateParameters(5, 65536, 128, 0.0625, 0.925, false, 0, true)
+	p, v, initOkay := Task1.SimulateInitialization(prm)
 	assert.True(t, initOkay)
 	execOkay := Task1.SimulateExecution(p, v)
 	assert.True(t, execOkay)

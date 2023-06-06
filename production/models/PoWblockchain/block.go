@@ -5,7 +5,6 @@ import (
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
-	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
 	"strconv"
 )
 
@@ -80,7 +79,7 @@ CreateGenesisBlock
 
 Creates the default Genesis-block to be used in a blocktree
 */
-func CreateGenesisBlock() Block {
+func CreateGenesisBlock(hardness int) Block {
 	return Block{
 		IsGenesis: true,
 		Vk:        "",
@@ -91,7 +90,7 @@ func CreateGenesisBlock() Block {
 			Counter:    0,
 		},
 		BlockData: BlockData{
-			Hardness: constants.Hardness,
+			Hardness: hardness,
 		},
 		ParentHash: [32]byte{},
 		Signature:  nil,

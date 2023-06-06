@@ -3,12 +3,15 @@ package SpacemintPeer
 import (
 	"errors"
 	"github.com/OskarRVestergaard/BachelorProject/Task1"
+	"github.com/OskarRVestergaard/BachelorProject/Task1/PoSpaceModels"
+	"github.com/OskarRVestergaard/BachelorProject/memoryHelper"
 	"github.com/OskarRVestergaard/BachelorProject/production/Message"
 	"github.com/OskarRVestergaard/BachelorProject/production/models"
 	"github.com/OskarRVestergaard/BachelorProject/production/models/SpaceMintBlockchain"
 	"github.com/OskarRVestergaard/BachelorProject/production/network"
 	"github.com/OskarRVestergaard/BachelorProject/production/sha256"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/lottery_strategy/PoSpace"
+	"github.com/OskarRVestergaard/BachelorProject/production/strategies/peer_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/strategies/signature_strategy"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils"
 	"github.com/OskarRVestergaard/BachelorProject/production/utils/constants"
@@ -37,11 +40,21 @@ type PoSpacePeer struct {
 	network                    network.Network
 	stopMiningSignal           chan struct{}
 	isMiningMutex              sync.Mutex
-	startTime                  time.Time
+	constants                  peer_strategy.PeerConstants
+	slotNotifier               chan int
+	fixedPrm                   PoSpaceModels.Parameters
 }
 
-func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
-	p.startTime = startTime
+func (p *PoSpacePeer) ActivatePeer(startTime time.Time, slotLength time.Duration) {
+	utils.StartTimeSlotUpdater(startTime, slotLength, p.slotNotifier)
+}
+
+func (p *PoSpacePeer) RunPeer(IpPort string, constants peer_strategy.PeerConstants) {
+	p.slotNotifier = make(chan int, 4)
+	p.constants = constants
+	if p.constants.FixedGraph {
+		p.fixedPrm = Task1.GenerateParameters(5, p.constants.FixedN, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD, false)
+	}
 	p.signatureStrategy = signature_strategy.ECDSASig{}
 	p.lotteryStrategy = &PoSpace.PoSpace{}
 	address, err := network.StringToAddress(IpPort)
@@ -64,7 +77,7 @@ func (p *PoSpacePeer) RunPeer(IpPort string, startTime time.Time) {
 	p.publicToSecret = make(chan map[string]string, 1)
 	p.publicToSecret <- make(map[string]string)
 	p.blockTreeChan = make(chan SpaceMintBlockchain.Blocktree, 1)
-	newBlockTree, blockTreeCreationWentWell := SpaceMintBlockchain.NewBlocktree(SpaceMintBlockchain.CreateGenesisBlock())
+	newBlockTree, blockTreeCreationWentWell := SpaceMintBlockchain.NewBlocktree(SpaceMintBlockchain.CreateGenesisBlock(), p.constants.GraphK)
 	if !blockTreeCreationWentWell {
 		panic("Could not generate new blocktree")
 	}
@@ -185,26 +198,38 @@ func (p *PoSpacePeer) GetBlockTree() interface{} {
 }
 
 func (p *PoSpacePeer) startBlocksToMinePasser(initialMiningLocation PoSpace.MiningLocation, newMiningLocations chan PoSpace.MiningLocation) chan PoSpace.MiningLocation {
-	mostRecentMiningLocation := make(chan PoSpace.MiningLocation, 1)
-	mostRecentMiningLocation <- initialMiningLocation
+	timeSlotBufferSize := 5
+	BestKnownLocations := make(chan []PoSpace.MiningLocation, 1) //The best mining locations for the last 5 slots
+	locations := make([]PoSpace.MiningLocation, timeSlotBufferSize, timeSlotBufferSize)
+	for i := 0; i < timeSlotBufferSize; i++ {
+		locations[i] = initialMiningLocation
+	}
+	BestKnownLocations <- locations
+
+	//Updater for best locations
 	go func() {
 		for {
-			newLocation := <-newMiningLocations
-			_ = <-mostRecentMiningLocation
-			mostRecentMiningLocation <- newLocation
+			newLocation := <-newMiningLocations //TODO Only new highest quality blocks are sent, but really we need the highest quality block for each slot, this should only be a problem when block are really late (they will get ignored)
+			slotMod := newLocation.Slot % timeSlotBufferSize
+			BestLocations := <-BestKnownLocations
+			BestLocations[slotMod] = newLocation
+			BestKnownLocations <- BestLocations
 		}
 	}()
-	slotNotifier := utils.StartTimeSlotUpdater(p.startTime)
-	hashesSendToMiner := make(chan PoSpace.MiningLocation, 10)
+
+	//Send what should be mined on to miner based on information about that slot
+	blocksToMiner := make(chan PoSpace.MiningLocation, 10)
 	go func() {
 		for {
-			_ = <-slotNotifier //TODO, Send slot along with hashes, instead of letting the miner calculate the slot itself
-			hashToMineOn := <-mostRecentMiningLocation
-			hashesSendToMiner <- hashToMineOn
-			mostRecentMiningLocation <- hashToMineOn
+			newSlot := <-p.slotNotifier
+			BestLocations := <-BestKnownLocations
+			slotToMineOn := (newSlot - 1) % timeSlotBufferSize
+			HighestQualityBlockInThatSlot := BestLocations[slotToMineOn]
+			blocksToMiner <- HighestQualityBlockInThatSlot
+			BestKnownLocations <- BestLocations
 		}
 	}()
-	return hashesSendToMiner
+	return blocksToMiner
 }
 
 func (p *PoSpacePeer) StartMining(n int) error {
@@ -219,11 +244,11 @@ func (p *PoSpacePeer) StartMining(n int) error {
 	newMiningLocations := blocktree.SubScribeToGetHead(n)
 	head := blocktree.GetHead()
 	initialMiningLocation := blocktree.GetMiningLocation(head.HashOfBlock(), n)
-	winningDraws := make(chan PoSpace.LotteryDraw, 10)
-	poSpaceParameters := Task1.GenerateParameters()
+	winningDraws := make(chan PoSpace.WinInformation, 10)
+	poSpaceParameters := Task1.GenerateParameters(5, n, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD, true)
 	blocksToMiner := p.startBlocksToMinePasser(initialMiningLocation, newMiningLocations)
-	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
-	p.floodSpaceCommit(commitment, poSpaceParameters.Id, n, verificationKey)
+	commitment := p.lotteryStrategy.StartNewMiner(poSpaceParameters, verificationKey, 0, p.constants.QualityThreshold, initialMiningLocation, blocksToMiner, winningDraws, p.stopMiningSignal)
+	p.floodSpaceCommit(commitment, poSpaceParameters.Id, p.constants.GraphK*n, verificationKey)
 	go p.blockCreatingLoop(winningDraws)
 
 	p.blockTreeChan <- blocktree
@@ -288,28 +313,18 @@ func (p *PoSpacePeer) createBlock(verificationKey string, slot int, draw PoSpace
 
 	parentBlock, isEmpty := blocktree.HashToBlock(parentHash)
 	if isEmpty {
-		panic("Something went wrong druing block creation, tried to create a block with no valid parent!")
+		panic("Something went wrong during block creation, tried to create a block with no valid parent!")
 	}
 	resultBlock.SignBlock(parentBlock, p.signatureStrategy, secretKey)
 	return resultBlock, false
 }
 
-func (p *PoSpacePeer) sendBlockWithTransactions(draw PoSpace.LotteryDraw) {
+func (p *PoSpacePeer) sendBlockWithTransactions(winningDraw PoSpace.WinInformation) {
 	secretKeys := <-p.publicToSecret
 	verificationKey := utils.GetSomeKey(secretKeys) //todo maybe make sure that it is the same public key that was used for the draw
 	p.publicToSecret <- secretKeys
 	blocktree := <-p.blockTreeChan
-	nod, isEmpty := blocktree.HashToBlock(draw.ParentHash)
-	if isEmpty {
-		panic("Trying to send block with no valid parent")
-	}
-	extendedOnSlot := nod.TransactionSubBlock.Slot
-	slot := utils.CalculateSlot(p.startTime)
-	for slot <= extendedOnSlot {
-		time.Sleep(constants.SlotLength / 10)
-		slot = utils.CalculateSlot(p.startTime)
-	}
-	blockWithTransactions, isEmpty := p.createBlock(verificationKey, slot, draw, blocktree)
+	blockWithTransactions, isEmpty := p.createBlock(verificationKey, winningDraw.Slot, winningDraw.Draw, blocktree)
 	if isEmpty {
 		p.blockTreeChan <- blocktree
 		return
@@ -368,13 +383,18 @@ func (p *PoSpacePeer) verifyBlock(block SpaceMintBlockchain.Block) bool {
 	}
 	chalA, chalB := blockTree.GetChallengesForExtendingOnBlockWithHash(block.ParentHash, commitmentOfProof.N)
 	location := PoSpace.MiningLocation{
-		Slot:          block.HashSubBlock.Slot - 1,
+		Slot:          parentBlock.HashSubBlock.Slot,
 		ParentHash:    block.ParentHash,
 		ChallengeSetP: chalA,
 		ChallengeSetV: chalB,
 	}
-	//TODO Discuss and handle real parameters
-	prm := Task1.GenerateParameters()
+	// TODO FIX SEED
+	var prm PoSpaceModels.Parameters
+	if p.constants.FixedGraph {
+		prm = p.fixedPrm
+	} else {
+		prm = Task1.GenerateParameters(5, commitmentOfProof.N/p.constants.GraphK, p.constants.GraphK, p.constants.Alpha, p.constants.Beta, p.constants.UseForcedD, p.constants.ForcedD, false)
+	}
 	prm.Id = commitmentOfProof.Id
 	if !p.lotteryStrategy.Verify(prm, block.HashSubBlock.Draw, location, commitmentOfProof.Commitment) {
 		p.blockTreeChan <- blockTree
@@ -440,10 +460,12 @@ func (p *PoSpacePeer) addTransaction(t SpaceMintBlockchain.SpacemintTransactions
 	p.unfinalizedTransactions <- unfinalizedTransactions
 }
 
-func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.LotteryDraw) {
+func (p *PoSpacePeer) blockCreatingLoop(wins chan PoSpace.WinInformation) {
 	for {
 		newWin := <-wins
 		go p.sendBlockWithTransactions(newWin)
+		println("When handling new block")
+		memoryHelper.PrintMemUsage()
 	}
 }
 
